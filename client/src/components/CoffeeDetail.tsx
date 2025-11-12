@@ -37,8 +37,10 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
 
   if (!entry) return null;
 
-  const mapEmbedUrl = entry.roasterLocation
-    ? `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(entry.roasterLocation)}`
+  // Use roaster name or website for Google Maps search
+  const mapSearchQuery = entry.roasterWebsite || entry.roasterName;
+  const mapEmbedUrl = mapSearchQuery
+    ? `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(mapSearchQuery)}`
     : null;
 
   const handleDelete = () => {
@@ -113,24 +115,37 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
               </div>
             )}
 
-            {mapEmbedUrl && (
+            {/* Roaster Website and Maps */}
+            {(entry.roasterWebsite || entry.roasterName) && (
               <Card className="overflow-hidden">
                 <div className="aspect-video bg-muted flex items-center justify-center">
                   <MapPin className="w-8 h-8 text-muted-foreground" />
                   <p className="ml-2 text-sm text-muted-foreground">Map placeholder</p>
                 </div>
-                <div className="p-4">
-                  <p className="text-sm font-medium mb-1">{entry.roasterLocation}</p>
-                  {entry.roasterAddress && (
-                    <p className="text-sm text-muted-foreground mb-3">{entry.roasterAddress}</p>
+                <div className="p-4 space-y-3">
+                  {entry.roasterWebsite && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Website</p>
+                      <Button variant="link" size="sm" asChild className="h-auto p-0" data-testid="link-roaster-website">
+                        <a
+                          href={entry.roasterWebsite.startsWith('http') ? entry.roasterWebsite : `https://${entry.roasterWebsite}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm"
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          {entry.roasterWebsite.replace(/^https?:\/\/(www\.)?/, '')}
+                        </a>
+                      </Button>
+                    </div>
                   )}
                   <Button variant="outline" size="sm" asChild data-testid="button-view-map">
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entry.roasterLocation || entry.roasterName)}`}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchQuery)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="w-4 h-4 mr-2" />
+                      <MapPin className="w-4 h-4 mr-2" />
                       View on Google Maps
                     </a>
                   </Button>
