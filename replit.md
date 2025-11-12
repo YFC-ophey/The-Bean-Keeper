@@ -20,6 +20,7 @@ Preferred communication style: Simple, everyday language.
 - Renamed application from "Coffee Journal" to "Coffee Bean Tracker"
 - Added manual "Rescan Text" button for re-triggering OCR when needed
 - Display both photos side-by-side in detail view when back photo is available
+- Added delete functionality with confirmation dialog for removing coffee entries
 
 ## System Architecture
 
