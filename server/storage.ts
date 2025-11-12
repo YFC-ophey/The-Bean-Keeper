@@ -13,20 +13,24 @@ export interface IStorage {
 
 export class DbStorage implements IStorage {
   async getCoffeeEntry(id: string): Promise<CoffeeEntry | undefined> {
+    if (!db) throw new Error("Database not initialized");
     const result = await db.select().from(coffeeEntries).where(eq(coffeeEntries.id, id)).limit(1);
     return result[0];
   }
 
   async getAllCoffeeEntries(): Promise<CoffeeEntry[]> {
+    if (!db) throw new Error("Database not initialized");
     return await db.select().from(coffeeEntries).orderBy(desc(coffeeEntries.createdAt));
   }
 
   async createCoffeeEntry(insertEntry: InsertCoffeeEntry): Promise<CoffeeEntry> {
+    if (!db) throw new Error("Database not initialized");
     const result = await db.insert(coffeeEntries).values(insertEntry).returning();
     return result[0];
   }
 
   async updateCoffeeEntry(id: string, updates: UpdateCoffeeEntry): Promise<CoffeeEntry | undefined> {
+    if (!db) throw new Error("Database not initialized");
     const result = await db.update(coffeeEntries)
       .set(updates)
       .where(eq(coffeeEntries.id, id))
@@ -35,6 +39,7 @@ export class DbStorage implements IStorage {
   }
 
   async deleteCoffeeEntry(id: string): Promise<boolean> {
+    if (!db) throw new Error("Database not initialized");
     const result = await db.delete(coffeeEntries).where(eq(coffeeEntries.id, id)).returning();
     return result.length > 0;
   }
@@ -109,5 +114,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Use database storage for permanent persistence
-export const storage = new DbStorage();
+// Use database storage if DATABASE_URL is available, otherwise use in-memory storage
+export const storage = process.env.DATABASE_URL ? new DbStorage() : new MemStorage();

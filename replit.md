@@ -8,6 +8,16 @@ A mobile-first coffee tracking application that allows users to photograph coffe
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**November 12, 2025:**
+- Added AI-powered OCR optimization using OpenAI GPT-5 (via Replit AI Integrations)
+- Migrated from in-memory to PostgreSQL database storage for data persistence
+- Enhanced extraction accuracy for roaster names, origins, varieties, and flavor notes
+- Implemented graceful database fallback for development environments
+- Renamed application from "Coffee Journal" to "Coffee Bean Tracker"
+- Added manual "Rescan Text" button for re-triggering OCR when needed
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -55,7 +65,8 @@ Preferred communication style: Simple, everyday language.
 **Data Storage:**
 - Coffee entries stored in PostgreSQL with schema defined in `shared/schema.ts`
 - Photo files stored in Google Cloud Storage buckets
-- In-memory fallback storage implementation for development/testing
+- Automatic fallback to in-memory storage when DATABASE_URL is not available
+- DbStorage uses Drizzle ORM with Neon serverless PostgreSQL driver
 
 **Database Schema:**
 The `coffee_entries` table includes:
@@ -66,8 +77,9 @@ The `coffee_entries` table includes:
 
 **Storage Abstraction:**
 - `IStorage` interface defines standard data operations
-- `MemStorage` provides in-memory implementation
-- Database storage implementation would use Drizzle ORM with PostgreSQL
+- `DbStorage` implements persistent storage using Drizzle ORM with PostgreSQL
+- `MemStorage` provides in-memory fallback when database is unavailable
+- Automatic storage selection based on DATABASE_URL availability
 
 ### External Dependencies
 
@@ -82,9 +94,14 @@ The `coffee_entries` table includes:
   - Serverless driver compatible with edge environments
 
 **OCR Processing:**
-- **Tesseract.js**: Client-side OCR for extracting text from coffee bag photos
-  - Runs in browser to parse roaster names, origins, varieties, processing methods
-  - No external API dependency for OCR functionality
+- **Tesseract.js**: Client-side OCR for extracting raw text from coffee bag photos
+  - Runs in browser to extract text from images
+  - Raw text is sent to AI for intelligent parsing
+- **OpenAI GPT-5**: AI-powered text extraction via Replit AI Integrations
+  - Intelligently extracts structured coffee information from OCR text
+  - Better at parsing stylized fonts and context than regex patterns
+  - Provides roaster name, location, farm, origin, variety, process, roast date, flavor notes
+  - Graceful fallback to regex extraction if AI service fails
 
 **UI Component Library:**
 - **shadcn/ui**: Comprehensive component library built on Radix UI primitives
