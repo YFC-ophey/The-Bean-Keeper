@@ -14,7 +14,9 @@ interface ExtractedData {
   variety?: string;
   processMethod?: string;
   roastDate?: string;
-  flavorNotes?: string[];
+  flavorNotes?: string;
+  farm?: string;
+  roasterLocation?: string;
 }
 
 interface AddCoffeeFormProps {
@@ -30,6 +32,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const [formData, setFormData] = useState({
     roasterName: "",
     roasterLocation: "",
+    farm: "",
     origin: "",
     variety: "",
     processMethod: "",
@@ -49,7 +52,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': [] },
+    accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'] },
     multiple: false,
   });
 
@@ -60,22 +63,106 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         logger: (m) => console.log(m),
       });
 
-      const text = result.data.text.toLowerCase();
+      const text = result.data.text;
+      const lowerText = text.toLowerCase();
+      const lines = text.split('\n').filter(line => line.trim());
+      
       const extracted: ExtractedData = {};
 
-      if (text.includes('ethiopia')) extracted.origin = 'Ethiopia';
-      if (text.includes('colombia')) extracted.origin = 'Colombia';
-      if (text.includes('kenya')) extracted.origin = 'Kenya';
-      if (text.includes('brazil')) extracted.origin = 'Brazil';
+      // Extract roaster name (usually first or prominent line)
+      const potentialRoaster = lines.find(line => 
+        line.length > 3 && line.length < 50 && 
+        /[A-Z]/.test(line) && 
+        !/(washed|natural|honey|ethiopia|colombia|kenya|brazil)/i.test(line)
+      );
+      if (potentialRoaster) {
+        extracted.roasterName = potentialRoaster.trim();
+      }
 
-      if (text.includes('washed')) extracted.processMethod = 'Washed';
-      if (text.includes('natural')) extracted.processMethod = 'Natural';
-      if (text.includes('honey')) extracted.processMethod = 'Honey';
+      // Extract origin countries
+      const origins = [
+        'Ethiopia', 'Colombia', 'Kenya', 'Brazil', 'Guatemala', 'Costa Rica',
+        'Peru', 'Honduras', 'Rwanda', 'Burundi', 'Tanzania', 'Uganda',
+        'El Salvador', 'Nicaragua', 'Panama', 'Mexico', 'Yemen', 'Indonesia',
+        'Papua New Guinea', 'India', 'Vietnam', 'Thailand'
+      ];
+      for (const origin of origins) {
+        if (lowerText.includes(origin.toLowerCase())) {
+          extracted.origin = origin;
+          break;
+        }
+      }
 
-      if (text.includes('heirloom')) extracted.variety = 'Heirloom';
-      if (text.includes('bourbon')) extracted.variety = 'Bourbon';
-      if (text.includes('gesha') || text.includes('geisha')) extracted.variety = 'Gesha';
+      // Extract process method
+      if (lowerText.includes('washed') || lowerText.includes('wet process')) {
+        extracted.processMethod = 'Washed';
+      } else if (lowerText.includes('natural') || lowerText.includes('dry process')) {
+        extracted.processMethod = 'Natural';
+      } else if (lowerText.includes('honey') || lowerText.includes('pulped natural')) {
+        extracted.processMethod = 'Honey';
+      } else if (lowerText.includes('anaerobic')) {
+        extracted.processMethod = 'Anaerobic';
+      }
 
+      // Extract variety
+      const varieties = [
+        'Heirloom', 'Bourbon', 'Typica', 'Caturra', 'Catuai', 'Gesha', 'Geisha',
+        'SL28', 'SL34', 'Pacamara', 'Villa Sarchi', 'Red Bourbon', 'Yellow Bourbon',
+        'Pink Bourbon', 'Mundo Novo', 'Maragogype'
+      ];
+      for (const variety of varieties) {
+        if (lowerText.includes(variety.toLowerCase())) {
+          extracted.variety = variety;
+          break;
+        }
+      }
+
+      // Extract farm name
+      const farmMatch = text.match(/(?:farm|finca|estate|plantation)[\s:]+([A-Za-z\s]+)/i);
+      if (farmMatch) {
+        extracted.farm = farmMatch[1].trim();
+      }
+
+      // Extract roast date (various formats)
+      const datePatterns = [
+        /roast(?:ed)?[\s:]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+        /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/,
+        /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/
+      ];
+      for (const pattern of datePatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          extracted.roastDate = match[1];
+          break;
+        }
+      }
+
+      // Extract flavor notes
+      const flavorKeywords = [
+        'chocolate', 'caramel', 'citrus', 'berry', 'fruity', 'floral', 'nutty',
+        'sweet', 'honey', 'vanilla', 'blueberry', 'strawberry', 'cherry',
+        'orange', 'lemon', 'apple', 'peach', 'jasmine', 'rose', 'lavender',
+        'almond', 'hazelnut', 'walnut', 'brown sugar', 'maple', 'toffee',
+        'wine', 'grape', 'tropical', 'mango', 'pineapple', 'coconut',
+        'stone fruit', 'red fruit', 'black tea', 'earl grey', 'spice', 'cinnamon'
+      ];
+      const foundFlavors: string[] = [];
+      for (const flavor of flavorKeywords) {
+        if (lowerText.includes(flavor)) {
+          foundFlavors.push(flavor.charAt(0).toUpperCase() + flavor.slice(1));
+        }
+      }
+      if (foundFlavors.length > 0) {
+        extracted.flavorNotes = foundFlavors.slice(0, 5).join(', ');
+      }
+
+      // Extract location (city, state)
+      const locationMatch = text.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)*),\s*([A-Z]{2})/);
+      if (locationMatch) {
+        extracted.roasterLocation = `${locationMatch[1]}, ${locationMatch[2]}`;
+      }
+
+      console.log('Extracted data:', extracted);
       setExtractedData(extracted);
       setFormData((prev) => ({
         ...prev,
@@ -110,7 +197,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
             }`}
             data-testid="dropzone-photo"
           >
-            <input {...getInputProps()} />
+            <input {...getInputProps()} accept="image/*" capture="environment" />
             <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
                 <Camera className="w-6 h-6 text-muted-foreground" />
@@ -120,7 +207,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                   {isDragActive ? 'Drop photo here' : 'Take or upload photo'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Drag and drop or click to select
+                  Tap to use camera or select from library
                 </p>
               </div>
             </div>
@@ -145,7 +232,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
               {!isScanning && Object.keys(extractedData).length > 0 && (
                 <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Auto-filled
+                  {Object.keys(extractedData).length} fields auto-filled
                 </Badge>
               )}
             </div>
@@ -188,6 +275,15 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
             onChange={(e) => setFormData({ ...formData, roasterLocation: e.target.value })}
             placeholder="City, State"
             data-testid="input-roaster-location"
+          />
+        </div>
+        <div>
+          <Label htmlFor="farm">Farm / Estate</Label>
+          <Input
+            id="farm"
+            value={formData.farm}
+            onChange={(e) => setFormData({ ...formData, farm: e.target.value })}
+            data-testid="input-farm"
           />
         </div>
         <div>
