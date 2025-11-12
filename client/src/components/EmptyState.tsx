@@ -12,7 +12,7 @@ export default function EmptyState({ onAddClick }: EmptyStateProps) {
       <div className="w-32 h-32 mb-6 opacity-50">
         <img
           src={emptyStateImage}
-          alt="Empty coffee journal"
+          alt="Empty coffee tracker"
           className="w-full h-full object-contain"
         />
       </div>

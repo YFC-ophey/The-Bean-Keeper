@@ -1,4 +1,4 @@
-# Coffee Journal App
+# Coffee Bean Tracker App
 
 ## Overview
 

@@ -178,7 +178,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-2xl font-semibold" data-testid="text-page-title">Coffee Journal</h1>
+              <h1 className="text-2xl font-semibold" data-testid="text-page-title">Coffee Bean Tracker</h1>
               <p className="text-sm text-muted-foreground" data-testid="text-page-subtitle">
                 {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
               </p>
@@ -203,7 +203,7 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading your coffee journal...</p>
+            <p className="text-muted-foreground">Loading your coffee tracker...</p>
           </div>
         ) : filteredEntries.length === 0 && !searchQuery ? (
           <EmptyState onAddClick={() => setShowAddForm(true)} />

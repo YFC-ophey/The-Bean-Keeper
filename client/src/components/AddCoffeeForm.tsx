@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Camera, Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { Camera, Upload, Loader2, CheckCircle2, ScanText } from "lucide-react";
 import Tesseract from "tesseract.js";
 
 interface ExtractedData {
@@ -195,7 +195,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       ];
       
       for (const pattern of roasterPatterns) {
-        const matches = text.matchAll(new RegExp(pattern.source, 'gim'));
+        const regex = new RegExp(pattern.source, 'gim');
+        const matches = Array.from(text.matchAll(regex));
         for (const match of matches) {
           let name = match[1].trim().replace(/\s+/g, ' ');
           
@@ -358,7 +359,22 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                 </Badge>
               )}
             </div>
-            <div className="p-4">
+            <div className="p-4 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (photoFile) {
+                    await performOCR(photoFile);
+                  }
+                }}
+                disabled={isScanning}
+                data-testid="button-rescan"
+              >
+                <ScanText className="w-4 h-4 mr-2" />
+                Rescan Text
+              </Button>
               <Button
                 type="button"
                 variant="outline"
