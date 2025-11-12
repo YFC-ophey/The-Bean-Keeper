@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Calendar, ExternalLink, X } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, X, Pencil } from "lucide-react";
 import StarRating from "./StarRating";
 import { CoffeeEntry } from "@shared/schema";
 import { format } from "date-fns";
@@ -17,9 +17,10 @@ interface CoffeeDetailProps {
   entry: CoffeeEntry | null;
   open: boolean;
   onClose: () => void;
+  onEdit?: () => void;
 }
 
-export default function CoffeeDetail({ entry, open, onClose }: CoffeeDetailProps) {
+export default function CoffeeDetail({ entry, open, onClose, onEdit }: CoffeeDetailProps) {
   if (!entry) return null;
 
   const mapEmbedUrl = entry.roasterLocation
@@ -30,13 +31,21 @@ export default function CoffeeDetail({ entry, open, onClose }: CoffeeDetailProps
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-coffee-detail">
         <DialogHeader>
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <DialogTitle className="text-2xl font-semibold" data-testid="text-detail-roaster">
               {entry.roasterName}
             </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-detail">
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {onEdit && (
+                <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-entry">
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-detail">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 

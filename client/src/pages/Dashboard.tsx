@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import CoffeeCard from "@/components/CoffeeCard";
 import AddCoffeeForm from "@/components/AddCoffeeForm";
+import EditCoffeeForm from "@/components/EditCoffeeForm";
 import RatingModal from "@/components/RatingModal";
 import CoffeeDetail from "@/components/CoffeeDetail";
 import FilterBar from "@/components/FilterBar";
@@ -20,8 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<CoffeeEntry | null>(null);
+  const [editEntry, setEditEntry] = useState<CoffeeEntry | null>(null);
   const [pendingEntry, setPendingEntry] = useState<CoffeeEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
@@ -108,6 +111,55 @@ export default function Dashboard() {
     }
   };
 
+  const handleEditCoffee = async (data: {
+    roasterName: string;
+    roasterLocation?: string;
+    farm?: string;
+    origin?: string;
+    variety?: string;
+    processMethod?: string;
+    roastDate?: string;
+    flavorNotes?: string;
+    rating?: number;
+    tastingNotes?: string;
+  }) => {
+    if (!editEntry) return;
+
+    try {
+      await apiRequest("PATCH", `/api/coffee-entries/${editEntry.id}`, {
+        roasterName: data.roasterName,
+        roasterLocation: data.roasterLocation || null,
+        farm: data.farm || null,
+        origin: data.origin || null,
+        variety: data.variety || null,
+        processMethod: data.processMethod || null,
+        roastDate: data.roastDate || null,
+        flavorNotes: data.flavorNotes
+          ? data.flavorNotes.split(",").map(f => f.trim()).filter(f => f.length > 0)
+          : null,
+        rating: data.rating || null,
+        tastingNotes: data.tastingNotes || null,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      setEditEntry(null);
+      setShowEditForm(false);
+      setSelectedEntry(null);
+
+      toast({
+        title: "Changes saved!",
+        description: "Your coffee entry has been updated.",
+      });
+    } catch (error) {
+      console.error("Error editing coffee:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update coffee entry. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredEntries = entries.filter(entry => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -184,6 +236,24 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="text-edit-coffee-title">Edit Coffee</DialogTitle>
+          </DialogHeader>
+          {editEntry && (
+            <EditCoffeeForm
+              entry={editEntry}
+              onSubmit={handleEditCoffee}
+              onCancel={() => {
+                setShowEditForm(false);
+                setEditEntry(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <RatingModal
         open={showRatingModal}
         onClose={() => {
@@ -198,6 +268,13 @@ export default function Dashboard() {
         entry={selectedEntry}
         open={!!selectedEntry}
         onClose={() => setSelectedEntry(null)}
+        onEdit={() => {
+          if (selectedEntry) {
+            setEditEntry(selectedEntry);
+            setShowEditForm(true);
+            setSelectedEntry(null);
+          }
+        }}
       />
     </div>
   );

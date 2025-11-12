@@ -185,28 +185,49 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       }
 
       // Extract roaster name - look for prominent text with "Coffee" or "Roasters"
+      // Exclude descriptor words that aren't part of the roaster name
+      const excludeWords = /^(roasted|locally|sourced|fresh|organic|single|origin|direct|trade|imported|premium|specialty|craft|artisan|small|batch|hand|selected|estate|grown|fair|sustainable)\s+/i;
+      
       const roasterPatterns = [
-        /([A-Z\s]+(?:Coffee|COFFEE)[A-Z\s]*(?:Roasters?|ROASTERS?)?)/,
-        /([A-Z][A-Za-z\s]{3,40}(?:Coffee|Roasters))/i
+        /([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/i,
+        /([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?)\s+(?:Co\.?|Company|Roasters?))/i,
       ];
+      
       for (const pattern of roasterPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          const name = match[1].trim().replace(/\s+/g, ' ');
-          if (name.length > 3 && name.length < 60) {
+        const matches = text.matchAll(new RegExp(pattern.source, 'gi'));
+        for (const match of matches) {
+          let name = match[1].trim().replace(/\s+/g, ' ');
+          
+          // Skip if it starts with descriptor words
+          if (excludeWords.test(name)) {
+            continue;
+          }
+          
+          // Skip if it contains label field markers
+          if (/(farm|origin|variety|process|flavou?rs?|roast(?:ed)?\s*(?:date|on)?)\s*:/i.test(name)) {
+            continue;
+          }
+          
+          if (name.length > 5 && name.length < 60) {
             extracted.roasterName = name;
             break;
           }
         }
+        if (extracted.roasterName) break;
       }
 
       // If no roaster found, try first prominent capitalized line
       if (!extracted.roasterName) {
-        const potentialRoaster = lines.find(line => 
-          line.length > 3 && line.length < 50 && 
-          /[A-Z]/.test(line) && 
-          !/(washed|natural|honey|farm|origin|variety|process|roasted|flavou?rs?)/i.test(line)
-        );
+        const potentialRoaster = lines.find(line => {
+          const trimmed = line.trim();
+          return (
+            trimmed.length > 5 && 
+            trimmed.length < 50 && 
+            /[A-Z]/.test(trimmed) && 
+            !excludeWords.test(trimmed) &&
+            !/(washed|natural|honey|farm|origin|variety|process|roasted|flavou?rs?|direct|trade|sourced)/i.test(trimmed)
+          );
+        });
         if (potentialRoaster) {
           extracted.roasterName = potentialRoaster.trim();
         }

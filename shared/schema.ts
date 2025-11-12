@@ -27,7 +27,17 @@ export const insertCoffeeEntrySchema = createInsertSchema(coffeeEntries).omit({
 });
 
 export const updateCoffeeEntrySchema = z.object({
-  rating: z.number().min(1).max(5).optional(),
+  roasterName: z.string().trim().min(1, "Roaster name is required").optional(),
+  roasterLocation: z.string().nullable().optional(),
+  roasterAddress: z.string().nullable().optional(),
+  roasterWebsite: z.string().nullable().optional(),
+  farm: z.string().nullable().optional(),
+  origin: z.string().nullable().optional(),
+  variety: z.string().nullable().optional(),
+  processMethod: z.string().nullable().optional(),
+  roastDate: z.string().nullable().optional(),
+  flavorNotes: z.array(z.string()).nullable().optional(),
+  rating: z.number().min(1).max(5).nullable().optional(),
   tastingNotes: z.string().nullable().optional(),
 });
 

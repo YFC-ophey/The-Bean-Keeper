@@ -56,6 +56,16 @@ export class MemStorage implements IStorage {
     // Only update fields that are explicitly provided
     const updatedEntry: CoffeeEntry = {
       ...entry,
+      ...(updates.roasterName !== undefined && { roasterName: updates.roasterName }),
+      ...(updates.roasterLocation !== undefined && { roasterLocation: updates.roasterLocation }),
+      ...(updates.roasterAddress !== undefined && { roasterAddress: updates.roasterAddress }),
+      ...(updates.roasterWebsite !== undefined && { roasterWebsite: updates.roasterWebsite }),
+      ...(updates.farm !== undefined && { farm: updates.farm }),
+      ...(updates.origin !== undefined && { origin: updates.origin }),
+      ...(updates.variety !== undefined && { variety: updates.variety }),
+      ...(updates.processMethod !== undefined && { processMethod: updates.processMethod }),
+      ...(updates.roastDate !== undefined && { roastDate: updates.roastDate }),
+      ...(updates.flavorNotes !== undefined && { flavorNotes: updates.flavorNotes }),
       ...(updates.rating !== undefined && { rating: updates.rating }),
       ...(updates.tastingNotes !== undefined && { tastingNotes: updates.tastingNotes }),
     };
