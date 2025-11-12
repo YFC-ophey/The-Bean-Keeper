@@ -16,13 +16,13 @@ interface ExtractedData {
   roastDate?: string;
   flavorNotes?: string;
   farm?: string;
-  roasterLocation?: string;
+  roasterWebsite?: string;
 }
 
 interface AddCoffeeFormProps {
   onSubmit: (frontPhotoUrl: string, backPhotoUrl: string | null, data: {
     roasterName: string;
-    roasterLocation?: string;
+    roasterWebsite?: string;
     farm?: string;
     origin?: string;
     variety?: string;
@@ -42,7 +42,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
   const [formData, setFormData] = useState({
     roasterName: "",
-    roasterLocation: "",
+    roasterWebsite: "",
     farm: "",
     origin: "",
     variety: "",
@@ -300,10 +300,10 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         }
       }
 
-      // Extract location (city, state)
-      const locationMatch = text.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)*),\s*([A-Z]{2})/);
-      if (locationMatch) {
-        extracted.roasterLocation = `${locationMatch[1]}, ${locationMatch[2]}`;
+      // Extract website URL
+      const urlMatch = text.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-z]{2,}(?:\/[^\s]*)?)/i);
+      if (urlMatch) {
+        extracted.roasterWebsite = urlMatch[0].startsWith('http') ? urlMatch[0] : `https://${urlMatch[0]}`;
       }
 
       console.log('Combined OCR text from both photos:', text);
@@ -324,7 +324,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
           // Merge AI results with basic extraction, preferring AI results when available
           const mergedData: ExtractedData = {
             roasterName: aiExtracted.roasterName || extracted.roasterName,
-            roasterLocation: aiExtracted.roasterLocation || extracted.roasterLocation,
+            roasterWebsite: aiExtracted.roasterWebsite || extracted.roasterWebsite,
             farm: aiExtracted.farm || extracted.farm,
             origin: aiExtracted.origin || extracted.origin,
             variety: aiExtracted.variety || extracted.variety,
@@ -567,13 +567,13 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
           />
         </div>
         <div>
-          <Label htmlFor="roasterLocation">Roaster Location</Label>
+          <Label htmlFor="roasterWebsite">Roaster Website</Label>
           <Input
-            id="roasterLocation"
-            value={formData.roasterLocation}
-            onChange={(e) => setFormData({ ...formData, roasterLocation: e.target.value })}
-            placeholder="City, State"
-            data-testid="input-roaster-location"
+            id="roasterWebsite"
+            value={formData.roasterWebsite}
+            onChange={(e) => setFormData({ ...formData, roasterWebsite: e.target.value })}
+            placeholder="https://example.com"
+            data-testid="input-roaster-website"
           />
         </div>
         <div>
