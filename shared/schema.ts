@@ -5,7 +5,8 @@ import { z } from "zod";
 
 export const coffeeEntries = pgTable("coffee_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  photoUrl: text("photo_url").notNull(),
+  frontPhotoUrl: text("front_photo_url").notNull(),
+  backPhotoUrl: text("back_photo_url"),
   roasterName: text("roaster_name").notNull(),
   roasterLocation: text("roaster_location"),
   roasterAddress: text("roaster_address"),
