@@ -161,6 +161,26 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeleteCoffee = async (entryId: string) => {
+    try {
+      await apiRequest("DELETE", `/api/coffee-entries/${entryId}`);
+      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      setSelectedEntry(null);
+
+      toast({
+        title: "Coffee deleted",
+        description: "Your coffee entry has been removed.",
+      });
+    } catch (error) {
+      console.error("Error deleting coffee:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete coffee entry. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredEntries = entries.filter(entry => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -274,6 +294,11 @@ export default function Dashboard() {
             setEditEntry(selectedEntry);
             setShowEditForm(true);
             setSelectedEntry(null);
+          }
+        }}
+        onDelete={() => {
+          if (selectedEntry) {
+            handleDeleteCoffee(selectedEntry.id);
           }
         }}
       />

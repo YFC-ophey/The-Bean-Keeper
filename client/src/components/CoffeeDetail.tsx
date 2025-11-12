@@ -4,50 +4,81 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Calendar, ExternalLink, X, Pencil } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, X, Pencil, Trash2 } from "lucide-react";
 import StarRating from "./StarRating";
 import { CoffeeEntry } from "@shared/schema";
 import { format } from "date-fns";
+import { useState } from "react";
 
 interface CoffeeDetailProps {
   entry: CoffeeEntry | null;
   open: boolean;
   onClose: () => void;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export default function CoffeeDetail({ entry, open, onClose, onEdit }: CoffeeDetailProps) {
+export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }: CoffeeDetailProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   if (!entry) return null;
 
   const mapEmbedUrl = entry.roasterLocation
     ? `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(entry.roasterLocation)}`
     : null;
 
+  const handleDelete = () => {
+    setShowDeleteConfirm(false);
+    onDelete?.();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-coffee-detail">
-        <DialogHeader>
-          <div className="flex items-start justify-between gap-3">
-            <DialogTitle className="text-2xl font-semibold" data-testid="text-detail-roaster">
-              {entry.roasterName}
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              {onEdit && (
-                <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-entry">
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-coffee-detail">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-3">
+              <DialogTitle className="text-2xl font-semibold" data-testid="text-detail-roaster">
+                {entry.roasterName}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-entry">
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowDeleteConfirm(true)} 
+                    data-testid="button-delete-entry"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-detail">
+                  <X className="w-4 h-4" />
                 </Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-detail">
-                <X className="w-4 h-4" />
-              </Button>
+              </div>
             </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-6">
@@ -190,5 +221,23 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit }: CoffeeDet
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialogContent data-testid="dialog-delete-confirm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Coffee Entry?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete {entry.roasterName}? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} data-testid="button-confirm-delete">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
