@@ -19,7 +19,7 @@ export default function CoffeeCard({ entry, onClick }: CoffeeCardProps) {
     >
       <div className="relative aspect-square overflow-hidden">
         <img
-          src={entry.photoUrl}
+          src={entry.frontPhotoUrl}
           alt={`${entry.roasterName} coffee bag`}
           className="w-full h-full object-cover"
           data-testid={`img-coffee-${entry.id}`}

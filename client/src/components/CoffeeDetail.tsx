@@ -51,14 +51,36 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit }: CoffeeDet
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <div className="aspect-square rounded-lg overflow-hidden">
-              <img
-                src={entry.photoUrl}
-                alt={`${entry.roasterName} coffee bag`}
-                className="w-full h-full object-cover"
-                data-testid="img-detail-photo"
-              />
-            </div>
+            {/* Photo grid - show both front and back if available */}
+            {entry.backPhotoUrl ? (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="aspect-square rounded-lg overflow-hidden">
+                  <img
+                    src={entry.frontPhotoUrl}
+                    alt={`Front of ${entry.roasterName} coffee bag`}
+                    className="w-full h-full object-cover"
+                    data-testid="img-detail-front-photo"
+                  />
+                </div>
+                <div className="aspect-square rounded-lg overflow-hidden">
+                  <img
+                    src={entry.backPhotoUrl}
+                    alt={`Back of ${entry.roasterName} coffee bag`}
+                    className="w-full h-full object-cover"
+                    data-testid="img-detail-back-photo"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="aspect-square rounded-lg overflow-hidden">
+                <img
+                  src={entry.frontPhotoUrl}
+                  alt={`${entry.roasterName} coffee bag`}
+                  className="w-full h-full object-cover"
+                  data-testid="img-detail-photo"
+                />
+              </div>
+            )}
 
             {mapEmbedUrl && (
               <Card className="overflow-hidden">
