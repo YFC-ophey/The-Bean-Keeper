@@ -1,18 +1,30 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export const coffeeEntries = pgTable("coffee_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  photoUrl: text("photo_url").notNull(),
+  roasterName: text("roaster_name").notNull(),
+  roasterLocation: text("roaster_location"),
+  roasterAddress: text("roaster_address"),
+  roasterWebsite: text("roaster_website"),
+  farm: text("farm"),
+  origin: text("origin"),
+  variety: text("variety"),
+  processMethod: text("process_method"),
+  roastDate: text("roast_date"),
+  flavorNotes: text("flavor_notes").array(),
+  rating: integer("rating"),
+  tastingNotes: text("tasting_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertCoffeeEntrySchema = createInsertSchema(coffeeEntries).omit({
+  id: true,
+  createdAt: true,
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type InsertCoffeeEntry = z.infer<typeof insertCoffeeEntrySchema>;
+export type CoffeeEntry = typeof coffeeEntries.$inferSelect;
