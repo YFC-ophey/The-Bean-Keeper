@@ -186,15 +186,16 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
       // Extract roaster name - look for prominent text with "Coffee" or "Roasters"
       // Exclude descriptor words that aren't part of the roaster name
-      const excludeWords = /^(roasted|locally|sourced|fresh|organic|single|origin|direct|trade|imported|premium|specialty|craft|artisan|small|batch|hand|selected|estate|grown|fair|sustainable)\s+/i;
+      const excludeWords = /^(roasted|locally|sourced|fresh|organic|single|origin|direct|trade|imported|premium|specialty|craft|artisan|small|batch|hand|selected|estate|grown|fair|sustainable|this|a|an|the)\s+/i;
       
       const roasterPatterns = [
-        /([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/i,
-        /([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?)\s+(?:Co\.?|Company|Roasters?))/i,
+        // Pattern for "Name Coffee Roasters" or "Name Roasters" (must start line or be capitalized)
+        /^([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/im,
+        /\n([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/i,
       ];
       
       for (const pattern of roasterPatterns) {
-        const matches = text.matchAll(new RegExp(pattern.source, 'gi'));
+        const matches = text.matchAll(new RegExp(pattern.source, 'gim'));
         for (const match of matches) {
           let name = match[1].trim().replace(/\s+/g, ' ');
           
@@ -208,7 +209,17 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
             continue;
           }
           
-          if (name.length > 5 && name.length < 60) {
+          // Skip if surrounded by lowercase text (likely part of a sentence)
+          const fullMatch = match[0];
+          const beforeMatch = text.substring(Math.max(0, match.index! - 20), match.index!);
+          if (/[a-z]\s*$/.test(beforeMatch)) {
+            // Has lowercase letter right before - likely part of sentence
+            continue;
+          }
+          
+          // Prefer names with multiple capital words (proper nouns)
+          const capitalWords = name.match(/[A-Z][a-z]+/g);
+          if (capitalWords && capitalWords.length >= 2 && name.length > 5 && name.length < 60) {
             extracted.roasterName = name;
             break;
           }
@@ -216,18 +227,29 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         if (extracted.roasterName) break;
       }
 
-      // If no roaster found, try first prominent capitalized line
+      // If no roaster found with patterns, look in first 10 lines for prominent brand name
       if (!extracted.roasterName) {
-        const potentialRoaster = lines.find(line => {
+        const earlyLines = lines.slice(0, 10);
+        const potentialRoaster = earlyLines.find(line => {
           const trimmed = line.trim();
-          return (
-            trimmed.length > 5 && 
-            trimmed.length < 50 && 
-            /[A-Z]/.test(trimmed) && 
-            !excludeWords.test(trimmed) &&
-            !/(washed|natural|honey|farm|origin|variety|process|roasted|flavou?rs?|direct|trade|sourced)/i.test(trimmed)
-          );
+          
+          // Must have reasonable length
+          if (trimmed.length < 5 || trimmed.length > 50) return false;
+          
+          // Must start with capital letter
+          if (!/^[A-Z]/.test(trimmed)) return false;
+          
+          // Skip descriptor words
+          if (excludeWords.test(trimmed)) return false;
+          
+          // Skip field labels and common coffee terms
+          if (/(washed|natural|honey|farm|origin|variety|process|roasted|flavou?rs?|direct|trade|sourced|wpg|300g|gram)/i.test(trimmed)) return false;
+          
+          // Prefer lines with multiple capital words (brand names)
+          const capitalWords = trimmed.match(/[A-Z][a-z]+/g);
+          return capitalWords && capitalWords.length >= 2;
         });
+        
         if (potentialRoaster) {
           extracted.roasterName = potentialRoaster.trim();
         }
