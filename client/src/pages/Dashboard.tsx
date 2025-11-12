@@ -36,7 +36,7 @@ export default function Dashboard() {
 
   const handleAddCoffee = async (frontPhotoUrl: string, backPhotoUrl: string | null, data: {
     roasterName: string;
-    roasterLocation?: string;
+    roasterWebsite?: string;
     farm?: string;
     origin?: string;
     variety?: string;
@@ -49,7 +49,7 @@ export default function Dashboard() {
         frontPhotoUrl,
         backPhotoUrl,
         roasterName: data.roasterName,
-        roasterLocation: data.roasterLocation || null,
+        roasterLocation: null,
         farm: data.farm || null,
         origin: data.origin || null,
         variety: data.variety || null,
@@ -59,7 +59,7 @@ export default function Dashboard() {
           ? data.flavorNotes.split(",").map(f => f.trim()).filter(f => f.length > 0)
           : null,
         roasterAddress: null,
-        roasterWebsite: null,
+        roasterWebsite: data.roasterWebsite || null,
         rating: null,
         tastingNotes: null,
       });
@@ -114,7 +114,7 @@ export default function Dashboard() {
 
   const handleEditCoffee = async (data: {
     roasterName: string;
-    roasterLocation?: string;
+    roasterWebsite?: string;
     farm?: string;
     origin?: string;
     variety?: string;
@@ -129,7 +129,7 @@ export default function Dashboard() {
     try {
       await apiRequest("PATCH", `/api/coffee-entries/${editEntry.id}`, {
         roasterName: data.roasterName,
-        roasterLocation: data.roasterLocation || null,
+        roasterWebsite: data.roasterWebsite || null,
         farm: data.farm || null,
         origin: data.origin || null,
         variety: data.variety || null,

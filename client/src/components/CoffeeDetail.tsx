@@ -126,17 +126,16 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
                   {entry.roasterWebsite && (
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Website</p>
-                      <Button variant="link" size="sm" asChild className="h-auto p-0" data-testid="link-roaster-website">
-                        <a
-                          href={entry.roasterWebsite.startsWith('http') ? entry.roasterWebsite : `https://${entry.roasterWebsite}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm"
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          {entry.roasterWebsite.replace(/^https?:\/\/(www\.)?/, '')}
-                        </a>
-                      </Button>
+                      <a
+                        href={entry.roasterWebsite.startsWith('http') ? entry.roasterWebsite : `https://${entry.roasterWebsite}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline flex items-center"
+                        data-testid="link-roaster-website"
+                      >
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        {entry.roasterWebsite.replace(/^https?:\/\/(www\.)?/, '')}
+                      </a>
                     </div>
                   )}
                   <Button variant="outline" size="sm" asChild data-testid="button-view-map">
