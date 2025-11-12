@@ -263,12 +263,54 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       }
 
       console.log('Full OCR text:', text);
-      console.log('Extracted data:', extracted);
-      setExtractedData(extracted);
-      setFormData((prev) => ({
-        ...prev,
-        ...extracted,
-      }));
+      console.log('Basic extracted data:', extracted);
+      
+      // Use AI to optimize extraction (better than regex patterns)
+      try {
+        const aiResponse = await fetch('/api/extract-coffee-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        
+        if (aiResponse.ok) {
+          const aiExtracted = await aiResponse.json();
+          console.log('AI-enhanced extracted data:', aiExtracted);
+          
+          // Merge AI results with basic extraction, preferring AI results when available
+          const mergedData: ExtractedData = {
+            roasterName: aiExtracted.roasterName || extracted.roasterName,
+            roasterLocation: aiExtracted.roasterLocation || extracted.roasterLocation,
+            farm: aiExtracted.farm || extracted.farm,
+            origin: aiExtracted.origin || extracted.origin,
+            variety: aiExtracted.variety || extracted.variety,
+            processMethod: aiExtracted.processMethod || extracted.processMethod,
+            roastDate: aiExtracted.roastDate || extracted.roastDate,
+            flavorNotes: aiExtracted.flavorNotes ? aiExtracted.flavorNotes.join(', ') : extracted.flavorNotes,
+          };
+          
+          setExtractedData(mergedData);
+          setFormData((prev) => ({
+            ...prev,
+            ...mergedData,
+          }));
+        } else {
+          // Fall back to basic extraction if AI fails
+          setExtractedData(extracted);
+          setFormData((prev) => ({
+            ...prev,
+            ...extracted,
+          }));
+        }
+      } catch (aiError) {
+        console.error('AI extraction error, using basic extraction:', aiError);
+        // Fall back to basic extraction if AI fails
+        setExtractedData(extracted);
+        setFormData((prev) => ({
+          ...prev,
+          ...extracted,
+        }));
+      }
     } catch (error) {
       console.error('OCR Error:', error);
     } finally {

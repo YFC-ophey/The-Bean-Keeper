@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { insertCoffeeEntrySchema, updateCoffeeEntrySchema } from "@shared/schema";
 import { z } from "zod";
+import { extractCoffeeInfoWithAI } from "./openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const objectStorageService = new ObjectStorageService();
@@ -113,6 +114,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting coffee entry:", error);
       res.status(500).json({ error: "Failed to delete coffee entry" });
+    }
+  });
+
+  // AI-powered OCR extraction endpoint
+  app.post("/api/extract-coffee-info", async (req, res) => {
+    try {
+      const { text } = req.body;
+      
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      const extracted = await extractCoffeeInfoWithAI(text);
+      res.json(extracted);
+    } catch (error) {
+      console.error("Error extracting coffee info with AI:", error);
+      res.status(500).json({ error: "Failed to extract coffee information" });
     }
   });
 

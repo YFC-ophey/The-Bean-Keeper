@@ -1,5 +1,7 @@
-import { type CoffeeEntry, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
+import { type CoffeeEntry, type InsertCoffeeEntry, type UpdateCoffeeEntry, coffeeEntries } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getCoffeeEntry(id: string): Promise<CoffeeEntry | undefined>;
@@ -7,6 +9,35 @@ export interface IStorage {
   createCoffeeEntry(entry: InsertCoffeeEntry): Promise<CoffeeEntry>;
   updateCoffeeEntry(id: string, updates: UpdateCoffeeEntry): Promise<CoffeeEntry | undefined>;
   deleteCoffeeEntry(id: string): Promise<boolean>;
+}
+
+export class DbStorage implements IStorage {
+  async getCoffeeEntry(id: string): Promise<CoffeeEntry | undefined> {
+    const result = await db.select().from(coffeeEntries).where(eq(coffeeEntries.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getAllCoffeeEntries(): Promise<CoffeeEntry[]> {
+    return await db.select().from(coffeeEntries).orderBy(desc(coffeeEntries.createdAt));
+  }
+
+  async createCoffeeEntry(insertEntry: InsertCoffeeEntry): Promise<CoffeeEntry> {
+    const result = await db.insert(coffeeEntries).values(insertEntry).returning();
+    return result[0];
+  }
+
+  async updateCoffeeEntry(id: string, updates: UpdateCoffeeEntry): Promise<CoffeeEntry | undefined> {
+    const result = await db.update(coffeeEntries)
+      .set(updates)
+      .where(eq(coffeeEntries.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteCoffeeEntry(id: string): Promise<boolean> {
+    const result = await db.delete(coffeeEntries).where(eq(coffeeEntries.id, id)).returning();
+    return result.length > 0;
+  }
 }
 
 export class MemStorage implements IStorage {
@@ -78,4 +109,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Use database storage for permanent persistence
+export const storage = new DbStorage();
