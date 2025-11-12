@@ -10,7 +10,7 @@ interface EditCoffeeFormProps {
   entry: CoffeeEntry;
   onSubmit: (data: {
     roasterName: string;
-    roasterLocation?: string;
+    roasterWebsite?: string;
     farm?: string;
     origin?: string;
     variety?: string;
@@ -26,7 +26,7 @@ interface EditCoffeeFormProps {
 export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffeeFormProps) {
   const [formData, setFormData] = useState({
     roasterName: entry.roasterName,
-    roasterLocation: entry.roasterLocation || "",
+    roasterWebsite: entry.roasterWebsite || "",
     farm: entry.farm || "",
     origin: entry.origin || "",
     variety: entry.variety || "",
@@ -56,13 +56,13 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
           />
         </div>
         <div>
-          <Label htmlFor="roasterLocation">Roaster Location</Label>
+          <Label htmlFor="roasterWebsite">Roaster Website</Label>
           <Input
-            id="roasterLocation"
-            value={formData.roasterLocation}
-            onChange={(e) => setFormData({ ...formData, roasterLocation: e.target.value })}
-            placeholder="City, State"
-            data-testid="input-edit-roaster-location"
+            id="roasterWebsite"
+            value={formData.roasterWebsite}
+            onChange={(e) => setFormData({ ...formData, roasterWebsite: e.target.value })}
+            placeholder="https://example.com"
+            data-testid="input-edit-roaster-website"
           />
         </div>
         <div>
