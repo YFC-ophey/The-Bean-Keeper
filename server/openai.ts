@@ -40,9 +40,9 @@ ${ocrText}
 
 Return a JSON object with these fields (use null for missing fields):
 - roasterName: The coffee roaster/brand name
-- roasterLocation: City, state, or country of the roaster
+- roasterWebsite: Website URL if mentioned (prioritize this - look for URLs, domain names, or web addresses)
+- roasterLocation: City, state, or country of the roaster (only if clearly stated)
 - roasterAddress: Full address if available
-- roasterWebsite: Website URL if mentioned
 - farm: Farm or estate name
 - origin: Country or region where coffee was grown
 - variety: Coffee variety/varietal (e.g., "Bourbon", "Typica", "Gesha")
