@@ -20,7 +20,7 @@ interface ExtractedData {
 }
 
 interface AddCoffeeFormProps {
-  onSubmit: (photoUrl: string, data: {
+  onSubmit: (frontPhotoUrl: string, backPhotoUrl: string | null, data: {
     roasterName: string;
     roasterLocation?: string;
     farm?: string;
@@ -34,8 +34,10 @@ interface AddCoffeeFormProps {
 }
 
 export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps) {
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [frontPhotoFile, setFrontPhotoFile] = useState<File | null>(null);
+  const [frontPhotoPreview, setFrontPhotoPreview] = useState<string>("");
+  const [backPhotoFile, setBackPhotoFile] = useState<File | null>(null);
+  const [backPhotoPreview, setBackPhotoPreview] = useState<string>("");
   const [isScanning, setIsScanning] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
   const [formData, setFormData] = useState({
@@ -49,30 +51,65 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     flavorNotes: "",
   });
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  const onDropFront = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
-      setPhotoFile(file);
+      setFrontPhotoFile(file);
       const preview = URL.createObjectURL(file);
-      setPhotoPreview(preview);
-      await performOCR(file);
+      setFrontPhotoPreview(preview);
+      await performOCR();
     }
-  }, []);
+  }, [frontPhotoFile, backPhotoFile]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+  const onDropBack = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setBackPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setBackPhotoPreview(preview);
+      await performOCR();
+    }
+  }, [frontPhotoFile, backPhotoFile]);
+
+  const frontDropzone = useDropzone({
+    onDrop: onDropFront,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'] },
     multiple: false,
   });
 
-  const performOCR = async (file: File) => {
+  const backDropzone = useDropzone({
+    onDrop: onDropBack,
+    accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'] },
+    multiple: false,
+  });
+
+  const performOCR = async () => {
     setIsScanning(true);
     try {
-      const result = await Tesseract.recognize(file, 'eng', {
-        logger: (m) => console.log(m),
-      });
+      let combinedText = "";
+      
+      // Run OCR on front photo
+      if (frontPhotoFile) {
+        const frontResult = await Tesseract.recognize(frontPhotoFile, 'eng', {
+          logger: (m) => console.log('Front:', m),
+        });
+        combinedText += frontResult.data.text + "\n\n";
+      }
+      
+      // Run OCR on back photo
+      if (backPhotoFile) {
+        const backResult = await Tesseract.recognize(backPhotoFile, 'eng', {
+          logger: (m) => console.log('Back:', m),
+        });
+        combinedText += backResult.data.text;
+      }
 
-      const text = result.data.text;
+      if (!combinedText.trim()) {
+        setIsScanning(false);
+        return;
+      }
+
+      const text = combinedText;
       const lowerText = text.toLowerCase();
       const lines = text.split('\n').filter(line => line.trim());
       
@@ -185,11 +222,9 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       }
 
       // Extract roaster name - look for prominent text with "Coffee" or "Roasters"
-      // Exclude descriptor words that aren't part of the roaster name
       const excludeWords = /^(roasted|locally|sourced|fresh|organic|single|origin|direct|trade|imported|premium|specialty|craft|artisan|small|batch|hand|selected|estate|grown|fair|sustainable|this|a|an|the)\s+/i;
       
       const roasterPatterns = [
-        // Pattern for "Name Coffee Roasters" or "Name Roasters" (must start line or be capitalized)
         /^([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/im,
         /\n([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/i,
       ];
@@ -200,25 +235,20 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         for (const match of matches) {
           let name = match[1].trim().replace(/\s+/g, ' ');
           
-          // Skip if it starts with descriptor words
           if (excludeWords.test(name)) {
             continue;
           }
           
-          // Skip if it contains label field markers
           if (/(farm|origin|variety|process|flavou?rs?|roast(?:ed)?\s*(?:date|on)?)\s*:/i.test(name)) {
             continue;
           }
           
-          // Skip if surrounded by lowercase text (likely part of a sentence)
           const fullMatch = match[0];
           const beforeMatch = text.substring(Math.max(0, match.index! - 20), match.index!);
           if (/[a-z]\s*$/.test(beforeMatch)) {
-            // Has lowercase letter right before - likely part of sentence
             continue;
           }
           
-          // Prefer names with multiple capital words (proper nouns)
           const capitalWords = name.match(/[A-Z][a-z]+/g);
           if (capitalWords && capitalWords.length >= 2 && name.length > 5 && name.length < 60) {
             extracted.roasterName = name;
@@ -228,25 +258,16 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         if (extracted.roasterName) break;
       }
 
-      // If no roaster found with patterns, look in first 10 lines for prominent brand name
       if (!extracted.roasterName) {
         const earlyLines = lines.slice(0, 10);
         const potentialRoaster = earlyLines.find(line => {
           const trimmed = line.trim();
           
-          // Must have reasonable length
           if (trimmed.length < 5 || trimmed.length > 50) return false;
-          
-          // Must start with capital letter
           if (!/^[A-Z]/.test(trimmed)) return false;
-          
-          // Skip descriptor words
           if (excludeWords.test(trimmed)) return false;
-          
-          // Skip field labels and common coffee terms
           if (/(washed|natural|honey|farm|origin|variety|process|roasted|flavou?rs?|direct|trade|sourced|wpg|300g|gram)/i.test(trimmed)) return false;
           
-          // Prefer lines with multiple capital words (brand names)
           const capitalWords = trimmed.match(/[A-Z][a-z]+/g);
           return capitalWords && capitalWords.length >= 2;
         });
@@ -262,7 +283,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         extracted.roasterLocation = `${locationMatch[1]}, ${locationMatch[2]}`;
       }
 
-      console.log('Full OCR text:', text);
+      console.log('Combined OCR text from both photos:', text);
       console.log('Basic extracted data:', extracted);
       
       // Use AI to optimize extraction (better than regex patterns)
@@ -295,7 +316,6 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
             ...mergedData,
           }));
         } else {
-          // Fall back to basic extraction if AI fails
           setExtractedData(extracted);
           setFormData((prev) => ({
             ...prev,
@@ -304,7 +324,6 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         }
       } catch (aiError) {
         console.error('AI extraction error, using basic extraction:', aiError);
-        // Fall back to basic extraction if AI fails
         setExtractedData(extracted);
         setFormData((prev) => ({
           ...prev,
@@ -321,27 +340,46 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!photoFile) return;
+    if (!frontPhotoFile) return;
 
     setIsScanning(true);
     try {
-      // Get upload URL from backend
-      const uploadResponse = await fetch('/api/upload-url', {
+      // Upload front photo
+      const frontUploadResponse = await fetch('/api/upload-url', {
         method: 'POST',
       });
-      const { uploadURL } = await uploadResponse.json();
+      const { uploadURL: frontUploadURL } = await frontUploadResponse.json();
 
-      // Upload photo to object storage
-      await fetch(uploadURL, {
+      await fetch(frontUploadURL, {
         method: 'PUT',
-        body: photoFile,
+        body: frontPhotoFile,
         headers: {
-          'Content-Type': photoFile.type,
+          'Content-Type': frontPhotoFile.type,
         },
       });
 
-      // Call parent handler with photo URL and form data
-      onSubmit(uploadURL.split('?')[0], formData);
+      let backPhotoUrl = null;
+      
+      // Upload back photo if present
+      if (backPhotoFile) {
+        const backUploadResponse = await fetch('/api/upload-url', {
+          method: 'POST',
+        });
+        const { uploadURL: backUploadURL } = await backUploadResponse.json();
+
+        await fetch(backUploadURL, {
+          method: 'PUT',
+          body: backPhotoFile,
+          headers: {
+            'Content-Type': backPhotoFile.type,
+          },
+        });
+        
+        backPhotoUrl = backUploadURL.split('?')[0];
+      }
+
+      // Call parent handler with both photo URLs and form data
+      onSubmit(frontUploadURL.split('?')[0], backPhotoUrl, formData);
     } catch (error) {
       console.error('Error uploading photo:', error);
       alert('Failed to upload photo. Please try again.');
@@ -352,89 +390,140 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" data-testid="form-add-coffee">
-      <div>
-        <Label className="mb-3 block">Coffee Bag Photo</Label>
-        {!photoPreview ? (
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors hover-elevate ${
-              isDragActive ? 'border-primary bg-accent' : 'border-border'
-            }`}
-            data-testid="dropzone-photo"
-          >
-            <input {...getInputProps()} accept="image/*" capture="environment" />
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                <Camera className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium mb-1">
-                  {isDragActive ? 'Drop photo here' : 'Take or upload photo'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Tap to use camera or select from library
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="relative aspect-square">
-              <img
-                src={photoPreview}
-                alt="Coffee bag preview"
-                className="w-full h-full object-cover"
-                data-testid="img-preview"
-              />
-              {isScanning && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
-                    <p className="text-sm">Scanning label...</p>
-                  </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Front Photo */}
+        <div>
+          <Label className="mb-3 block">Front Photo *</Label>
+          {!frontPhotoPreview ? (
+            <div
+              {...frontDropzone.getRootProps()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors hover-elevate ${
+                frontDropzone.isDragActive ? 'border-primary bg-accent' : 'border-border'
+              }`}
+              data-testid="dropzone-front-photo"
+            >
+              <input {...frontDropzone.getInputProps()} accept="image/*" capture="environment" />
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-muted-foreground" />
                 </div>
-              )}
-              {!isScanning && Object.keys(extractedData).length > 0 && (
-                <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  {Object.keys(extractedData).length} fields auto-filled
-                </Badge>
-              )}
+                <p className="font-medium text-sm">Front of bag</p>
+                <p className="text-xs text-muted-foreground">
+                  {frontDropzone.isDragActive ? 'Drop here' : 'Tap to capture'}
+                </p>
+              </div>
             </div>
-            <div className="p-4 flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (photoFile) {
-                    await performOCR(photoFile);
-                  }
-                }}
-                disabled={isScanning}
-                data-testid="button-rescan"
-              >
-                <ScanText className="w-4 h-4 mr-2" />
-                Rescan Text
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setPhotoPreview("");
-                  setPhotoFile(null);
-                  setExtractedData({});
-                }}
-                data-testid="button-change-photo"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Change Photo
-              </Button>
+          ) : (
+            <Card className="overflow-hidden">
+              <div className="relative aspect-square">
+                <img
+                  src={frontPhotoPreview}
+                  alt="Front of coffee bag"
+                  className="w-full h-full object-cover"
+                  data-testid="img-front-preview"
+                />
+              </div>
+              <div className="p-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFrontPhotoPreview("");
+                    setFrontPhotoFile(null);
+                  }}
+                  className="w-full"
+                  data-testid="button-change-front-photo"
+                >
+                  <Upload className="w-3 h-3 mr-1" />
+                  Change
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Back Photo */}
+        <div>
+          <Label className="mb-3 block">Back Photo (Optional)</Label>
+          {!backPhotoPreview ? (
+            <div
+              {...backDropzone.getRootProps()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors hover-elevate ${
+                backDropzone.isDragActive ? 'border-primary bg-accent' : 'border-border'
+              }`}
+              data-testid="dropzone-back-photo"
+            >
+              <input {...backDropzone.getInputProps()} accept="image/*" capture="environment" />
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="font-medium text-sm">Back of bag</p>
+                <p className="text-xs text-muted-foreground">
+                  {backDropzone.isDragActive ? 'Drop here' : 'Tap to capture'}
+                </p>
+              </div>
             </div>
-          </Card>
-        )}
+          ) : (
+            <Card className="overflow-hidden">
+              <div className="relative aspect-square">
+                <img
+                  src={backPhotoPreview}
+                  alt="Back of coffee bag"
+                  className="w-full h-full object-cover"
+                  data-testid="img-back-preview"
+                />
+              </div>
+              <div className="p-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBackPhotoPreview("");
+                    setBackPhotoFile(null);
+                  }}
+                  className="w-full"
+                  data-testid="button-change-back-photo"
+                >
+                  <Upload className="w-3 h-3 mr-1" />
+                  Change
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
+
+      {/* Scanning status */}
+      {isScanning && (
+        <div className="p-4 bg-muted rounded-lg flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm">Scanning photos and extracting information...</span>
+        </div>
+      )}
+
+      {/* Auto-fill badge */}
+      {!isScanning && Object.keys(extractedData).length > 0 && (
+        <div className="flex items-center gap-2">
+          <Badge className="bg-primary text-primary-foreground">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            {Object.keys(extractedData).length} fields auto-filled
+          </Badge>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={performOCR}
+            disabled={isScanning || (!frontPhotoFile && !backPhotoFile)}
+            data-testid="button-rescan"
+          >
+            <ScanText className="w-4 h-4 mr-2" />
+            Rescan Text
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -521,7 +610,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1" data-testid="button-cancel">
           Cancel
         </Button>
-        <Button type="submit" disabled={!photoFile || !formData.roasterName} className="flex-1" data-testid="button-save-entry">
+        <Button type="submit" disabled={!frontPhotoFile || !formData.roasterName} className="flex-1" data-testid="button-save-entry">
           Save Entry
         </Button>
       </div>

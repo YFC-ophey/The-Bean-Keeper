@@ -65,12 +65,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validatedData = insertCoffeeEntrySchema.parse(req.body);
       
-      // Normalize photo URL if it's a presigned URL
-      const photoUrl = objectStorageService.normalizeObjectEntityPath(validatedData.photoUrl);
+      // Normalize photo URLs if they're presigned URLs
+      const frontPhotoUrl = objectStorageService.normalizeObjectEntityPath(validatedData.frontPhotoUrl);
+      const backPhotoUrl = validatedData.backPhotoUrl 
+        ? objectStorageService.normalizeObjectEntityPath(validatedData.backPhotoUrl)
+        : null;
       
       const entry = await storage.createCoffeeEntry({
         ...validatedData,
-        photoUrl,
+        frontPhotoUrl,
+        backPhotoUrl,
       });
       
       res.status(201).json(entry);

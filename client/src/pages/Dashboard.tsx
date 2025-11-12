@@ -34,7 +34,7 @@ export default function Dashboard() {
     queryKey: ["/api/coffee-entries"],
   });
 
-  const handleAddCoffee = async (photoUrl: string, data: {
+  const handleAddCoffee = async (frontPhotoUrl: string, backPhotoUrl: string | null, data: {
     roasterName: string;
     roasterLocation?: string;
     farm?: string;
@@ -46,7 +46,8 @@ export default function Dashboard() {
   }) => {
     try {
       const response = await apiRequest("POST", "/api/coffee-entries", {
-        photoUrl,
+        frontPhotoUrl,
+        backPhotoUrl,
         roasterName: data.roasterName,
         roasterLocation: data.roasterLocation || null,
         farm: data.farm || null,
