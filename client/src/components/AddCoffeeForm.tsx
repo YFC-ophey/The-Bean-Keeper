@@ -69,91 +69,138 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       
       const extracted: ExtractedData = {};
 
-      // Extract roaster name (usually first or prominent line)
-      const potentialRoaster = lines.find(line => 
-        line.length > 3 && line.length < 50 && 
-        /[A-Z]/.test(line) && 
-        !/(washed|natural|honey|ethiopia|colombia|kenya|brazil)/i.test(line)
-      );
-      if (potentialRoaster) {
-        extracted.roasterName = potentialRoaster.trim();
-      }
-
-      // Extract origin countries
-      const origins = [
-        'Ethiopia', 'Colombia', 'Kenya', 'Brazil', 'Guatemala', 'Costa Rica',
-        'Peru', 'Honduras', 'Rwanda', 'Burundi', 'Tanzania', 'Uganda',
-        'El Salvador', 'Nicaragua', 'Panama', 'Mexico', 'Yemen', 'Indonesia',
-        'Papua New Guinea', 'India', 'Vietnam', 'Thailand'
-      ];
-      for (const origin of origins) {
-        if (lowerText.includes(origin.toLowerCase())) {
-          extracted.origin = origin;
-          break;
-        }
-      }
-
-      // Extract process method
-      if (lowerText.includes('washed') || lowerText.includes('wet process')) {
-        extracted.processMethod = 'Washed';
-      } else if (lowerText.includes('natural') || lowerText.includes('dry process')) {
-        extracted.processMethod = 'Natural';
-      } else if (lowerText.includes('honey') || lowerText.includes('pulped natural')) {
-        extracted.processMethod = 'Honey';
-      } else if (lowerText.includes('anaerobic')) {
-        extracted.processMethod = 'Anaerobic';
-      }
-
-      // Extract variety
-      const varieties = [
-        'Heirloom', 'Bourbon', 'Typica', 'Caturra', 'Catuai', 'Gesha', 'Geisha',
-        'SL28', 'SL34', 'Pacamara', 'Villa Sarchi', 'Red Bourbon', 'Yellow Bourbon',
-        'Pink Bourbon', 'Mundo Novo', 'Maragogype'
-      ];
-      for (const variety of varieties) {
-        if (lowerText.includes(variety.toLowerCase())) {
-          extracted.variety = variety;
-          break;
-        }
-      }
-
-      // Extract farm name
-      const farmMatch = text.match(/(?:farm|finca|estate|plantation)[\s:]+([A-Za-z\s]+)/i);
+      // Extract structured label fields (FARM:, ORIGIN:, etc.)
+      const farmMatch = text.match(/(?:FARM|Farm)[\s:]+([^\n]+)/i);
       if (farmMatch) {
         extracted.farm = farmMatch[1].trim();
       }
 
-      // Extract roast date (various formats)
-      const datePatterns = [
-        /roast(?:ed)?[\s:]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/,
-        /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/
-      ];
-      for (const pattern of datePatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          extracted.roastDate = match[1];
-          break;
+      const originMatch = text.match(/(?:ORIGIN|Origin)[\s:]+([^\n]+)/i);
+      if (originMatch) {
+        extracted.origin = originMatch[1].trim();
+      } else {
+        // Fallback: Extract origin countries
+        const origins = [
+          'Ethiopia', 'Colombia', 'Kenya', 'Brazil', 'Guatemala', 'Costa Rica',
+          'Peru', 'Honduras', 'Rwanda', 'Burundi', 'Tanzania', 'Uganda',
+          'El Salvador', 'Nicaragua', 'Panama', 'Mexico', 'Yemen', 'Indonesia',
+          'Papua New Guinea', 'India', 'Vietnam', 'Thailand'
+        ];
+        for (const origin of origins) {
+          if (lowerText.includes(origin.toLowerCase())) {
+            extracted.origin = origin;
+            break;
+          }
         }
       }
 
-      // Extract flavor notes
-      const flavorKeywords = [
-        'chocolate', 'caramel', 'citrus', 'berry', 'fruity', 'floral', 'nutty',
-        'sweet', 'honey', 'vanilla', 'blueberry', 'strawberry', 'cherry',
-        'orange', 'lemon', 'apple', 'peach', 'jasmine', 'rose', 'lavender',
-        'almond', 'hazelnut', 'walnut', 'brown sugar', 'maple', 'toffee',
-        'wine', 'grape', 'tropical', 'mango', 'pineapple', 'coconut',
-        'stone fruit', 'red fruit', 'black tea', 'earl grey', 'spice', 'cinnamon'
-      ];
-      const foundFlavors: string[] = [];
-      for (const flavor of flavorKeywords) {
-        if (lowerText.includes(flavor)) {
-          foundFlavors.push(flavor.charAt(0).toUpperCase() + flavor.slice(1));
+      const varietyMatch = text.match(/(?:VARIETY|Variety)[\s:]+([^\n]+)/i);
+      if (varietyMatch) {
+        extracted.variety = varietyMatch[1].trim();
+      } else {
+        // Fallback: Extract variety keywords
+        const varieties = [
+          'Heirloom', 'Bourbon', 'Typica', 'Caturra', 'Catuai', 'Gesha', 'Geisha',
+          'SL28', 'SL34', 'Ruiru', 'Pacamara', 'Villa Sarchi', 'Red Bourbon', 
+          'Yellow Bourbon', 'Pink Bourbon', 'Mundo Novo', 'Maragogype'
+        ];
+        const foundVarieties: string[] = [];
+        for (const variety of varieties) {
+          if (lowerText.includes(variety.toLowerCase())) {
+            foundVarieties.push(variety);
+          }
+        }
+        if (foundVarieties.length > 0) {
+          extracted.variety = foundVarieties.join(', ');
         }
       }
-      if (foundFlavors.length > 0) {
-        extracted.flavorNotes = foundFlavors.slice(0, 5).join(', ');
+
+      const processMatch = text.match(/(?:PROCESS|Process)[\s:]+([^\n]+)/i);
+      if (processMatch) {
+        extracted.processMethod = processMatch[1].trim();
+      } else {
+        // Fallback: Extract process method keywords
+        if (lowerText.includes('fully washed') || lowerText.includes('washed') || lowerText.includes('wet process')) {
+          extracted.processMethod = 'Washed';
+        } else if (lowerText.includes('natural') || lowerText.includes('dry process')) {
+          extracted.processMethod = 'Natural';
+        } else if (lowerText.includes('honey') || lowerText.includes('pulped natural')) {
+          extracted.processMethod = 'Honey';
+        } else if (lowerText.includes('anaerobic')) {
+          extracted.processMethod = 'Anaerobic';
+        }
+      }
+
+      const flavorMatch = text.match(/(?:FLAVOU?RS?|Flavou?rs?)[\s:]+([^\n]+)/i);
+      if (flavorMatch) {
+        extracted.flavorNotes = flavorMatch[1].trim();
+      } else {
+        // Fallback: Extract flavor keywords
+        const flavorKeywords = [
+          'chocolate', 'caramel', 'citrus', 'berry', 'fruity', 'floral', 'nutty',
+          'sweet', 'honey', 'vanilla', 'blueberry', 'strawberry', 'cherry',
+          'orange', 'lemon', 'apple', 'peach', 'jasmine', 'rose', 'lavender',
+          'almond', 'hazelnut', 'walnut', 'brown sugar', 'maple', 'toffee',
+          'wine', 'grape', 'tropical', 'mango', 'pineapple', 'coconut',
+          'stone fruit', 'red fruit', 'black tea', 'earl grey', 'spice', 'cinnamon',
+          'raspberry'
+        ];
+        const foundFlavors: string[] = [];
+        for (const flavor of flavorKeywords) {
+          if (lowerText.includes(flavor)) {
+            foundFlavors.push(flavor.charAt(0).toUpperCase() + flavor.slice(1));
+          }
+        }
+        if (foundFlavors.length > 0) {
+          extracted.flavorNotes = foundFlavors.slice(0, 5).join(', ');
+        }
+      }
+
+      const roastedMatch = text.match(/(?:ROAST(?:ED)?|Roast(?:ed)?)[\s:]+([^\n]+)/i);
+      if (roastedMatch) {
+        extracted.roastDate = roastedMatch[1].trim();
+      } else {
+        // Fallback: Extract various date formats
+        const datePatterns = [
+          /(\w+ \d{1,2},? \d{4})/,  // October 6, 2025
+          /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/,
+          /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/
+        ];
+        for (const pattern of datePatterns) {
+          const match = text.match(pattern);
+          if (match) {
+            extracted.roastDate = match[1];
+            break;
+          }
+        }
+      }
+
+      // Extract roaster name - look for prominent text with "Coffee" or "Roasters"
+      const roasterPatterns = [
+        /([A-Z\s]+(?:Coffee|COFFEE)[A-Z\s]*(?:Roasters?|ROASTERS?)?)/,
+        /([A-Z][A-Za-z\s]{3,40}(?:Coffee|Roasters))/i
+      ];
+      for (const pattern of roasterPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          const name = match[1].trim().replace(/\s+/g, ' ');
+          if (name.length > 3 && name.length < 60) {
+            extracted.roasterName = name;
+            break;
+          }
+        }
+      }
+
+      // If no roaster found, try first prominent capitalized line
+      if (!extracted.roasterName) {
+        const potentialRoaster = lines.find(line => 
+          line.length > 3 && line.length < 50 && 
+          /[A-Z]/.test(line) && 
+          !/(washed|natural|honey|farm|origin|variety|process|roasted|flavou?rs?)/i.test(line)
+        );
+        if (potentialRoaster) {
+          extracted.roasterName = potentialRoaster.trim();
+        }
       }
 
       // Extract location (city, state)
@@ -162,6 +209,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         extracted.roasterLocation = `${locationMatch[1]}, ${locationMatch[2]}`;
       }
 
+      console.log('Full OCR text:', text);
       console.log('Extracted data:', extracted);
       setExtractedData(extracted);
       setFormData((prev) => ({
