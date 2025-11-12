@@ -1,11 +1,11 @@
-import { type CoffeeEntry, type InsertCoffeeEntry } from "@shared/schema";
+import { type CoffeeEntry, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   getCoffeeEntry(id: string): Promise<CoffeeEntry | undefined>;
   getAllCoffeeEntries(): Promise<CoffeeEntry[]>;
   createCoffeeEntry(entry: InsertCoffeeEntry): Promise<CoffeeEntry>;
-  updateCoffeeEntry(id: string, entry: Partial<InsertCoffeeEntry>): Promise<CoffeeEntry | undefined>;
+  updateCoffeeEntry(id: string, updates: UpdateCoffeeEntry): Promise<CoffeeEntry | undefined>;
   deleteCoffeeEntry(id: string): Promise<boolean>;
 }
 
@@ -49,11 +49,16 @@ export class MemStorage implements IStorage {
     return entry;
   }
 
-  async updateCoffeeEntry(id: string, updates: Partial<InsertCoffeeEntry>): Promise<CoffeeEntry | undefined> {
+  async updateCoffeeEntry(id: string, updates: UpdateCoffeeEntry): Promise<CoffeeEntry | undefined> {
     const entry = this.coffeeEntries.get(id);
     if (!entry) return undefined;
     
-    const updatedEntry = { ...entry, ...updates };
+    // Only update fields that are explicitly provided
+    const updatedEntry: CoffeeEntry = {
+      ...entry,
+      ...(updates.rating !== undefined && { rating: updates.rating }),
+      ...(updates.tastingNotes !== undefined && { tastingNotes: updates.tastingNotes }),
+    };
     this.coffeeEntries.set(id, updatedEntry);
     return updatedEntry;
   }

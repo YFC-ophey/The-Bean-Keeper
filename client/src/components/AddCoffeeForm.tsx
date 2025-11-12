@@ -20,7 +20,16 @@ interface ExtractedData {
 }
 
 interface AddCoffeeFormProps {
-  onSubmit: (data: FormData) => void;
+  onSubmit: (photoUrl: string, data: {
+    roasterName: string;
+    roasterLocation?: string;
+    farm?: string;
+    origin?: string;
+    variety?: string;
+    processMethod?: string;
+    roastDate?: string;
+    flavorNotes?: string;
+  }) => void;
   onCancel: () => void;
 }
 
@@ -223,14 +232,36 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const data = new FormData();
-    if (photoFile) data.append('photo', photoFile);
-    Object.entries(formData).forEach(([key, value]) => {
-      data.append(key, value);
-    });
-    onSubmit(data);
+    
+    if (!photoFile) return;
+
+    setIsScanning(true);
+    try {
+      // Get upload URL from backend
+      const uploadResponse = await fetch('/api/upload-url', {
+        method: 'POST',
+      });
+      const { uploadURL } = await uploadResponse.json();
+
+      // Upload photo to object storage
+      await fetch(uploadURL, {
+        method: 'PUT',
+        body: photoFile,
+        headers: {
+          'Content-Type': photoFile.type,
+        },
+      });
+
+      // Call parent handler with photo URL and form data
+      onSubmit(uploadURL.split('?')[0], formData);
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      alert('Failed to upload photo. Please try again.');
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   return (

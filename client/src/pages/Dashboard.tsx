@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import {
@@ -14,9 +15,8 @@ import CoffeeDetail from "@/components/CoffeeDetail";
 import FilterBar from "@/components/FilterBar";
 import EmptyState from "@/components/EmptyState";
 import { CoffeeEntry } from "@shared/schema";
-import coffeeImage1 from "@assets/generated_images/Craft_coffee_bag_minimal_a5d94523.png";
-import coffeeImage2 from "@assets/generated_images/Specialty_coffee_bag_brown_70802fba.png";
-import coffeeImage3 from "@assets/generated_images/Artisan_coffee_bag_black_1c1b939c.png";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -25,105 +25,90 @@ export default function Dashboard() {
   const [pendingEntry, setPendingEntry] = useState<CoffeeEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const { toast } = useToast();
 
-  // todo: remove mock functionality
-  const [mockEntries, setMockEntries] = useState<CoffeeEntry[]>([
-    {
-      id: "1",
-      photoUrl: coffeeImage1,
-      roasterName: "Blue Bottle Coffee",
-      roasterLocation: "Oakland, CA",
-      roasterAddress: null,
-      roasterWebsite: null,
-      farm: "Finca El Puente",
-      origin: "Ethiopia",
-      variety: "Heirloom",
-      processMethod: "Washed",
-      roastDate: "2024-01-15",
-      flavorNotes: ["Blueberry", "Jasmine", "Citrus"],
-      rating: 5,
-      tastingNotes: "Bright and complex with amazing floral notes",
-      createdAt: new Date("2024-01-20"),
-    },
-    {
-      id: "2",
-      photoUrl: coffeeImage2,
-      roasterName: "Stumptown Coffee",
-      roasterLocation: "Portland, OR",
-      roasterAddress: null,
-      roasterWebsite: null,
-      farm: null,
-      origin: "Colombia",
-      variety: "Bourbon",
-      processMethod: "Washed",
-      roastDate: "2024-01-10",
-      flavorNotes: ["Chocolate", "Caramel", "Orange"],
-      rating: 4,
-      tastingNotes: "Rich and balanced with notes of dark chocolate",
-      createdAt: new Date("2024-01-15"),
-    },
-    {
-      id: "3",
-      photoUrl: coffeeImage3,
-      roasterName: "Verve Coffee",
-      roasterLocation: "Santa Cruz, CA",
-      roasterAddress: null,
-      roasterWebsite: null,
-      farm: null,
-      origin: "Kenya",
-      variety: "SL28",
-      processMethod: "Natural",
-      roastDate: "2024-01-05",
-      flavorNotes: ["Blackberry", "Wine", "Brown Sugar"],
-      rating: 5,
-      tastingNotes: "Incredibly complex and fruity",
-      createdAt: new Date("2024-01-12"),
-    },
-  ]);
+  const { data: entries = [], isLoading } = useQuery<CoffeeEntry[]>({
+    queryKey: ["/api/coffee-entries"],
+  });
 
-  const handleAddCoffee = (formData: FormData) => {
-    console.log("Adding coffee:", formData);
-    // todo: remove mock functionality
-    const newEntry: CoffeeEntry = {
-      id: String(mockEntries.length + 1),
-      photoUrl: coffeeImage1,
-      roasterName: formData.get("roasterName") as string,
-      roasterLocation: formData.get("roasterLocation") as string || null,
-      roasterAddress: null,
-      roasterWebsite: null,
-      farm: null,
-      origin: formData.get("origin") as string || null,
-      variety: formData.get("variety") as string || null,
-      processMethod: formData.get("processMethod") as string || null,
-      roastDate: formData.get("roastDate") as string || null,
-      flavorNotes: formData.get("flavorNotes") 
-        ? (formData.get("flavorNotes") as string).split(",").map(f => f.trim())
-        : [],
-      rating: null,
-      tastingNotes: null,
-      createdAt: new Date(),
-    };
-    setMockEntries([newEntry, ...mockEntries]);
-    setPendingEntry(newEntry);
-    setShowAddForm(false);
-    setShowRatingModal(true);
-  };
+  const handleAddCoffee = async (photoUrl: string, data: {
+    roasterName: string;
+    roasterLocation?: string;
+    farm?: string;
+    origin?: string;
+    variety?: string;
+    processMethod?: string;
+    roastDate?: string;
+    flavorNotes?: string;
+  }) => {
+    try {
+      const response = await apiRequest("POST", "/api/coffee-entries", {
+        photoUrl,
+        roasterName: data.roasterName,
+        roasterLocation: data.roasterLocation || null,
+        farm: data.farm || null,
+        origin: data.origin || null,
+        variety: data.variety || null,
+        processMethod: data.processMethod || null,
+        roastDate: data.roastDate || null,
+        flavorNotes: data.flavorNotes
+          ? data.flavorNotes.split(",").map(f => f.trim()).filter(f => f.length > 0)
+          : null,
+        roasterAddress: null,
+        roasterWebsite: null,
+        rating: null,
+        tastingNotes: null,
+      });
 
-  const handleSaveRating = (rating: number, notes: string) => {
-    console.log("Saving rating:", rating, notes);
-    // todo: remove mock functionality
-    if (pendingEntry) {
-      setMockEntries(mockEntries.map(entry =>
-        entry.id === pendingEntry.id
-          ? { ...entry, rating, tastingNotes: notes }
-          : entry
-      ));
-      setPendingEntry(null);
+      const newEntry = await response.json() as CoffeeEntry;
+      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      
+      setPendingEntry(newEntry);
+      setShowAddForm(false);
+      setShowRatingModal(true);
+
+      toast({
+        title: "Coffee added!",
+        description: "Now rate your coffee experience.",
+      });
+    } catch (error) {
+      console.error("Error adding coffee:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add coffee entry. Please try again.",
+        variant: "destructive",
+      });
     }
-    setShowRatingModal(false);
   };
 
-  const filteredEntries = mockEntries.filter(entry => {
+  const handleSaveRating = async (rating: number, notes: string) => {
+    if (!pendingEntry) return;
+
+    try {
+      await apiRequest("PATCH", `/api/coffee-entries/${pendingEntry.id}`, {
+        rating,
+        tastingNotes: notes || null,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      setPendingEntry(null);
+      setShowRatingModal(false);
+
+      toast({
+        title: "Rating saved!",
+        description: "Your coffee has been rated.",
+      });
+    } catch (error) {
+      console.error("Error saving rating:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save rating. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredEntries = entries.filter(entry => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -143,7 +128,7 @@ export default function Dashboard() {
             <div>
               <h1 className="text-2xl font-semibold" data-testid="text-page-title">Coffee Journal</h1>
               <p className="text-sm text-muted-foreground" data-testid="text-page-subtitle">
-                {mockEntries.length} {mockEntries.length === 1 ? 'entry' : 'entries'}
+                {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
               </p>
             </div>
             <Button onClick={() => setShowAddForm(true)} data-testid="button-add-coffee">
@@ -164,7 +149,11 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {filteredEntries.length === 0 && !searchQuery ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading your coffee journal...</p>
+          </div>
+        ) : filteredEntries.length === 0 && !searchQuery ? (
           <EmptyState onAddClick={() => setShowAddForm(true)} />
         ) : filteredEntries.length === 0 && searchQuery ? (
           <div className="text-center py-12">

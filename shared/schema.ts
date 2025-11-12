@@ -26,5 +26,11 @@ export const insertCoffeeEntrySchema = createInsertSchema(coffeeEntries).omit({
   createdAt: true,
 });
 
+export const updateCoffeeEntrySchema = z.object({
+  rating: z.number().min(1).max(5).optional(),
+  tastingNotes: z.string().nullable().optional(),
+});
+
 export type InsertCoffeeEntry = z.infer<typeof insertCoffeeEntrySchema>;
+export type UpdateCoffeeEntry = z.infer<typeof updateCoffeeEntrySchema>;
 export type CoffeeEntry = typeof coffeeEntries.$inferSelect;
