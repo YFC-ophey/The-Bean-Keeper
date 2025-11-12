@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,25 +51,26 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     flavorNotes: "",
   });
 
-  const onDropFront = useCallback(async (acceptedFiles: File[]) => {
+  const isOCRRunningRef = useRef(false);
+  const pendingOCRRef = useRef(false);
+
+  const onDropFront = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
       setFrontPhotoFile(file);
       const preview = URL.createObjectURL(file);
       setFrontPhotoPreview(preview);
-      await performOCR();
     }
-  }, [frontPhotoFile, backPhotoFile]);
+  }, []);
 
-  const onDropBack = useCallback(async (acceptedFiles: File[]) => {
+  const onDropBack = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
       setBackPhotoFile(file);
       const preview = URL.createObjectURL(file);
       setBackPhotoPreview(preview);
-      await performOCR();
     }
-  }, [frontPhotoFile, backPhotoFile]);
+  }, []);
 
   const frontDropzone = useDropzone({
     onDrop: onDropFront,
@@ -83,7 +84,29 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     multiple: false,
   });
 
+  // Trigger OCR when photo files change
+  useEffect(() => {
+    // Skip if no files are uploaded
+    if (!frontPhotoFile && !backPhotoFile) {
+      return;
+    }
+
+    // If OCR is already running, mark as pending
+    if (isOCRRunningRef.current) {
+      pendingOCRRef.current = true;
+      return;
+    }
+
+    performOCR();
+  }, [frontPhotoFile, backPhotoFile]);
+
   const performOCR = async () => {
+    // Prevent concurrent OCR runs
+    if (isOCRRunningRef.current) {
+      return;
+    }
+
+    isOCRRunningRef.current = true;
     setIsScanning(true);
     try {
       let combinedText = "";
@@ -334,6 +357,13 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       console.error('OCR Error:', error);
     } finally {
       setIsScanning(false);
+      isOCRRunningRef.current = false;
+
+      // If files changed during OCR, rerun
+      if (pendingOCRRef.current) {
+        pendingOCRRef.current = false;
+        performOCR();
+      }
     }
   };
 

@@ -66,7 +66,8 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const entry: CoffeeEntry = { 
       roasterName: insertEntry.roasterName,
-      photoUrl: insertEntry.photoUrl,
+      frontPhotoUrl: insertEntry.frontPhotoUrl,
+      backPhotoUrl: insertEntry.backPhotoUrl ?? null,
       origin: insertEntry.origin ?? null,
       variety: insertEntry.variety ?? null,
       processMethod: insertEntry.processMethod ?? null,

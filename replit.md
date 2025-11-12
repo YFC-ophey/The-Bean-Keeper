@@ -11,12 +11,15 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 **November 12, 2025:**
+- Added support for uploading 2 photos (front and back of coffee bag) for comprehensive information extraction
+- Combined OCR text from both photos sent to ChatGPT for improved extraction accuracy
 - Added AI-powered OCR optimization using OpenAI GPT-5 (via Replit AI Integrations)
 - Migrated from in-memory to PostgreSQL database storage for data persistence
 - Enhanced extraction accuracy for roaster names, origins, varieties, and flavor notes
 - Implemented graceful database fallback for development environments
 - Renamed application from "Coffee Journal" to "Coffee Bean Tracker"
 - Added manual "Rescan Text" button for re-triggering OCR when needed
+- Display both photos side-by-side in detail view when back photo is available
 
 ## System Architecture
 
@@ -36,9 +39,9 @@ Preferred communication style: Simple, everyday language.
 - Typography using Inter font family with specific weight and size conventions
 
 **Key Frontend Components:**
-- `AddCoffeeForm`: Photo upload interface with OCR scanning using Tesseract.js for automatic field extraction
-- `CoffeeCard`: Instagram-style card displaying coffee photo with overlay information
-- `CoffeeDetail`: Modal view showing comprehensive coffee entry details
+- `AddCoffeeForm`: Photo upload interface supporting front and back photos with combined OCR scanning using Tesseract.js for automatic field extraction
+- `CoffeeCard`: Instagram-style card displaying front photo with overlay information
+- `CoffeeDetail`: Modal view showing comprehensive coffee entry details with side-by-side photo display when both photos available
 - `RatingModal`: Star rating interface with tasting notes
 - `FilterBar`: Search and filter interface for browsing entries
 - `StarRating`: Reusable star rating component with interactive and readonly modes
@@ -70,7 +73,7 @@ Preferred communication style: Simple, everyday language.
 
 **Database Schema:**
 The `coffee_entries` table includes:
-- Core fields: id (UUID), photoUrl, roasterName, createdAt
+- Core fields: id (UUID), frontPhotoUrl (required), backPhotoUrl (optional), roasterName, createdAt
 - Roaster info: roasterLocation, roasterAddress, roasterWebsite
 - Coffee details: farm, origin, variety, processMethod, roastDate
 - User input: flavorNotes (array), rating (integer), tastingNotes (text)
@@ -95,13 +98,15 @@ The `coffee_entries` table includes:
 
 **OCR Processing:**
 - **Tesseract.js**: Client-side OCR for extracting raw text from coffee bag photos
-  - Runs in browser to extract text from images
-  - Raw text is sent to AI for intelligent parsing
+  - Runs in browser to extract text from both front and back photos
+  - Combines text from both images before sending to AI
+  - Raw combined text is sent to AI for intelligent parsing
 - **OpenAI GPT-5**: AI-powered text extraction via Replit AI Integrations
-  - Intelligently extracts structured coffee information from OCR text
+  - Intelligently extracts structured coffee information from combined OCR text
   - Better at parsing stylized fonts and context than regex patterns
   - Provides roaster name, location, farm, origin, variety, process, roast date, flavor notes
   - Graceful fallback to regex extraction if AI service fails
+  - Analyzing both bag sides significantly improves extraction accuracy
 
 **UI Component Library:**
 - **shadcn/ui**: Comprehensive component library built on Radix UI primitives
