@@ -2,7 +2,7 @@
 
 ## Overview
 
-A mobile-first coffee tracking application that allows users to photograph coffee bags, extract information via OCR, and maintain a personal journal of their coffee experiences. The app combines photo-centric design with structured data organization, featuring automatic data extraction from coffee bag photos, roaster location mapping, and rating/tasting note capabilities.
+A mobile-first coffee tracking application that allows users to photograph coffee bags, extract information via OCR, and maintain a personal journal of their coffee experiences. The app combines photo-centric design with structured data organization, featuring automatic data extraction from coffee bag photos, roaster website links, Google Maps integration, and rating/tasting note capabilities.
 
 ## User Preferences
 
@@ -21,6 +21,11 @@ Preferred communication style: Simple, everyday language.
 - Added manual "Rescan Text" button for re-triggering OCR when needed
 - Display both photos side-by-side in detail view when back photo is available
 - Added delete functionality with confirmation dialog for removing coffee entries
+- **Replaced "Roaster Location" field with "Roaster Website" field throughout UI**
+  - AddCoffeeForm and EditCoffeeForm now capture website URLs instead of location text
+  - CoffeeDetail displays website as clickable external link with clean formatting
+  - Google Maps integration now searches by roaster name or website (previously used location)
+  - OpenAI extraction prioritizes website URL extraction over location parsing
 
 ## System Architecture
 
@@ -40,9 +45,9 @@ Preferred communication style: Simple, everyday language.
 - Typography using Inter font family with specific weight and size conventions
 
 **Key Frontend Components:**
-- `AddCoffeeForm`: Photo upload interface supporting front and back photos with combined OCR scanning using Tesseract.js for automatic field extraction
+- `AddCoffeeForm`: Photo upload interface supporting front and back photos with combined OCR scanning using Tesseract.js for automatic field extraction including roaster website
 - `CoffeeCard`: Instagram-style card displaying front photo with overlay information
-- `CoffeeDetail`: Modal view showing comprehensive coffee entry details with side-by-side photo display when both photos available
+- `CoffeeDetail`: Modal view showing comprehensive coffee entry details with side-by-side photo display when both photos available; displays roaster website as clickable external link
 - `RatingModal`: Star rating interface with tasting notes
 - `FilterBar`: Search and filter interface for browsing entries
 - `StarRating`: Reusable star rating component with interactive and readonly modes
@@ -75,7 +80,7 @@ Preferred communication style: Simple, everyday language.
 **Database Schema:**
 The `coffee_entries` table includes:
 - Core fields: id (UUID), frontPhotoUrl (required), backPhotoUrl (optional), roasterName, createdAt
-- Roaster info: roasterLocation, roasterAddress, roasterWebsite
+- Roaster info: roasterWebsite (displayed in UI), roasterLocation (deprecated in UI), roasterAddress
 - Coffee details: farm, origin, variety, processMethod, roastDate
 - User input: flavorNotes (array), rating (integer), tastingNotes (text)
 
@@ -105,7 +110,8 @@ The `coffee_entries` table includes:
 - **OpenAI GPT-5**: AI-powered text extraction via Replit AI Integrations
   - Intelligently extracts structured coffee information from combined OCR text
   - Better at parsing stylized fonts and context than regex patterns
-  - Provides roaster name, location, farm, origin, variety, process, roast date, flavor notes
+  - Provides roaster name, website, farm, origin, variety, process, roast date, flavor notes
+  - Prioritizes website URL extraction over location parsing
   - Graceful fallback to regex extraction if AI service fails
   - Analyzing both bag sides significantly improves extraction accuracy
 
@@ -115,10 +121,11 @@ The `coffee_entries` table includes:
   - Customized Tailwind theme with neutral base color
   - Components aliased via `@/components` path
 
-**Mapping (Future Integration):**
-- Google Maps Embed API for roaster location visualization
-  - Placeholder implementation in `CoffeeDetail` component
-  - Requires `GOOGLE_MAPS_API_KEY` environment variable
+**Mapping Integration:**
+- Google Maps search integration for finding roasters
+  - Uses roaster name or website URL for search query
+  - External link opens Google Maps in new tab
+  - Placeholder map visualization in `CoffeeDetail` component
 
 **Build & Development Tools:**
 - **Vite**: Development server and build system with HMR
