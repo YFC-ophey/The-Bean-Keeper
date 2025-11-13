@@ -181,13 +181,17 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
                 {entry.weight && (
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Weight</span>
-                    <span className="text-sm font-medium" data-testid="text-detail-weight">{entry.weight}</span>
+                    <span className="text-sm font-medium" data-testid="text-detail-weight">
+                      {entry.weight.match(/g|lbs|oz/i) ? entry.weight : entry.weight + 'g'}
+                    </span>
                   </div>
                 )}
                 {entry.price && (
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Price</span>
-                    <span className="text-sm font-medium" data-testid="text-detail-price">{entry.price}</span>
+                    <span className="text-sm font-medium" data-testid="text-detail-price">
+                      {entry.price.startsWith('$') ? entry.price : '$' + entry.price}
+                    </span>
                   </div>
                 )}
               </div>

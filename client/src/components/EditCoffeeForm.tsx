@@ -125,6 +125,12 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
             id="weight"
             value={formData.weight}
             onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+            onBlur={(e) => {
+              const value = e.target.value.trim();
+              if (value && !value.match(/g|lbs|oz/i)) {
+                setFormData({ ...formData, weight: value + 'g' });
+              }
+            }}
             placeholder="e.g., 250g, 12oz"
             data-testid="input-edit-weight"
           />
@@ -135,6 +141,12 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
             id="price"
             value={formData.price}
             onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            onBlur={(e) => {
+              const value = e.target.value.trim();
+              if (value && !value.startsWith('$')) {
+                setFormData({ ...formData, price: '$' + value });
+              }
+            }}
             placeholder="e.g., $15.99"
             data-testid="input-edit-price"
           />
