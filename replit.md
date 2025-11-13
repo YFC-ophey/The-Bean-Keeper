@@ -10,6 +10,29 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**November 13, 2025:**
+- **Fixed OCR text cleaning to remove special character artifacts while preserving structure**
+  - Enhanced cleanText() function removes mixed-case gibberish patterns (e.g., "Kenye« | il aE" → "Kenya")
+  - Preserves newlines for line-based extraction while sanitizing OCR noise
+  - Applied to both raw OCR text and AI-returned field values
+- **Enhanced roast date extraction accuracy**
+  - Improved AI prompt with multiple date format examples
+  - Better recognition of various date patterns from coffee bag labels
+- **Added intelligent fallback for roaster name extraction**
+  - Extracts roaster name from website URL when OCR scan fails
+  - Prevents duplicate "Coffee" suffix when using website fallback
+- **Implemented weight, price, and "Purchase Again" fields**
+  - Added weight (text) and price (text) fields to track purchase details
+  - AddCoffeeForm includes weight and price input fields with appropriate placeholders
+  - Added purchaseAgain (boolean, default: false) field with heart toggle UI
+  - RatingModal includes "Purchase Again?" switch with visual heart icon feedback
+  - EditCoffeeForm preserves all field values including purchaseAgain state
+  - CoffeeDetail displays weight and price in Coffee Details section
+  - CoffeeDetail shows "Would purchase again" badge with heart icon when true (positive-only messaging)
+  - Schema migration: purchaseAgain is non-nullable boolean defaulting to false
+  - RatingModal uses useEffect to hydrate from existing entry values when re-rating
+  - Full data flow: Create → Rate → Edit → Display maintains field persistence
+
 **November 12, 2025:**
 - Added support for uploading 2 photos (front and back of coffee bag) for comprehensive information extraction
 - Combined OCR text from both photos sent to ChatGPT for improved extraction accuracy
@@ -45,10 +68,11 @@ Preferred communication style: Simple, everyday language.
 - Typography using Inter font family with specific weight and size conventions
 
 **Key Frontend Components:**
-- `AddCoffeeForm`: Photo upload interface supporting front and back photos with combined OCR scanning using Tesseract.js for automatic field extraction including roaster website
+- `AddCoffeeForm`: Photo upload interface supporting front and back photos with combined OCR scanning using Tesseract.js for automatic field extraction including roaster website, weight, and price
 - `CoffeeCard`: Instagram-style card displaying front photo with overlay information
-- `CoffeeDetail`: Modal view showing comprehensive coffee entry details with side-by-side photo display when both photos available; displays roaster website as clickable external link
-- `RatingModal`: Star rating interface with tasting notes
+- `CoffeeDetail`: Modal view showing comprehensive coffee entry details with side-by-side photo display when both photos available; displays roaster website as clickable external link, weight/price in Coffee Details section, and "Purchase Again" badge with heart icon
+- `RatingModal`: Star rating interface with tasting notes and "Purchase Again?" toggle with heart icon feedback
+- `EditCoffeeForm`: Edit existing coffee entries with full field preservation including purchaseAgain state
 - `FilterBar`: Search and filter interface for browsing entries
 - `StarRating`: Reusable star rating component with interactive and readonly modes
 
@@ -81,8 +105,8 @@ Preferred communication style: Simple, everyday language.
 The `coffee_entries` table includes:
 - Core fields: id (UUID), frontPhotoUrl (required), backPhotoUrl (optional), roasterName, createdAt
 - Roaster info: roasterWebsite (displayed in UI), roasterLocation (deprecated in UI), roasterAddress
-- Coffee details: farm, origin, variety, processMethod, roastDate
-- User input: flavorNotes (array), rating (integer), tastingNotes (text)
+- Coffee details: farm, origin, variety, processMethod, roastDate, weight (text), price (text)
+- User input: flavorNotes (array), rating (integer), tastingNotes (text), purchaseAgain (boolean, default: false)
 
 **Storage Abstraction:**
 - `IStorage` interface defines standard data operations

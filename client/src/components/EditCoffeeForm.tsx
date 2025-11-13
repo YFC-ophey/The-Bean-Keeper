@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { CoffeeEntry } from "@shared/schema";
 import StarRating from "./StarRating";
+import { Heart } from "lucide-react";
 
 interface EditCoffeeFormProps {
   entry: CoffeeEntry;
@@ -19,6 +21,9 @@ interface EditCoffeeFormProps {
     flavorNotes?: string;
     rating?: number;
     tastingNotes?: string;
+    weight?: string;
+    price?: string;
+    purchaseAgain?: boolean;
   }) => void;
   onCancel: () => void;
 }
@@ -35,6 +40,9 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
     flavorNotes: entry.flavorNotes?.join(", ") || "",
     rating: entry.rating || 0,
     tastingNotes: entry.tastingNotes || "",
+    weight: entry.weight || "",
+    price: entry.price || "",
+    purchaseAgain: entry.purchaseAgain ?? false,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -111,6 +119,26 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
             data-testid="input-edit-roast-date"
           />
         </div>
+        <div>
+          <Label htmlFor="weight">Weight</Label>
+          <Input
+            id="weight"
+            value={formData.weight}
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+            placeholder="e.g., 250g, 12oz"
+            data-testid="input-edit-weight"
+          />
+        </div>
+        <div>
+          <Label htmlFor="price">Price</Label>
+          <Input
+            id="price"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            placeholder="e.g., $15.99"
+            data-testid="input-edit-price"
+          />
+        </div>
       </div>
 
       <div>
@@ -134,6 +162,19 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
             size="lg"
           />
         </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Heart className={`w-5 h-5 ${formData.purchaseAgain ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+          <Label htmlFor="purchaseAgain">Purchase Again?</Label>
+        </div>
+        <Switch
+          id="purchaseAgain"
+          checked={formData.purchaseAgain}
+          onCheckedChange={(checked) => setFormData({ ...formData, purchaseAgain: checked })}
+          data-testid="switch-purchase-again"
+        />
       </div>
 
       <div>

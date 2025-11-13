@@ -79,6 +79,9 @@ export class MemStorage implements IStorage {
       roasterWebsite: insertEntry.roasterWebsite ?? null,
       rating: insertEntry.rating ?? null,
       tastingNotes: insertEntry.tastingNotes ?? null,
+      weight: insertEntry.weight ?? null,
+      price: insertEntry.price ?? null,
+      purchaseAgain: insertEntry.purchaseAgain ?? false,
       id,
       createdAt: new Date()
     };
@@ -105,6 +108,9 @@ export class MemStorage implements IStorage {
       ...(updates.flavorNotes !== undefined && { flavorNotes: updates.flavorNotes }),
       ...(updates.rating !== undefined && { rating: updates.rating }),
       ...(updates.tastingNotes !== undefined && { tastingNotes: updates.tastingNotes }),
+      ...(updates.weight !== undefined && { weight: updates.weight }),
+      ...(updates.price !== undefined && { price: updates.price }),
+      ...(updates.purchaseAgain !== undefined && { purchaseAgain: updates.purchaseAgain }),
     };
     this.coffeeEntries.set(id, updatedEntry);
     return updatedEntry;

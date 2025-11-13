@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -19,12 +19,18 @@ export const coffeeEntries = pgTable("coffee_entries", {
   flavorNotes: text("flavor_notes").array(),
   rating: integer("rating"),
   tastingNotes: text("tasting_notes"),
+  weight: text("weight"),
+  price: text("price"),
+  purchaseAgain: boolean("purchase_again").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertCoffeeEntrySchema = createInsertSchema(coffeeEntries).omit({
   id: true,
   createdAt: true,
+  purchaseAgain: true,
+}).extend({
+  purchaseAgain: z.boolean().default(false),
 });
 
 export const updateCoffeeEntrySchema = z.object({
@@ -40,6 +46,9 @@ export const updateCoffeeEntrySchema = z.object({
   flavorNotes: z.array(z.string()).nullable().optional(),
   rating: z.number().min(1).max(5).nullable().optional(),
   tastingNotes: z.string().nullable().optional(),
+  weight: z.string().nullable().optional(),
+  price: z.string().nullable().optional(),
+  purchaseAgain: z.boolean().optional(),
 });
 
 export type InsertCoffeeEntry = z.infer<typeof insertCoffeeEntrySchema>;

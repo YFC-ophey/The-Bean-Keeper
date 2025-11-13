@@ -43,6 +43,8 @@ export default function Dashboard() {
     processMethod?: string;
     roastDate?: string;
     flavorNotes?: string;
+    weight?: string;
+    price?: string;
   }) => {
     try {
       const response = await apiRequest("POST", "/api/coffee-entries", {
@@ -62,6 +64,8 @@ export default function Dashboard() {
         roasterWebsite: data.roasterWebsite || null,
         rating: null,
         tastingNotes: null,
+        weight: data.weight || null,
+        price: data.price || null,
       });
 
       const newEntry = await response.json() as CoffeeEntry;
@@ -85,14 +89,42 @@ export default function Dashboard() {
     }
   };
 
-  const handleSaveRating = async (rating: number, notes: string) => {
+  const handleSaveRating = async (rating: number, notes: string, purchaseAgain: boolean) => {
     if (!pendingEntry) return;
 
     try {
-      await apiRequest("PATCH", `/api/coffee-entries/${pendingEntry.id}`, {
-        rating,
-        tastingNotes: notes || null,
-      });
+      // Build update payload - only include fields that have changed
+      const updates: {
+        rating?: number | null;
+        tastingNotes?: string | null;
+        purchaseAgain: boolean;
+      } = {
+        purchaseAgain,
+      };
+
+      // Update rating only if user provided one
+      if (rating > 0) {
+        updates.rating = rating;
+        // Only include notes if user typed something (empty means don't change)
+        if (notes) {
+          updates.tastingNotes = notes;
+        }
+      } else if (pendingEntry.rating) {
+        // Preserve existing rating if user didn't change it
+        updates.rating = pendingEntry.rating;
+        // Only include notes if user typed something
+        if (notes) {
+          updates.tastingNotes = notes;
+        }
+      } else {
+        // No existing rating and no new rating - that's fine for purchaseAgain-only updates
+        // Only include notes if user typed something
+        if (notes) {
+          updates.tastingNotes = notes;
+        }
+      }
+
+      await apiRequest("PATCH", `/api/coffee-entries/${pendingEntry.id}`, updates);
 
       await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
       setPendingEntry(null);
@@ -123,6 +155,9 @@ export default function Dashboard() {
     flavorNotes?: string;
     rating?: number;
     tastingNotes?: string;
+    weight?: string;
+    price?: string;
+    purchaseAgain?: boolean;
   }) => {
     if (!editEntry) return;
 
@@ -140,6 +175,9 @@ export default function Dashboard() {
           : null,
         rating: data.rating || null,
         tastingNotes: data.tastingNotes || null,
+        weight: data.weight || null,
+        price: data.price || null,
+        purchaseAgain: data.purchaseAgain ?? false,
       });
 
       await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
@@ -283,6 +321,9 @@ export default function Dashboard() {
         }}
         onSave={handleSaveRating}
         roasterName={pendingEntry?.roasterName}
+        initialRating={pendingEntry?.rating ?? 0}
+        initialNotes={pendingEntry?.tastingNotes ?? ""}
+        initialPurchaseAgain={pendingEntry?.purchaseAgain ?? false}
       />
 
       <CoffeeDetail

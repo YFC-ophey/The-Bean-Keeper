@@ -43,12 +43,14 @@ Return a JSON object with these fields (use null for missing fields):
 - roasterWebsite: Website URL if mentioned (prioritize this - look for URLs, domain names, or web addresses)
 - roasterLocation: City, state, or country of the roaster (only if clearly stated)
 - roasterAddress: Full address if available
-- farm: Farm or estate name
-- origin: Country or region where coffee was grown
-- variety: Coffee variety/varietal (e.g., "Bourbon", "Typica", "Gesha")
-- processMethod: Processing method (e.g., "Washed", "Natural", "Honey")
-- roastDate: Roast date if mentioned (keep original format)
-- flavorNotes: Array of flavor descriptors (e.g., ["chocolate", "citrus", "caramel"])`
+- farm: Farm or estate name (clean text only, no OCR artifacts)
+- origin: Country or region where coffee was grown (clean text only, no special characters)
+- variety: Coffee variety/varietal (e.g., "Bourbon", "Typica", "Gesha") - clean text only
+- processMethod: Processing method (e.g., "Washed", "Natural", "Honey") - clean text only
+- roastDate: Roast date if mentioned - look for dates near words like "ROAST", "ROASTED", "ROAST DATE", or standalone dates. Return in clean format like "MM/DD/YYYY" or "Month DD, YYYY"
+- flavorNotes: Array of flavor descriptors (e.g., ["chocolate", "citrus", "caramel"])
+
+Important: Return only clean text without OCR artifacts like special characters, pipe symbols, or gibberish. For dates, look carefully for any date format including MM/DD/YYYY, DD/MM/YYYY, or written formats like "January 15, 2025".`
         }
       ],
       response_format: { type: "json_object" },

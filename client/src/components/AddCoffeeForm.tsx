@@ -29,6 +29,8 @@ interface AddCoffeeFormProps {
     processMethod?: string;
     roastDate?: string;
     flavorNotes?: string;
+    weight?: string;
+    price?: string;
   }) => void;
   onCancel: () => void;
 }
@@ -49,6 +51,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     processMethod: "",
     roastDate: "",
     flavorNotes: "",
+    weight: "",
+    price: "",
   });
 
   const isOCRRunningRef = useRef(false);
@@ -132,7 +136,28 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         return;
       }
 
-      const text = combinedText;
+      // Clean OCR text to remove artifacts and special characters
+      const cleanText = (rawText: string): string => {
+        return rawText
+          .split('\n')
+          .map(line => {
+            return line
+              // Remove common OCR artifacts (but keep legitimate apostrophes)
+              .replace(/[«»`´""]/g, '')
+              // Remove non-printable characters and control characters
+              .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+              // Remove OCR artifacts at end of lines: mixed-case gibberish like "| il aE", "| Il a3"
+              // Only remove if it's mixed case or has unusual pattern (not valid words)
+              .replace(/\s*\|\s*[a-z]{1,2}\s+[a-zA-Z]{1,3}\s*$/g, '')
+              // Clean up multiple spaces within the line
+              .replace(/\s+/g, ' ')
+              .trim();
+          })
+          .join('\n')
+          .trim();
+      };
+
+      const text = cleanText(combinedText);
       const lowerText = text.toLowerCase();
       const lines = text.split('\n').filter(line => line.trim());
       
@@ -321,17 +346,45 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
           const aiExtracted = await aiResponse.json();
           console.log('AI-enhanced extracted data:', aiExtracted);
           
+          // Clean AI-extracted values to remove any remaining artifacts
+          const cleanValue = (value: string | undefined): string | undefined => {
+            if (!value) return value;
+            return value
+              .replace(/[«»`´""]/g, '')
+              .replace(/\s*\|\s*[a-zA-Z0-9]{1,3}(\s+[a-zA-Z0-9]{1,3})*\s*$/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+          };
+          
           // Merge AI results with basic extraction, preferring AI results when available
           const mergedData: ExtractedData = {
-            roasterName: aiExtracted.roasterName || extracted.roasterName,
-            roasterWebsite: aiExtracted.roasterWebsite || extracted.roasterWebsite,
-            farm: aiExtracted.farm || extracted.farm,
-            origin: aiExtracted.origin || extracted.origin,
-            variety: aiExtracted.variety || extracted.variety,
-            processMethod: aiExtracted.processMethod || extracted.processMethod,
-            roastDate: aiExtracted.roastDate || extracted.roastDate,
-            flavorNotes: aiExtracted.flavorNotes ? aiExtracted.flavorNotes.join(', ') : extracted.flavorNotes,
+            roasterName: cleanValue(aiExtracted.roasterName) || extracted.roasterName,
+            roasterWebsite: cleanValue(aiExtracted.roasterWebsite) || extracted.roasterWebsite,
+            farm: cleanValue(aiExtracted.farm) || extracted.farm,
+            origin: cleanValue(aiExtracted.origin) || extracted.origin,
+            variety: cleanValue(aiExtracted.variety) || extracted.variety,
+            processMethod: cleanValue(aiExtracted.processMethod) || extracted.processMethod,
+            roastDate: cleanValue(aiExtracted.roastDate) || extracted.roastDate,
+            flavorNotes: aiExtracted.flavorNotes ? aiExtracted.flavorNotes.map(cleanValue).filter(Boolean).join(', ') : extracted.flavorNotes,
           };
+          
+          // Fallback: If no roaster name found but we have a website, extract from website
+          if (!mergedData.roasterName && mergedData.roasterWebsite) {
+            let websiteName = mergedData.roasterWebsite
+              .replace(/^https?:\/\/(www\.)?/, '')
+              .split(/[/.]/)[0]
+              .split(/[-_]/)
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+            
+            // Remove redundant "Coffee" or "Roasters" suffix if domain already contains it
+            const lowerName = websiteName.toLowerCase();
+            if (lowerName.includes('coffee') || lowerName.includes('roaster')) {
+              mergedData.roasterName = websiteName;
+            } else {
+              mergedData.roasterName = websiteName + ' Coffee';
+            }
+          }
           
           setExtractedData(mergedData);
           setFormData((prev) => ({
@@ -620,6 +673,26 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
             value={formData.roastDate}
             onChange={(e) => setFormData({ ...formData, roastDate: e.target.value })}
             data-testid="input-roast-date"
+          />
+        </div>
+        <div>
+          <Label htmlFor="weight">Weight</Label>
+          <Input
+            id="weight"
+            value={formData.weight}
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+            placeholder="e.g., 250g, 12oz"
+            data-testid="input-weight"
+          />
+        </div>
+        <div>
+          <Label htmlFor="price">Price</Label>
+          <Input
+            id="price"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            placeholder="e.g., $15.99"
+            data-testid="input-price"
           />
         </div>
       </div>

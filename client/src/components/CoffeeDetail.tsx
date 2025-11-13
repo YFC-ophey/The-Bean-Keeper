@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Calendar, ExternalLink, X, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, X, Pencil, Trash2, Heart } from "lucide-react";
 import StarRating from "./StarRating";
 import { CoffeeEntry } from "@shared/schema";
 import { format } from "date-fns";
@@ -39,9 +39,6 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
 
   // Use roaster name or website for Google Maps search
   const mapSearchQuery = entry.roasterWebsite || entry.roasterName;
-  const mapEmbedUrl = mapSearchQuery
-    ? `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(mapSearchQuery)}`
-    : null;
 
   const handleDelete = () => {
     setShowDeleteConfirm(false);
@@ -181,6 +178,18 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
                     <span className="text-sm font-medium" data-testid="text-detail-roast-date">{entry.roastDate}</span>
                   </div>
                 )}
+                {entry.weight && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Weight</span>
+                    <span className="text-sm font-medium" data-testid="text-detail-weight">{entry.weight}</span>
+                  </div>
+                )}
+                {entry.price && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Price</span>
+                    <span className="text-sm font-medium" data-testid="text-detail-price">{entry.price}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -200,12 +209,22 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
               </>
             )}
 
-            {entry.rating && (
+            {(entry.rating || entry.purchaseAgain) && (
               <>
                 <Separator />
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">My Rating</h3>
-                  <StarRating rating={entry.rating} readonly size="lg" />
+                  {entry.rating && (
+                    <>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3">My Rating</h3>
+                      <StarRating rating={entry.rating} readonly size="lg" />
+                    </>
+                  )}
+                  {entry.purchaseAgain && (
+                    <div className={`flex items-center gap-2 text-sm ${entry.rating ? 'mt-3' : ''}`}>
+                      <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                      <span className="text-muted-foreground" data-testid="text-purchase-again">Would purchase again</span>
+                    </div>
+                  )}
                 </div>
               </>
             )}
