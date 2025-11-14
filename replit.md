@@ -1,4 +1,4 @@
-# Coffee Bean Tracker App
+# The Bean Keeper
 
 ## Overview
 
@@ -40,7 +40,7 @@ Preferred communication style: Simple, everyday language.
 - Migrated from in-memory to PostgreSQL database storage for data persistence
 - Enhanced extraction accuracy for roaster names, origins, varieties, and flavor notes
 - Implemented graceful database fallback for development environments
-- Renamed application from "Coffee Journal" to "Coffee Bean Tracker"
+- Renamed application from "Coffee Journal" to "The Bean Keeper"
 - Added manual "Rescan Text" button for re-triggering OCR when needed
 - Display both photos side-by-side in detail view when back photo is available
 - Added delete functionality with confirmation dialog for removing coffee entries
