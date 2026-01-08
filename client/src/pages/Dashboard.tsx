@@ -30,6 +30,7 @@ import UserGuideModal from "@/components/UserGuideModal";
 import HelpButton from "@/components/HelpButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotionButton from "@/components/NotionButton";
+import AboutSection from "@/components/AboutSection";
 import { CoffeeEntry } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -463,6 +464,9 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* About Section - Introduction for new users */}
+        <AboutSection />
+
         {isLoading ? (
           <div className="text-center py-20">
             <div className="inline-block w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
