@@ -219,10 +219,10 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ## 👨‍💻 Author
 
-**Your Name**
-- Portfolio: [your-portfolio.com](https://your-portfolio.com)
-- LinkedIn: [linkedin.com/in/yourname](https://linkedin.com/in/yourname)
-- GitHub: [@yourusername](https://github.com/yourusername)
+**Ophelia Chen**
+- Portfolio: [your-portfolio.com]
+- LinkedIn: [https://www.linkedin.com/in/opheliandata/]
+- GitHub: [@YFC-ophey]
 
 ## 🙏 Acknowledgments
 
