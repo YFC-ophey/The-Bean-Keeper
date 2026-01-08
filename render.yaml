@@ -1,0 +1,42 @@
+services:
+  # Web service for The Bean Keeper
+  - type: web
+    name: the-bean-keeper
+    runtime: node
+    region: oregon # Choose: oregon, frankfurt, singapore (closest to you)
+    plan: free
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+
+    # Health check endpoint
+    healthCheckPath: /api/health
+
+    # Environment variables (add these in Render dashboard)
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: PORT
+        value: 10000
+
+      # Add these via Render dashboard (keep them secret!)
+      - key: GROQ_API_KEY
+        sync: false
+
+      - key: NOTION_API_KEY
+        sync: false
+
+      - key: NOTION_DATABASE_ID
+        sync: false
+
+      - key: VITE_GOOGLE_MAPS_API_KEY
+        sync: false
+
+      # Optional: Add if you migrate to Cloudinary
+      # - key: CLOUDINARY_CLOUD_NAME
+      #   sync: false
+      # - key: CLOUDINARY_API_KEY
+      #   sync: false
+      # - key: CLOUDINARY_API_SECRET
+      #   sync: false

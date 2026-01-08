@@ -1,0 +1,91 @@
+{
+  "addCoffee": {
+    "title": "新增咖啡",
+    "photosTitle": "咖啡袋照片",
+    "frontPhoto": "正面照片",
+    "required": "*",
+    "backPhoto": "背面照片（選填）",
+    "frontOfBag": "咖啡袋正面",
+    "backOfBag": "咖啡袋背面",
+    "dropPhotoHere": "將照片放在這裡...",
+    "takePhoto": "拍照",
+    "useCamera": "使用相機",
+    "choosePhoto": "選擇照片",
+    "fromDevice": "從裝置選擇",
+    "dragAndDrop": "或拖放檔案",
+    "change": "更換",
+    "changePhoto": "更換照片",
+    "frontAlt": "咖啡袋正面照片",
+    "backAlt": "咖啡袋背面照片",
+    "detailsTitle": "咖啡詳情",
+    "extracting": "正在從照片中提取咖啡資訊...",
+    "aiProcessing": "AI 正在讀取您的咖啡袋...",
+    "scanning": {
+      "readingText": "正在讀取照片中的文字...",
+      "aiAnalyzing": "AI 正在分析咖啡詳情...",
+      "uploadingPhotos": "正在上傳照片...",
+      "thisMayTake": "這可能需要幾秒鐘"
+    },
+    "autoFill": {
+      "fieldsAutoFilled": "欄位已自動填入",
+      "field": "欄位",
+      "fields": "欄位",
+      "rescan": "重新掃描"
+    },
+    "sections": {
+      "essentialInfo": "基本資訊",
+      "additionalDetails": "附加詳情",
+      "filled": "已填入"
+    },
+    "selectRoastLevel": "選擇烘焙度",
+    "flavorNotesHint": "多個風味請用逗號分隔",
+    "buttons": {
+      "brewing": "處理中...",
+      "saved": "已儲存！",
+      "saveEntry": "儲存 🫘"
+    },
+    "labels": {
+      "roasterName": "烘焙店家名稱",
+      "roasterWebsite": "烘焙店家網站",
+      "roasterAddress": "烘焙店家地址",
+      "farm": "農場 / 莊園 ",
+      "origin": "產地 / 國家",
+      "variety": "品種 / 品系",
+      "processMethod": "處理法",
+      "roastLevel": "烘焙度",
+      "roastDate": "烘焙日期",
+      "flavorNotes": "風味描述",
+      "weight": "重量",
+      "price": "價格",
+      "purchaseAgain": "會再次購買"
+    },
+    "placeholders": {
+      "roasterName": "例如：Happy Goat Coffee Co.",
+      "roasterWebsite": "例如：https://happygoat.ca",
+      "roasterAddress": "街道地址，用於地圖定位",
+      "farm": "例如：Finca El Paraíso",
+      "origin": "例如：衣索比亞、哥倫比亞",
+      "variety": "例如：藝伎、SL28",
+      "processMethod": "例如：水洗、日曬、蜜處理",
+      "roastDate": "例如：2024-12-10",
+      "flavorNotes": "用逗號分隔，例如：巧克力、焦糖、柑橘",
+      "weight": "例如：340克、12盎司",
+      "price": "例如：NT$550"
+    },
+    "roastLevels": {
+      "light": "淺烘焙",
+      "medium": "中烘焙",
+      "dark": "深烘焙"
+    },
+    "validation": {
+      "roasterNameRequired": "烘焙店家名稱為必填項",
+      "frontPhotoRequired": "正面照片為必填項",
+      "invalidUrl": "請輸入有效的網址"
+    }
+  },
+  "editCoffee": {
+    "title": "編輯咖啡",
+    "save": "儲存變更",
+    "delete": "刪除 ❌"
+  }
+}

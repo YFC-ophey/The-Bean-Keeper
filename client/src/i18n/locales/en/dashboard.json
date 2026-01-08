@@ -1,0 +1,41 @@
+{
+  "header": {
+    "title": "The Bean Keeper",
+    "searchPlaceholder": "Search by roaster, origin, or variety...",
+    "addCoffee": "Add Coffee"
+  },
+  "filters": {
+    "all": "All",
+    "roastLevel": "Roast Level",
+    "rating": "Rating",
+    "origin": "Origin",
+    "sortBy": "Sort by",
+    "newest": "Newest First",
+    "oldest": "Oldest First",
+    "rating_high": "Highest Rated",
+    "rating_low": "Lowest Rated",
+    "name": "Name A-Z",
+    "origin_az": "Origin A-Z",
+    "activeFilters": "Active filters",
+    "clearAll": "Clear all"
+  },
+  "stats": {
+    "journey": "Your Coffee Bean Journey Starts Here",
+    "subtitle": "Why Not Track Good Stuff ☕️",
+    "totalCollection": "Total Collection",
+    "beans": "beans",
+    "connoisseur": "Quite the connoisseur",
+    "building": "Building your collection",
+    "originsExplored": "Origins Explored",
+    "countries": "countries",
+    "mostLoved": "Most Loved",
+    "topOrigin": "top origin",
+    "averageQuality": "Average Quality"
+  },
+  "empty": {
+    "title": "Begin Your Coffee Journey",
+    "subtitle": "Capture the story of every bean—from artisan roasters to your morning ritual.",
+    "description": "Track origins, tasting notes, and discover your perfect roast.",
+    "action": "Add Your First Coffee"
+  }
+}

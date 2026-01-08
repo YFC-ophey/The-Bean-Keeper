@@ -1,10 +1,25 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Notion database ID - this will be the same for all users since we're using a single database
+const NOTION_DATABASE_ID = "a12cbbbc-b1a4-421d-83f0-2fac3436c39d";
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
+}
+
+function getHeaders(includeContentType: boolean = false): HeadersInit {
+  const headers: HeadersInit = {
+    "X-Notion-Database-Id": NOTION_DATABASE_ID,
+  };
+
+  if (includeContentType) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return headers;
 }
 
 export async function apiRequest(
@@ -14,7 +29,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: getHeaders(!!data),
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -31,6 +46,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers: getHeaders(false),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

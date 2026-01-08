@@ -1,0 +1,91 @@
+{
+  "addCoffee": {
+    "title": "Add New Coffee",
+    "photosTitle": "Coffee Bag Photos",
+    "frontPhoto": "Front Photo",
+    "required": "*",
+    "backPhoto": "Back Photo (Optional)",
+    "frontOfBag": "Front of bag",
+    "backOfBag": "Back of bag",
+    "dropPhotoHere": "Drop photo here...",
+    "takePhoto": "Take Photo",
+    "useCamera": "Use camera",
+    "choosePhoto": "Choose Photo",
+    "fromDevice": "From device",
+    "dragAndDrop": "or drag and drop",
+    "change": "Change",
+    "changePhoto": "Change Photo",
+    "frontAlt": "Front of coffee bag",
+    "backAlt": "Back of coffee bag",
+    "detailsTitle": "Coffee Details",
+    "extracting": "Extracting coffee info from photos...",
+    "aiProcessing": "AI is reading your coffee bag...",
+    "scanning": {
+      "readingText": "Reading text from photos...",
+      "aiAnalyzing": "AI analyzing coffee details...",
+      "uploadingPhotos": "Uploading photos...",
+      "thisMayTake": "This may take a few seconds"
+    },
+    "autoFill": {
+      "fieldsAutoFilled": "fields auto-filled",
+      "field": "field",
+      "fields": "fields",
+      "rescan": "Rescan"
+    },
+    "sections": {
+      "essentialInfo": "Essential Info",
+      "additionalDetails": "Additional Details",
+      "filled": "filled"
+    },
+    "selectRoastLevel": "Select roast level",
+    "flavorNotesHint": "Separate multiple flavors with commas",
+    "buttons": {
+      "brewing": "Brewing...",
+      "saved": "Saved!",
+      "saveEntry": "Save Entry"
+    },
+    "labels": {
+      "roasterName": "Roaster Name",
+      "roasterWebsite": "Roaster Website",
+      "roasterAddress": "Roaster Address",
+      "farm": "Farm / Producer",
+      "origin": "Origin / Country",
+      "variety": "Variety / Varietal",
+      "processMethod": "Process Method",
+      "roastLevel": "Roast Level",
+      "roastDate": "Roast Date",
+      "flavorNotes": "Flavor Notes",
+      "weight": "Weight",
+      "price": "Price",
+      "purchaseAgain": "Would Purchase Again"
+    },
+    "placeholders": {
+      "roasterName": "e.g. Happy Goat Coffee Co.",
+      "roasterWebsite": "e.g. https://happygoat.ca",
+      "roasterAddress": "Street address for map location",
+      "farm": "e.g. Finca El Paraíso",
+      "origin": "e.g. Ethiopia, Colombia",
+      "variety": "e.g. Gesha, SL28",
+      "processMethod": "e.g. Washed, Natural, Honey",
+      "roastDate": "e.g. 2024-12-10",
+      "flavorNotes": "Comma-separated, e.g. Chocolate, Caramel, Citrus",
+      "weight": "e.g. 340g, 12oz",
+      "price": "e.g. $18.99"
+    },
+    "roastLevels": {
+      "light": "Light",
+      "medium": "Medium",
+      "dark": "Dark"
+    },
+    "validation": {
+      "roasterNameRequired": "Roaster name is required",
+      "frontPhotoRequired": "Front photo is required",
+      "invalidUrl": "Please enter a valid URL"
+    }
+  },
+  "editCoffee": {
+    "title": "Edit Coffee Entry",
+    "save": "Save Changes",
+    "delete": "Delete Entry"
+  }
+}

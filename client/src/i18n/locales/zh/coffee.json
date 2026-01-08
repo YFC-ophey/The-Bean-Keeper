@@ -1,0 +1,39 @@
+{
+  "fields": {
+    "roaster": "烘焙商",
+    "origin": "產地",
+    "variety": "品種",
+    "process": "處理法",
+    "roastLevel": "烘焙度",
+    "roastDate": "烘焙日期",
+    "flavorNotes": "風味描述",
+    "farm": "農場",
+    "weight": "重量",
+    "price": "價格",
+    "rating": "評分",
+    "tastingNotes": "品鑑筆記",
+    "website": "網站",
+    "address": "地址",
+    "location": "位置"
+  },
+  "roastLevels": {
+    "light": "淺烘焙",
+    "medium": "中烘焙",
+    "dark": "深烘焙"
+  },
+  "processMethods": {
+    "washed": "水洗",
+    "natural": "日曬",
+    "honey": "蜜處理",
+    "anaerobic": "厭氧發酵"
+  },
+  "details": {
+    "coffeeDetails": "咖啡詳情",
+    "myRating": "我的評分",
+    "viewMap": "在 Google 地圖上檢視",
+    "purchaseAgain": "會再次購買",
+    "addedOn": "新增於",
+    "noData": "未指定",
+    "enlargedPhoto": "咖啡袋放大圖"
+  }
+}

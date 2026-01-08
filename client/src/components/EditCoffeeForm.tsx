@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { CoffeeEntry } from "@shared/schema";
 import StarRating from "./StarRating";
 import { Heart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface EditCoffeeFormProps {
   entry: CoffeeEntry;
@@ -17,6 +18,7 @@ interface EditCoffeeFormProps {
     origin?: string;
     variety?: string;
     processMethod?: string;
+    roastLevel?: string;
     roastDate?: string;
     flavorNotes?: string;
     rating?: number;
@@ -29,6 +31,7 @@ interface EditCoffeeFormProps {
 }
 
 export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffeeFormProps) {
+  const { t } = useTranslation(['forms', 'coffee', 'common']);
   const [formData, setFormData] = useState({
     roasterName: entry.roasterName,
     roasterWebsite: entry.roasterWebsite || "",
@@ -36,6 +39,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
     origin: entry.origin || "",
     variety: entry.variety || "",
     processMethod: entry.processMethod || "",
+    roastLevel: entry.roastLevel || "",
     roastDate: entry.roastDate || "",
     flavorNotes: entry.flavorNotes?.join(", ") || "",
     rating: entry.rating || 0,
@@ -54,7 +58,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
     <form onSubmit={handleSubmit} className="space-y-6" data-testid="form-edit-coffee">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="roasterName">Roaster Name *</Label>
+          <Label htmlFor="roasterName">{t('forms:addCoffee.labels.roasterName')} *</Label>
           <Input
             id="roasterName"
             required
@@ -64,17 +68,17 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
           />
         </div>
         <div>
-          <Label htmlFor="roasterWebsite">Roaster Website</Label>
+          <Label htmlFor="roasterWebsite">{t('forms:addCoffee.labels.roasterWebsite')}</Label>
           <Input
             id="roasterWebsite"
             value={formData.roasterWebsite}
             onChange={(e) => setFormData({ ...formData, roasterWebsite: e.target.value })}
-            placeholder="https://example.com"
+            placeholder={t('forms:addCoffee.placeholders.roasterWebsite')}
             data-testid="input-edit-roaster-website"
           />
         </div>
         <div>
-          <Label htmlFor="farm">Farm / Estate</Label>
+          <Label htmlFor="farm">{t('forms:addCoffee.labels.farm')}</Label>
           <Input
             id="farm"
             value={formData.farm}
@@ -83,7 +87,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
           />
         </div>
         <div>
-          <Label htmlFor="origin">Origin</Label>
+          <Label htmlFor="origin">{t('forms:addCoffee.labels.origin')}</Label>
           <Input
             id="origin"
             value={formData.origin}
@@ -92,7 +96,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
           />
         </div>
         <div>
-          <Label htmlFor="variety">Variety</Label>
+          <Label htmlFor="variety">{t('forms:addCoffee.labels.variety')}</Label>
           <Input
             id="variety"
             value={formData.variety}
@@ -101,7 +105,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
           />
         </div>
         <div>
-          <Label htmlFor="processMethod">Process Method</Label>
+          <Label htmlFor="processMethod">{t('forms:addCoffee.labels.processMethod')}</Label>
           <Input
             id="processMethod"
             value={formData.processMethod}
@@ -110,7 +114,22 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
           />
         </div>
         <div>
-          <Label htmlFor="roastDate">Roast Date</Label>
+          <Label htmlFor="roastLevel">{t('forms:addCoffee.labels.roastLevel')}</Label>
+          <select
+            id="roastLevel"
+            value={formData.roastLevel}
+            onChange={(e) => setFormData({ ...formData, roastLevel: e.target.value })}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="select-edit-roast-level"
+          >
+            <option value="">{t('forms:addCoffee.selectRoastLevel')}</option>
+            <option value="Light">{t('coffee:roastLevels.light')}</option>
+            <option value="Medium">{t('coffee:roastLevels.medium')}</option>
+            <option value="Dark">{t('coffee:roastLevels.dark')}</option>
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="roastDate">{t('forms:addCoffee.labels.roastDate')}</Label>
           <Input
             id="roastDate"
             type="date"
@@ -120,7 +139,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
           />
         </div>
         <div>
-          <Label htmlFor="weight">Weight</Label>
+          <Label htmlFor="weight">{t('forms:addCoffee.labels.weight')}</Label>
           <Input
             id="weight"
             value={formData.weight}
@@ -131,12 +150,12 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
                 setFormData({ ...formData, weight: value + 'g' });
               }
             }}
-            placeholder="e.g., 250g, 12oz"
+            placeholder={t('forms:addCoffee.placeholders.weight')}
             data-testid="input-edit-weight"
           />
         </div>
         <div>
-          <Label htmlFor="price">Price</Label>
+          <Label htmlFor="price">{t('forms:addCoffee.labels.price')}</Label>
           <Input
             id="price"
             value={formData.price}
@@ -147,29 +166,29 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
                 setFormData({ ...formData, price: '$' + value });
               }
             }}
-            placeholder="e.g., $15.99"
+            placeholder={t('forms:addCoffee.placeholders.price')}
             data-testid="input-edit-price"
           />
         </div>
       </div>
 
       <div>
-        <Label htmlFor="flavorNotes">Flavor Notes</Label>
+        <Label htmlFor="flavorNotes">{t('forms:addCoffee.labels.flavorNotes')}</Label>
         <Input
           id="flavorNotes"
           value={formData.flavorNotes}
           onChange={(e) => setFormData({ ...formData, flavorNotes: e.target.value })}
-          placeholder="e.g., Chocolate, Citrus, Caramel"
+          placeholder={t('forms:addCoffee.placeholders.flavorNotes')}
           data-testid="input-edit-flavor-notes"
         />
-        <p className="text-xs text-muted-foreground mt-1">Separate multiple flavors with commas</p>
+        <p className="text-xs text-muted-foreground mt-1">{t('forms:addCoffee.flavorNotesHint')}</p>
       </div>
 
       <div>
-        <Label>Rating</Label>
+        <Label>{t('coffee:fields.rating')}</Label>
         <div className="mt-2">
-          <StarRating 
-            rating={formData.rating} 
+          <StarRating
+            rating={formData.rating}
             onRatingChange={(rating) => setFormData({ ...formData, rating })}
             size="lg"
           />
@@ -179,7 +198,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Heart className={`w-5 h-5 ${formData.purchaseAgain ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-          <Label htmlFor="purchaseAgain">Purchase Again?</Label>
+          <Label htmlFor="purchaseAgain">{t('forms:addCoffee.labels.purchaseAgain')}</Label>
         </div>
         <Switch
           id="purchaseAgain"
@@ -190,12 +209,12 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
       </div>
 
       <div>
-        <Label htmlFor="tastingNotes">Tasting Notes</Label>
+        <Label htmlFor="tastingNotes">{t('coffee:fields.tastingNotes')}</Label>
         <Textarea
           id="tastingNotes"
           value={formData.tastingNotes}
           onChange={(e) => setFormData({ ...formData, tastingNotes: e.target.value })}
-          placeholder="Your thoughts on this coffee..."
+          placeholder={t('modals:rating.notesPlaceholder')}
           rows={3}
           data-testid="input-edit-tasting-notes"
         />
@@ -203,10 +222,10 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
 
       <div className="flex gap-3 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1" data-testid="button-cancel-edit">
-          Cancel
+          {t('common:buttons.cancel')}
         </Button>
         <Button type="submit" className="flex-1" data-testid="button-save-edit">
-          Save Changes
+          {t('forms:editCoffee.save')}
         </Button>
       </div>
     </form>

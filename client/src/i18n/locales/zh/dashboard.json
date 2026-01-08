@@ -1,0 +1,41 @@
+{
+  "header": {
+    "title": "豆誌",
+    "searchPlaceholder": "搜尋烘焙店家、產地或品種...",
+    "addCoffee": "新增咖啡"
+  },
+  "filters": {
+    "all": "全部",
+    "roastLevel": "烘焙程度",
+    "rating": "評分",
+    "origin": "產地",
+    "sortBy": "排序方式",
+    "newest": "最新優先",
+    "oldest": "最早優先",
+    "rating_high": "評分最高",
+    "rating_low": "評分最低",
+    "name": "名稱 A-Z",
+    "origin_az": "產地 A-Z",
+    "activeFilters": "已選擇的篩選條件",
+    "clearAll": "清除所有"
+  },
+  "stats": {
+    "journey": "開啟收藏咖啡豆之旅",
+    "subtitle": "咖啡豆誌 ☕️ 品嚐留下印記",
+    "totalCollection": "總收藏",
+    "beans": "款咖啡",
+    "connoisseur": "真正的咖啡鑑賞家",
+    "building": "建立您的收藏",
+    "originsExplored": "探索的產地",
+    "countries": "個國家",
+    "mostLoved": "最喜愛",
+    "topOrigin": "首選產地",
+    "averageQuality": "平均品質"
+  },
+  "empty": {
+    "title": "開始您的咖啡之旅",
+    "subtitle": "捕捉每一顆咖啡豆的故事——從精品烘焙商到您的晨間儀式。",
+    "description": "追蹤產地、品鑑筆記，發現您的完美烘焙。",
+    "action": "新增第一款咖啡"
+  }
+}

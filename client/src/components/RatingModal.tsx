@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import StarRating from "./StarRating";
 import { Heart } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface RatingModalProps {
   open: boolean;
@@ -32,6 +33,7 @@ export default function RatingModal({
   initialNotes = "",
   initialPurchaseAgain = false
 }: RatingModalProps) {
+  const { t } = useTranslation(['modals', 'common']);
   const [rating, setRating] = useState(initialRating);
   const [notes, setNotes] = useState(initialNotes);
   const [purchaseAgain, setPurchaseAgain] = useState(initialPurchaseAgain);
@@ -62,9 +64,9 @@ export default function RatingModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md" data-testid="dialog-rating">
         <DialogHeader>
-          <DialogTitle data-testid="text-rating-title">Rate Your Coffee</DialogTitle>
+          <DialogTitle data-testid="text-rating-title">{t('modals:rating.title')}</DialogTitle>
           <DialogDescription data-testid="text-rating-description">
-            {roasterName ? `How was ${roasterName}?` : "How was this coffee?"}
+            {roasterName ? `${t('modals:rating.subtitle')} ${roasterName}?` : t('modals:rating.subtitle')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 py-4">
@@ -74,7 +76,7 @@ export default function RatingModal({
           <div className="flex items-center justify-between px-4 py-3 bg-muted rounded-lg">
             <div className="flex items-center gap-2">
               <Heart className={`w-5 h-5 ${purchaseAgain ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-              <Label htmlFor="purchaseAgain" className="cursor-pointer">Purchase Again?</Label>
+              <Label htmlFor="purchaseAgain" className="cursor-pointer">{t('forms:addCoffee.labels.purchaseAgain')}</Label>
             </div>
             <Switch
               id="purchaseAgain"
@@ -85,11 +87,11 @@ export default function RatingModal({
           </div>
           <div>
             <label htmlFor="notes" className="text-sm font-medium mb-2 block">
-              Tasting Notes (Optional)
+              {t('modals:rating.notesLabel')}
             </label>
             <Textarea
               id="notes"
-              placeholder="What flavors did you taste? Any thoughts?"
+              placeholder={t('modals:rating.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               maxLength={100}
@@ -97,7 +99,7 @@ export default function RatingModal({
               data-testid="input-tasting-notes"
             />
             <p className="text-xs text-muted-foreground mt-1 text-right">
-              {notes.length}/100 characters
+              {notes.length}/100
             </p>
           </div>
         </div>
@@ -108,7 +110,7 @@ export default function RatingModal({
             className="flex-1"
             data-testid="button-skip-rating"
           >
-            Skip for now
+            {t('common:buttons.skip')}
           </Button>
           <Button
             onClick={handleSave}
@@ -116,7 +118,7 @@ export default function RatingModal({
             className="flex-1"
             data-testid="button-save-rating"
           >
-            Save Rating
+            {t('modals:rating.save')}
           </Button>
         </div>
       </DialogContent>

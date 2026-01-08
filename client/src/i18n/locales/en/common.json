@@ -1,0 +1,23 @@
+{
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip for now",
+    "confirm": "Confirm",
+    "saveAnyway": "Save Anyway"
+  },
+  "loading": {
+    "default": "Loading...",
+    "brewing": "Brewing your collection..."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Network error. Please check your connection."
+  }
+}

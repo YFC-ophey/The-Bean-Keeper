@@ -1,0 +1,28 @@
+{
+  "rating": {
+    "title": "Rate This Coffee",
+    "subtitle": "How was this coffee?",
+    "ratingLabel": "Your Rating",
+    "notesLabel": "Tasting Notes (Optional)",
+    "notesPlaceholder": "Share your thoughts on the flavor, aroma, body...",
+    "save": "Save Rating"
+  },
+  "duplicate": {
+    "title": "Possible Duplicate Detected",
+    "message": "You might already have this coffee in your collection:",
+    "existing": "Existing Entry",
+    "new": "New Entry",
+    "saveAnyway": "Save Anyway",
+    "cancel": "Cancel"
+  },
+  "delete": {
+    "title": "Delete Coffee Entry?",
+    "message": "Are you sure you want to delete this coffee? This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "help": {
+    "button": "Need Help?",
+    "tooltip": "Learn how to use The Bean Keeper"
+  }
+}

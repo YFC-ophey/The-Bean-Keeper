@@ -1,62 +1,110 @@
+/* Google Fonts - Must be first */
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE */
+/* Clash Display Font Family */
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* LIGHT MODE - Artisan Coffee House Aesthetic */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(44, 24, 16, .12);
+  --badge-outline: rgba(44, 24, 16, .08);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
-  --background: 0 0% 100%;
-  --foreground: 20 14% 10%;
-  --border: 0 0% 89%;
-  --card: 0 0% 98%;
-  --card-foreground: 20 14% 10%;
-  --card-border: 0 0% 94%;
-  --sidebar: 0 0% 96%;
-  --sidebar-foreground: 20 14% 12%;
-  --sidebar-border: 0 0% 92%;
-  --sidebar-primary: 25 85% 45%;
-  --sidebar-primary-foreground: 25 10% 98%;
-  --sidebar-accent: 25 12% 88%;
-  --sidebar-accent-foreground: 20 14% 15%;
-  --sidebar-ring: 25 85% 45%;
-  --popover: 0 0% 96%;
-  --popover-foreground: 20 14% 10%;
-  --popover-border: 0 0% 92%;
-  --primary: 25 85% 45%;
-  --primary-foreground: 25 10% 98%;
-  --secondary: 25 8% 90%;
-  --secondary-foreground: 20 14% 12%;
-  --muted: 25 6% 92%;
-  --muted-foreground: 20 10% 35%;
-  --accent: 25 10% 92%;
-  --accent-foreground: 20 14% 12%;
-  --destructive: 0 72% 45%;
-  --destructive-foreground: 0 10% 98%;
-  --input: 0 0% 75%;
-  --ring: 25 85% 45%;
-  --chart-1: 25 75% 40%;
-  --chart-2: 200 70% 35%;
-  --chart-3: 140 60% 30%;
-  --chart-4: 280 55% 35%;
-  --chart-5: 40 70% 35%;
-  --font-sans: Inter, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Menlo, monospace;
-  --radius: .5rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 2px 4px -1px hsl(0 0% 0% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 4px 6px -1px hsl(0 0% 0% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 8px 10px -1px hsl(0 0% 0% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --tracking-normal: 0em;
+  --elevate-1: rgba(111, 78, 55, .04);
+  --elevate-2: rgba(111, 78, 55, .10);
+
+  /* Core Colors - Coffee House Palette */
+  --background: 35 35% 96%;  /* Latte Cream #F5EFE7 */
+  --foreground: 25 45% 12%;  /* Deep Espresso #2C1810 */
+  --border: 35 20% 85%;
+  --card: 0 0% 100%;
+  --card-foreground: 25 45% 12%;
+  --card-border: 35 15% 90%;
+
+  /* Sidebar */
+  --sidebar: 35 30% 94%;
+  --sidebar-foreground: 25 45% 15%;
+  --sidebar-border: 35 20% 88%;
+  --sidebar-primary: 120 15% 35%;  /* Forest Green #3D5A40 */
+  --sidebar-primary-foreground: 35 35% 96%;
+  --sidebar-accent: 35 25% 85%;
+  --sidebar-accent-foreground: 25 45% 18%;
+  --sidebar-ring: 120 15% 35%;
+
+  /* Popover */
+  --popover: 0 0% 100%;
+  --popover-foreground: 25 45% 12%;
+  --popover-border: 35 15% 90%;
+
+  /* Primary - Forest Green Accent */
+  --primary: 120 15% 35%;  /* #3D5A40 */
+  --primary-foreground: 35 35% 96%;
+
+  /* Secondary - Caramel */
+  --secondary: 35 35% 75%;  /* #C4A57B */
+  --secondary-foreground: 25 45% 12%;
+
+  /* Muted */
+  --muted: 35 25% 90%;
+  --muted-foreground: 25 20% 40%;
+
+  /* Accent - Roasted Bean */
+  --accent: 25 35% 45%;  /* #6F4E37 */
+  --accent-foreground: 35 35% 96%;
+
+  /* Destructive */
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
+
+  /* Form Elements */
+  --input: 35 20% 85%;
+  --ring: 120 15% 35%;
+
+  /* Charts */
+  --chart-1: 25 35% 45%;
+  --chart-2: 120 15% 35%;
+  --chart-3: 35 35% 75%;
+  --chart-4: 25 45% 12%;
+  --chart-5: 35 25% 60%;
+
+  /* Typography */
+  --font-sans: 'Crimson Text', Georgia, serif;
+  --font-serif: 'EB Garamond', Georgia, serif;
+  --font-display: 'Clash Display', sans-serif;
+  --font-mono: 'Berkeley Mono', Menlo, monospace;
+
+  /* Spacing & Radius */
+  --radius: 1rem;
+  --tracking-normal: 0.01em;
   --spacing: 0.25rem;
+
+  /* Enhanced Shadows - Coffee House Depth */
+  --shadow-2xs: 0px 1px 2px 0px rgba(44, 24, 16, 0.04);
+  --shadow-xs: 0px 1px 3px 0px rgba(44, 24, 16, 0.08);
+  --shadow-sm: 0px 2px 4px -1px rgba(44, 24, 16, 0.06), 0px 4px 6px -1px rgba(44, 24, 16, 0.08);
+  --shadow: 0px 4px 6px -1px rgba(44, 24, 16, 0.08), 0px 2px 4px -2px rgba(44, 24, 16, 0.06);
+  --shadow-md: 0px 6px 12px -2px rgba(44, 24, 16, 0.12), 0px 3px 6px -3px rgba(44, 24, 16, 0.08);
+  --shadow-lg: 0px 10px 20px -3px rgba(44, 24, 16, 0.16), 0px 4px 8px -4px rgba(44, 24, 16, 0.08);
+  --shadow-xl: 0px 20px 25px -5px rgba(44, 24, 16, 0.18), 0px 8px 10px -6px rgba(44, 24, 16, 0.08);
+  --shadow-2xl: 0px 25px 50px -12px rgba(44, 24, 16, 0.25);
 
 /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
@@ -172,6 +220,40 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-feature-settings: "liga" 1, "calt" 1, "kern" 1;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  /* Enhanced Typography Hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 { @apply text-5xl md:text-6xl; }
+  h2 { @apply text-4xl md:text-5xl; }
+  h3 { @apply text-3xl md:text-4xl; }
+  h4 { @apply text-2xl md:text-3xl; }
+  h5 { @apply text-xl md:text-2xl; }
+  h6 { @apply text-lg md:text-xl; }
+
+  p {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    letter-spacing: 0.01em;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Selection styling */
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
   }
 }
 
@@ -284,5 +366,528 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Font Family Utilities */
+  .font-clash-regular {
+    font-family: 'Clash Display', sans-serif;
+    font-weight: 400;
+  }
+
+  .font-clash-medium {
+    font-family: 'Clash Display', sans-serif;
+    font-weight: 500;
+  }
+
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* Coffee House Textures & Backgrounds */
+  .coffee-texture {
+    position: relative;
+  }
+
+  .coffee-texture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .coffee-stain {
+    position: relative;
+    overflow: visible;
+  }
+
+  .coffee-stain::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, rgba(111, 78, 55, 0.08) 0%, rgba(111, 78, 55, 0.04) 40%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes floatUp {
+    0% {
+      transform: translateY(0) scale(1);
+      box-shadow: var(--shadow-md);
+    }
+    100% {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: var(--shadow-xl);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-in-up {
+    animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Staggered animation delays */
+  .stagger-1 { animation-delay: 0.025s; }
+  .stagger-2 { animation-delay: 0.05s; }
+  .stagger-3 { animation-delay: 0.075s; }
+  .stagger-4 { animation-delay: 0.1s; }
+  .stagger-5 { animation-delay: 0.125s; }
+  .stagger-6 { animation-delay: 0.15s; }
+  .stagger-7 { animation-delay: 0.175s; }
+  .stagger-8 { animation-delay: 0.2s; }
+  .stagger-9 { animation-delay: 0.225s; }
+
+  /* Card hover effects */
+  .card-float {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .card-float:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .card-float:active {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Decorative Elements */
+  .coffee-bean-ornament {
+    position: relative;
+  }
+
+  .coffee-bean-ornament::before {
+    content: '☕';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    opacity: 0.15;
+  }
+
+  /* Paper-like card styling */
+  .paper-card {
+    background: linear-gradient(135deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--card) / 0.98) 100%);
+    box-shadow: var(--shadow-md);
+    border: 1px solid hsl(var(--card-border));
+    position: relative;
+  }
+
+  .paper-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.8) 0%,
+      rgba(255, 255, 255, 0) 100%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* Organic border radius variations */
+  .organic-radius {
+    border-radius: 1.25rem 1rem 1.5rem 1rem;
+  }
+
+  .organic-radius-lg {
+    border-radius: 1.75rem 1.5rem 2rem 1.5rem;
+  }
+
+  /* Text effects */
+  .text-coffee-gradient {
+    background: linear-gradient(135deg,
+      hsl(var(--accent)) 0%,
+      hsl(var(--primary)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-serif-elegant {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+  }
+
+  /* Enhanced Focus States */
+  .focus-coffee {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted) / 0.8) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Enhanced Glass-morphism for Origin Badges */
+  .badge-glass {
+    background: rgba(255, 255, 255, 0.9);
+    /* Removed backdrop-filter for better mobile performance */
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .badge-glass:hover {
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  /* Enhanced Card Shadow on Hover */
+  .card-shadow-enhance {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .card-shadow-enhance:hover {
+    box-shadow: 0 25px 60px -12px rgba(44, 24, 16, 0.3),
+                0 10px 20px -8px rgba(44, 24, 16, 0.15);
+  }
+
+  /* Refined Typography Scale */
+  .text-display {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  .text-subheading {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
+  .text-body-refined {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    line-height: 1.65;
+  }
+
+  /* Sophisticated Button Hover */
+  .button-refined {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .button-refined::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .button-refined:hover::before {
+    opacity: 1;
+  }
+
+  .button-refined:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -6px rgba(61, 90, 64, 0.4);
+  }
+
+  .button-refined:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px -4px rgba(61, 90, 64, 0.3);
+  }
+
+  /* Enhanced Badge Styles for Coffee Details */
+  .badge-origin {
+    background: linear-gradient(135deg, rgba(196, 165, 123, 0.08) 0%, rgba(196, 165, 123, 0.05) 100%);
+    border: 1px solid rgba(196, 165, 123, 0.25);
+    color: hsl(var(--accent));
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .badge-origin:hover {
+    background: linear-gradient(135deg, rgba(196, 165, 123, 0.15) 0%, rgba(196, 165, 123, 0.1) 100%);
+    border-color: rgba(196, 165, 123, 0.4);
+    transform: scale(1.05);
+  }
+
+  /* Smooth Page Transitions */
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .page-enter {
+    animation: pageEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Enhanced Focus States for Accessibility */
+  .focus-refined {
+    outline: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .focus-refined:focus-visible {
+    box-shadow: 0 0 0 3px hsl(var(--background)),
+                0 0 0 5px hsl(var(--primary)),
+                0 0 24px rgba(61, 90, 64, 0.25);
+    border-color: hsl(var(--primary));
+  }
+
+  /* Editorial Stats Card Enhancements */
+  .stat-card-editorial {
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .stat-card-editorial::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .stat-card-editorial:hover::before {
+    opacity: 1;
+  }
+
+  .stat-card-large {
+    animation: heroReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes heroReveal {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Enhanced Number Typography */
+  .stat-number-large {
+    font-feature-settings: 'tnum' 1, 'salt' 1;
+    letter-spacing: -0.04em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Decorative Line Accent */
+  .line-accent {
+    position: relative;
+    display: inline-block;
+  }
+
+  .line-accent::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, currentColor 0%, transparent 100%);
+    opacity: 0.3;
+  }
+
+  /* Editorial Spacing System */
+  .editorial-spacing-sm {
+    padding: clamp(1rem, 3vw, 1.5rem);
+  }
+
+  .editorial-spacing-md {
+    padding: clamp(1.5rem, 4vw, 2rem);
+  }
+
+  .editorial-spacing-lg {
+    padding: clamp(2rem, 5vw, 3rem);
+  }
+
+  /* Refined Shadow System */
+  .shadow-editorial-sm {
+    box-shadow: 0 2px 8px -2px rgba(44, 24, 16, 0.08),
+                0 6px 16px -4px rgba(44, 24, 16, 0.04);
+  }
+
+  .shadow-editorial-md {
+    box-shadow: 0 4px 16px -4px rgba(44, 24, 16, 0.12),
+                0 12px 32px -8px rgba(44, 24, 16, 0.08);
+  }
+
+  .shadow-editorial-lg {
+    box-shadow: 0 8px 24px -6px rgba(44, 24, 16, 0.16),
+                0 20px 48px -12px rgba(44, 24, 16, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  /* Coffee Bean Illustration Animation */
+  @keyframes beanFloat {
+    0%, 100% {
+      transform: translateY(0) rotate(-25deg);
+    }
+    50% {
+      transform: translateY(-10px) rotate(-25deg);
+    }
+  }
+
+  .bean-float {
+    animation: beanFloat 3s ease-in-out infinite;
+  }
+
+  /* Editorial Grid Reveal */
+  @keyframes gridReveal {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .grid-reveal {
+    animation: gridReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .grid-reveal-delay-1 { animation-delay: 0.1s; opacity: 0; }
+  .grid-reveal-delay-2 { animation-delay: 0.2s; opacity: 0; }
+  .grid-reveal-delay-3 { animation-delay: 0.3s; opacity: 0; }
+  .grid-reveal-delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+  /* Subtle Grain Texture Overlay */
+  .grain-texture {
+    position: relative;
+  }
+
+  .grain-texture::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='3.5' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: inherit;
+    mix-blend-mode: overlay;
+  }
+
+  /* Enhanced Card Lift */
+  .card-lift {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px -8px rgba(44, 24, 16, 0.18),
+                0 24px 64px -16px rgba(44, 24, 16, 0.12);
+  }
+
+  /* Editorial Typography Enhancement */
+  .text-editorial-display {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .text-editorial-body {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    line-height: 1.7;
+    text-wrap: pretty;
+  }
+
+  .text-editorial-label {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-size: 0.625rem;
+    opacity: 0.6;
   }
 }

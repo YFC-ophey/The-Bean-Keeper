@@ -1,0 +1,28 @@
+{
+  "rating": {
+    "title": "為這款咖啡評分",
+    "subtitle": "這款咖啡怎麼樣？",
+    "ratingLabel": "您的評分",
+    "notesLabel": "品鑑筆記（選填）",
+    "notesPlaceholder": "分享您對風味、香氣、醇厚度的看法...",
+    "save": "儲存評分"
+  },
+  "duplicate": {
+    "title": "檢測到可能的重複",
+    "message": "您的收藏中可能已有這款咖啡：",
+    "existing": "已有條目",
+    "new": "新條目",
+    "saveAnyway": "仍然儲存",
+    "cancel": "取消"
+  },
+  "delete": {
+    "title": "刪除咖啡條目？",
+    "message": "您確定要刪除這款咖啡嗎？此操作無法撤銷。",
+    "confirm": "刪除",
+    "cancel": "取消"
+  },
+  "help": {
+    "button": "需要幫助？",
+    "tooltip": "瞭解如何使用咖啡日記"
+  }
+}

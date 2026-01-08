@@ -1,0 +1,39 @@
+{
+  "fields": {
+    "roaster": "Roaster",
+    "origin": "Origin",
+    "variety": "Variety",
+    "process": "Process",
+    "roastLevel": "Roast Level",
+    "roastDate": "Roast Date",
+    "flavorNotes": "Flavor Notes",
+    "farm": "Farm",
+    "weight": "Weight",
+    "price": "Price",
+    "rating": "Rating",
+    "tastingNotes": "Tasting Notes",
+    "website": "Website",
+    "address": "Address",
+    "location": "Location"
+  },
+  "roastLevels": {
+    "light": "Light",
+    "medium": "Medium",
+    "dark": "Dark"
+  },
+  "processMethods": {
+    "washed": "Washed",
+    "natural": "Natural",
+    "honey": "Honey",
+    "anaerobic": "Anaerobic"
+  },
+  "details": {
+    "coffeeDetails": "Coffee Details",
+    "myRating": "My Rating",
+    "viewMap": "View on Google Maps",
+    "purchaseAgain": "Would purchase again",
+    "addedOn": "Added",
+    "noData": "Not specified",
+    "enlargedPhoto": "Enlarged coffee bag"
+  }
+}

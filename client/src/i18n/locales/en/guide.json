@@ -1,0 +1,33 @@
+{
+  "header": {
+    "title": "Your Coffee Journey Starts Here",
+    "subtitle": "Master The Bean Keeper in 4 simple steps"
+  },
+  "steps": {
+    "1": {
+      "title": "Capture Your Coffee",
+      "description": "Take photos of your coffee bag - front and back. Our camera makes it easy!",
+      "details": "Tap the camera icon or choose from your device. Good lighting helps our AI read the details better."
+    },
+    "2": {
+      "title": "AI Extracts the Magic",
+      "description": "Watch as AI instantly reads roaster info, origin, variety, flavor notes, and more.",
+      "details": "Let AI read text from your photos and fills in all the details automatically!"
+    },
+    "3": {
+      "title": "Location Magically Appears",
+      "description": "Watch the roaster's location appear instantly on an interactive Google Map—see exactly where your coffee comes from!",
+      "details": "Everything auto-fills including an embedded map view. Add your rating, tasting notes, and make it yours with personal touches."
+    },
+    "4": {
+      "title": "Build Your Collection",
+      "description": "Your coffee is saved! Track your journey, discover patterns, and never forget a great roast.",
+      "details": "Browse your collection, filter by origin, see stats, and relive every coffee moment."
+    }
+  },
+  "footer": {
+    "progress": "Step {{current}} of {{total}}",
+    "startTracking": "Start Tracking!",
+    "gotIt": "Got it!"
+  }
+}
