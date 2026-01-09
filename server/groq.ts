@@ -127,6 +127,11 @@ Important: Return only clean text without OCR artifacts like special characters,
     return result;
   } catch (error) {
     console.error('Error extracting coffee info with Groq AI:', error);
+    // Log more details about the error for debugging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return {};
   }
 }

@@ -302,6 +302,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Test Groq API connectivity
+  app.get("/api/debug/groq", async (_req, res) => {
+    try {
+      const testResult = await extractCoffeeInfoWithAI("Happy Goat Coffee, Ottawa, Canada. Ethiopia Washed. Blueberry notes.");
+      res.json({
+        success: Object.keys(testResult).length > 0,
+        extracted: testResult,
+        message: Object.keys(testResult).length > 0
+          ? "Groq API is working"
+          : "Groq API returned empty result - check server logs for errors"
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Notion Database Setup
 
   // Create Notion database
