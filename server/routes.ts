@@ -323,6 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Diagnostic endpoint to check environment
   app.get("/api/debug/env", (_req, res) => {
+    const cloudinaryConfigured = cloudinaryStorageService.isConfigured();
     res.json({
       nodeEnv: process.env.NODE_ENV,
       hasGroqKey: !!process.env.GROQ_API_KEY,
@@ -330,8 +331,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       hasNotionDb: !!process.env.NOTION_DATABASE_ID,
       hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_API_KEY,
       hasPrivateObjectDir: !!process.env.PRIVATE_OBJECT_DIR,
+      hasCloudinary: cloudinaryConfigured,
       port: process.env.PORT || '5000',
-      uploadDir: '.local/uploads (local storage active)'
+      storageMode: cloudinaryConfigured ? 'cloudinary (persistent)' : 'local (ephemeral)'
     });
   });
 
