@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from 'react-i18next';
 
 export default function ScrollSidebar() {
+  const { t } = useTranslation(['common']);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const lastUpdateTime = useRef(0);
@@ -95,7 +97,7 @@ export default function ScrollSidebar() {
         {/* Hover Tooltip */}
         <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
           <div className="bg-[#6F4E37] text-white px-3 py-1.5 rounded-lg shadow-lg text-xs font-medium whitespace-nowrap">
-            {Math.round(scrollProgress)}% through collection
+            {t('common:ui.scrollProgress', { progress: Math.round(scrollProgress) })}
           </div>
           {/* Arrow */}
           <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-px">

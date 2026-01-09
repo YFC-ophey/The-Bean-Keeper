@@ -19,5 +19,10 @@
   "errors": {
     "generic": "出現錯誤，請重試。",
     "network": "網路錯誤，請檢查您的連線。"
+  },
+  "ui": {
+    "quickGuide": "快速指南",
+    "openUserGuide": "開啟使用指南",
+    "scrollProgress": "已瀏覽 {{progress}}% 的收藏"
   }
 }

@@ -37,5 +37,27 @@
     "subtitle": "Capture the story of every bean—from artisan roasters to your morning ritual.",
     "description": "Track origins, tasting notes, and discover your perfect roast.",
     "action": "Add Your First Coffee"
+  },
+  "about": {
+    "title": "About The Bean Keeper",
+    "clickToExpand": "Click to expand",
+    "quickGuide": "Quick Guide",
+    "steps": "4 steps",
+    "new": "NEW",
+    "intro": "Your personal coffee journal powered by AI.",
+    "tagline": "Capture, remember, and celebrate every roast that tells your story.",
+    "step1": {
+      "title": "1. Capture",
+      "description": "Snap photos of your coffee bags"
+    },
+    "step2": {
+      "title": "2. Extract",
+      "description": "AI reads roaster, origin, notes"
+    },
+    "step3": {
+      "title": "3. Remember",
+      "description": "Build your coffee story"
+    },
+    "footer": "Every great coffee deserves to be remembered"
   }
 }

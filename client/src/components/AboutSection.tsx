@@ -41,13 +41,13 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                 className="text-sm md:text-base font-bold text-[#6F4E37] tracking-tight"
                 style={{ fontFamily: "'Clash Display', sans-serif" }}
               >
-                About The Bean Keeper
+                {t('dashboard:about.title')}
               </span>
             </div>
 
             {/* Right: Expand hint */}
             <div className="flex items-center gap-2 text-[#6F4E37]/60 group-hover:text-[#6F4E37] transition-colors">
-              <span className="text-xs font-serif hidden sm:inline">Click to expand</span>
+              <span className="text-xs font-serif hidden sm:inline">{t('dashboard:about.clickToExpand')}</span>
               <ChevronDown className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
             </div>
           </div>
@@ -146,10 +146,10 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                 <span
                   className="text-[9px] sm:text-[10px] text-[#6F4E37] font-bold leading-tight tracking-wide"
                   style={{ fontFamily: "'Clash Display', sans-serif" }}>
-                  Quick Guide
+                  {t('dashboard:about.quickGuide')}
                 </span>
                 <span className="text-[8px] sm:text-[9px] text-[#6F4E37]/60 font-serif leading-tight">
-                  4 steps
+                  {t('dashboard:about.steps')}
                 </span>
               </div>
 
@@ -180,7 +180,7 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                 transition-all duration-200">
                 <span className="text-white text-[7px] sm:text-[8px] font-bold tracking-wide"
                   style={{ fontFamily: "'Clash Display', sans-serif" }}>
-                  NEW
+                  {t('dashboard:about.new')}
                 </span>
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                 className="text-lg min-[400px]:text-xl sm:text-2xl md:text-3xl font-bold text-[#6F4E37] tracking-tight text-center"
                 style={{ fontFamily: "'Clash Display', sans-serif" }}
               >
-                About The Bean Keeper
+                {t('dashboard:about.title')}
               </h2>
 
               {/* Right coffee bean - Hide on small screens */}
@@ -229,9 +229,9 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
 
           {/* Introduction text - Mobile optimized */}
           <p className="text-center text-[#6F4E37]/80 text-sm sm:text-base md:text-lg mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed font-serif">
-            Your personal coffee journal powered by AI.
+            {t('dashboard:about.intro')}
             <span className="block mt-1 font-medium text-[#6F4E37]">
-              Capture, remember, and celebrate every roast that tells your story.
+              {t('dashboard:about.tagline')}
             </span>
           </p>
 
@@ -247,10 +247,10 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                   </div>
                   <div>
                     <h3 className="font-bold text-[#6F4E37] mb-1 text-base sm:text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
-                      1. Capture
+                      {t('dashboard:about.step1.title')}
                     </h3>
                     <p className="text-xs sm:text-sm text-[#6F4E37]/70 font-serif leading-snug">
-                      Snap photos of your coffee bags
+                      {t('dashboard:about.step1.description')}
                     </p>
                   </div>
                 </div>
@@ -267,10 +267,10 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                   </div>
                   <div>
                     <h3 className="font-bold text-[#6F4E37] mb-1 text-base sm:text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
-                      2. Extract
+                      {t('dashboard:about.step2.title')}
                     </h3>
                     <p className="text-xs sm:text-sm text-[#6F4E37]/70 font-serif leading-snug">
-                      AI reads roaster, origin, notes
+                      {t('dashboard:about.step2.description')}
                     </p>
                   </div>
                 </div>
@@ -287,10 +287,10 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                   </div>
                   <div>
                     <h3 className="font-bold text-[#6F4E37] mb-1 text-base sm:text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
-                      3. Remember
+                      {t('dashboard:about.step3.title')}
                     </h3>
                     <p className="text-xs sm:text-sm text-[#6F4E37]/70 font-serif leading-snug">
-                      Build your coffee story
+                      {t('dashboard:about.step3.description')}
                     </p>
                   </div>
                 </div>
@@ -301,7 +301,7 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
           {/* Footer tagline */}
           <div className="text-center">
             <p className="text-[#6F4E37]/60 text-xs md:text-sm italic font-serif">
-              Every great coffee deserves to be remembered
+              {t('dashboard:about.footer')}
             </p>
           </div>
         </div>

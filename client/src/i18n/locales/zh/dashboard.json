@@ -37,5 +37,27 @@
     "subtitle": "捕捉每一顆咖啡豆的故事——從精品烘焙商到您的晨間儀式。",
     "description": "追蹤產地、品鑑筆記，發現您的完美烘焙。",
     "action": "新增第一款咖啡"
+  },
+  "about": {
+    "title": "關於豆誌",
+    "clickToExpand": "點擊展開",
+    "quickGuide": "快速指南",
+    "steps": "4 個步驟",
+    "new": "最新",
+    "intro": "您的個人咖啡日記，由 AI 驅動。",
+    "tagline": "拍攝、記憶並慶祝每一次烘焙，譜寫屬於您的故事。",
+    "step1": {
+      "title": "1. 拍攝",
+      "description": "拍攝咖啡袋的照片"
+    },
+    "step2": {
+      "title": "2. 讀取",
+      "description": "AI 讀取烘焙店家、產地、風味描述"
+    },
+    "step3": {
+      "title": "3. 記錄",
+      "description": "建立您的咖啡故事"
+    },
+    "footer": "每一款出色的咖啡都值得被記住"
   }
 }

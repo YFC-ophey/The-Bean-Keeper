@@ -19,5 +19,10 @@
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "network": "Network error. Please check your connection."
+  },
+  "ui": {
+    "quickGuide": "Quick Guide",
+    "openUserGuide": "Open user guide",
+    "scrollProgress": "{{progress}}% through collection"
   }
 }
