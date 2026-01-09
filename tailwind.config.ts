@@ -5,6 +5,11 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      screens: {
+        'xs': '480px',  // Extra small devices (large phones)
+        // Tailwind default breakpoints still apply:
+        // sm: 640px, md: 768px, lg: 1024px, xl: 1280px, 2xl: 1536px
+      },
       borderRadius: {
         lg: ".5625rem", /* 9px */
         md: ".375rem", /* 6px */

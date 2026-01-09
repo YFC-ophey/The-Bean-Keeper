@@ -37,18 +37,18 @@ export default function LanguageSwitcher() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button */}
+      {/* Trigger Button - Better mobile touch target */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/80 hover:bg-white border border-[#2C1810]/10 hover:border-[#2C1810]/20 transition-all duration-200 shadow-sm hover:shadow-md group"
+        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/80 hover:bg-white border border-[#2C1810]/10 hover:border-[#2C1810]/20 transition-all duration-200 shadow-sm hover:shadow-md group min-h-[36px]"
         aria-label="Change language"
       >
-        <Globe className="w-4 h-4 text-[#6F4E37] group-hover:rotate-12 transition-transform duration-300" />
-        <span className="text-sm font-medium text-[#2C1810] hidden sm:inline">
+        <Globe className="w-[18px] h-[18px] sm:w-4 sm:h-4 text-[#6F4E37] group-hover:rotate-12 transition-transform duration-300" />
+        <span className="text-xs sm:text-sm font-medium text-[#2C1810] hidden xs:inline">
           {currentLanguage.nativeName}
         </span>
         <svg
-          className={`w-4 h-4 text-[#6F4E37] transition-transform duration-200 ${
+          className={`w-3 h-3 sm:w-4 sm:h-4 text-[#6F4E37] transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
           fill="none"

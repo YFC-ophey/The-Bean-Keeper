@@ -378,11 +378,42 @@ export default function Dashboard() {
         }`}
         style={{ willChange: 'transform' }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
-          {/* Logo and Title Section - Compact on mobile */}
-          <div className="flex flex-col items-center mb-6 md:mb-8 relative">
-            {/* Language Switcher & Notion Button - Top Right */}
-            <div className="absolute top-0 right-0 flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 md:py-6">
+          {/* Logo and Title Section - Mobile-first responsive layout */}
+
+          {/* MOBILE LAYOUT (< 640px): Horizontal with logo left, buttons right */}
+          <div className="sm:hidden mb-4">
+            {/* Top row: Logo + Buttons */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <img
+                    src="/logo.jpeg"
+                    alt="The Bean Keeper"
+                    className="h-14 w-14 object-cover rounded-full shadow-lg ring-2 ring-white ring-offset-1 ring-offset-background"
+                  />
+                  <div className="absolute -top-1 -right-1 w-12 h-12 bg-[#6F4E37]/10 rounded-full blur-xl -z-10" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-serif font-bold text-foreground tracking-tight leading-tight">
+                    {t('dashboard:header.title')}
+                  </h1>
+                  <p className="text-muted-foreground font-light text-[10px] tracking-wide">
+                    Your artisan coffee journal
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <NotionButton />
+                <LanguageSwitcher />
+              </div>
+            </div>
+          </div>
+
+          {/* TABLET & DESKTOP LAYOUT (≥ 640px): Centered with proper spacing */}
+          <div className="hidden sm:flex sm:flex-col sm:items-center mb-6 md:mb-8">
+            {/* Language Switcher & Notion Button - Top Right with safe spacing */}
+            <div className="self-end flex items-center gap-2 mb-3 md:mb-4">
               <NotionButton />
               <LanguageSwitcher />
             </div>
@@ -391,10 +422,10 @@ export default function Dashboard() {
               <img
                 src="/logo.jpeg"
                 alt="The Bean Keeper"
-                className="h-20 w-20 md:h-32 md:w-32 object-cover rounded-full shadow-xl ring-2 md:ring-4 ring-white ring-offset-1 md:ring-offset-2 ring-offset-background transition-all duration-300"
+                className="h-24 w-24 md:h-32 md:w-32 lg:h-40 lg:w-40 object-cover rounded-full shadow-xl ring-2 md:ring-4 ring-white ring-offset-1 md:ring-offset-2 ring-offset-background transition-all duration-300"
               />
               {/* Decorative coffee stain behind logo */}
-              <div className="absolute -top-2 md:-top-4 -right-2 md:-right-4 w-16 md:w-24 h-16 md:h-24 bg-[#6F4E37]/10 rounded-full blur-2xl -z-10" />
+              <div className="absolute -top-3 md:-top-4 -right-3 md:-right-4 w-20 md:w-24 lg:w-28 h-20 md:h-24 lg:h-28 bg-[#6F4E37]/10 rounded-full blur-2xl -z-10" />
             </div>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-foreground tracking-tight mb-1">
               {t('dashboard:header.title')}
