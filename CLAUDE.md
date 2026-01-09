@@ -449,7 +449,12 @@ See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically incl
       - Average quality score across collection
     - Vintage coffee journal aesthetic with cream backgrounds
     - Coffee bean decorative elements
-    - Collapsible with "Show less" button (right-aligned)
+    - **Collapsible toggle functionality** (January 2026):
+      - Arrow-only circular toggle button (ChevronUp ↑)
+      - Collapsed state shows minimal summary tab with stats
+      - Coffee brown gradient button with white border
+      - Smooth animations between expanded/collapsed states
+      - Defaults to expanded on page load
     - Motivational messages based on collection size
     - File: `client/src/components/CoffeeStats.tsx`
 
@@ -469,6 +474,37 @@ See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically incl
     - Fully responsive (compact on mobile)
     - File: `client/src/components/NotionButton.tsx`
 
+13. **Collapsible Section Toggles (January 2026):**
+    - Unified arrow-only toggle design across all collapsible sections
+    - **Design specifications:**
+      - 10×10 circular button with coffee brown gradient (#6F4E37 to #8B6F47)
+      - White border (2px) for contrast
+      - No text labels - just ChevronUp (↑) or ChevronDown (↓) icons
+      - Positioned at bottom center of expanded sections
+      - Smooth hover effects: gradient reversal, scale 110%, shadow intensifies
+      - Icon micro-animation (translates up/down on hover)
+      - Active press feedback (scale 95%)
+    - **Implemented in:**
+      - `AboutSection.tsx` - Collapses to minimal tab with coffee bean icon + title
+      - `EmptyState.tsx` - Collapses to compact card with welcome text
+      - `CoffeeStats.tsx` - Collapses to stats summary bar
+    - **Better mobile UX**: Easy show/hide without permanent dismissal
+    - Feels like folding/unfolding pages in vintage coffee journal
+
+14. **Currency Selection for Price Field (January 2026):**
+    - Multi-currency support: USD ($), CAD ($), EUR (€)
+    - **Implementation:**
+      - Currency dropdown (24px wide) + price input side-by-side
+      - Auto-formats price with correct currency symbol on blur
+      - Dynamic placeholder updates based on selected currency
+      - Smart currency detection in EditCoffeeForm (€ = EUR, $ = USD)
+    - **Files modified:**
+      - `client/src/components/AddCoffeeForm.tsx` (lines 1060-1102)
+      - `client/src/components/EditCoffeeForm.tsx` (lines 174-216)
+    - **Storage**: Price stored as single string in database (e.g., "$18.99" or "€15.00")
+    - Select component from shadcn/ui with coffee-themed styling
+    - Currency symbol automatically updates when switching currencies
+
 **New Components Added:**
 - `client/src/components/ScrollSidebar.tsx` - Coffee-themed scroll progress indicator
 - `client/src/components/UserGuideModal.tsx` - 4-step onboarding carousel
@@ -481,7 +517,11 @@ See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically incl
 
 **Modified Components:**
 - `client/src/components/CoffeeCard.tsx` - Optimized sizing and mobile layout
-- `client/src/components/AddCoffeeForm.tsx` - Dual upload options + duplicate detection + i18n
+- `client/src/components/AddCoffeeForm.tsx` - Dual upload options + duplicate detection + i18n + currency selection
+- `client/src/components/EditCoffeeForm.tsx` - Currency selection for price field
+- `client/src/components/AboutSection.tsx` - Arrow-only collapsible toggle (overflow-visible for button positioning)
+- `client/src/components/EmptyState.tsx` - Arrow-only collapsible toggle
+- `client/src/components/CoffeeStats.tsx` - Added collapsible toggle functionality
 - `client/src/pages/Dashboard.tsx` - Integrated all new features (stats, filters, language switcher, scroll sidebar, help button, user guide, Notion button)
 - All form and modal components - Full i18n integration
 
@@ -614,6 +654,7 @@ If API requests fail with "Database not initialized":
 - `roastDate` stored as text, not typed Date
 - `roastLevel` accepts only: "Light", "Medium", or "Dark" (case-sensitive)
 - `placeUrl` is auto-generated from roaster info (do not manually set)
+- `price` stored as string with currency symbol (e.g., "$18.99", "€15.00", "$25.00 CAD")
 
 ### Photo Upload Flow
 1. Frontend requests presigned URL from `/api/upload-url`

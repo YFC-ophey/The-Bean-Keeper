@@ -1,7 +1,6 @@
 import { Coffee, Globe, MapPin, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { CoffeeEntry } from "@shared/schema";
 import { useState, useMemo } from "react";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTranslation } from "react-i18next";
 
 interface CoffeeStatsProps {
@@ -10,8 +9,7 @@ interface CoffeeStatsProps {
 
 export default function CoffeeStats({ entries }: CoffeeStatsProps) {
   const { t } = useTranslation('dashboard');
-  const [isExpanded, setIsExpanded] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // Calculate statistics (memoized for performance)
   const stats = useMemo(() => {
@@ -43,46 +41,52 @@ export default function CoffeeStats({ entries }: CoffeeStatsProps) {
 
   if (stats.totalBeans === 0) return null;
 
-  // Mobile: Compact summary view
-  if (isMobile && !isExpanded) {
+  // Collapsed state - shows minimal summary tab
+  if (!isExpanded) {
     return (
-      <div className="mb-8">
+      <div className="mb-8 animate-in fade-in duration-300">
         <button
           onClick={() => setIsExpanded(true)}
-          className="w-full p-4 bg-gradient-to-r from-[#6F4E37] to-[#4A3020] rounded-2xl text-white flex items-center justify-between shadow-lg hover:shadow-xl transition-shadow duration-300 active:scale-[0.98]"
+          className="group w-full relative overflow-hidden rounded-xl
+            bg-gradient-to-r from-[#F5EFE7] via-[#E8DCC8] to-[#F5EFE7]
+            border-2 border-[#D4C5B0]
+            shadow-[0_2px_8px_rgba(111,78,55,0.1)]
+            hover:shadow-[0_4px_12px_rgba(111,78,55,0.15)]
+            transition-all duration-300
+            hover:-translate-y-0.5
+            px-4 py-3"
         >
-          <div className="flex items-center gap-3">
-            <Coffee className="w-5 h-5" />
-            <div className="text-left">
-              <p className="font-serif font-semibold text-base">
-                {stats.totalBeans} {t('stats.beans')} · {stats.countriesCount} {t('stats.countries')}
-              </p>
-              <p className="text-xs text-white/70 font-serif">
-                {stats.avgRating !== "—" && `★ ${stats.avgRating}`}
-              </p>
+          <div className="flex items-center justify-between">
+            {/* Left: Coffee icon + Stats summary */}
+            <div className="flex items-center gap-3">
+              <Coffee className="w-5 h-5 text-[#6F4E37] shrink-0" strokeWidth={1.5} />
+              <div className="text-left">
+                <span
+                  className="text-sm md:text-base font-bold text-[#6F4E37] tracking-tight"
+                  style={{ fontFamily: "'Clash Display', sans-serif" }}
+                >
+                  {stats.totalBeans} {t('stats.beans')} · {stats.countriesCount} {t('stats.countries')}
+                  {stats.avgRating !== "—" && ` · ★ ${stats.avgRating}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Expand hint */}
+            <div className="flex items-center gap-2 text-[#6F4E37]/60 group-hover:text-[#6F4E37] transition-colors">
+              <span className="text-xs font-serif hidden sm:inline">View stats</span>
+              <ChevronDown className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
             </div>
           </div>
-          <ChevronDown className="w-5 h-5 flex-shrink-0" />
+
+          {/* Decorative fold line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#8B6F47]/30 to-transparent" />
         </button>
       </div>
     );
   }
 
   return (
-    <div className="mb-8">
-      {/* Mobile: Collapse button */}
-      {isMobile && isExpanded && (
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={() => setIsExpanded(false)}
-            className="text-sm text-[#2C1810]/60 hover:text-[#2C1810] flex items-center gap-1 transition-colors"
-          >
-            <ChevronUp className="w-4 h-4" />
-            {t('common:buttons.back', { defaultValue: 'Show less' })}
-          </button>
-        </div>
-      )}
-
+    <div className="mb-8 relative animate-in fade-in slide-in-from-top-4 duration-600">
       {/* Editorial Section Header */}
       <div className="mb-6 border-b border-[#2C1810]/10 pb-4">
         <h2 className="text-2xl font-serif font-bold text-[#2C1810] tracking-tight flex items-center gap-3">
@@ -204,7 +208,7 @@ export default function CoffeeStats({ entries }: CoffeeStatsProps) {
       </div>
 
       {/* Decorative divider */}
-      <div className="mt-8 flex items-center gap-3 opacity-20">
+      <div className="mt-8 mb-8 flex items-center gap-3 opacity-20">
         <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#2C1810] to-transparent" />
         <div className="flex gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-[#6F4E37]" />
@@ -213,6 +217,26 @@ export default function CoffeeStats({ entries }: CoffeeStatsProps) {
         </div>
         <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#2C1810] to-transparent" />
       </div>
+
+      {/* Collapse toggle button - bottom center (arrow only) */}
+      <button
+        onClick={() => setIsExpanded(false)}
+        className="group absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-20
+          w-10 h-10
+          bg-gradient-to-br from-[#6F4E37] to-[#8B6F47]
+          hover:from-[#8B6F47] hover:to-[#6F4E37]
+          rounded-full
+          flex items-center justify-center
+          shadow-[0_4px_12px_rgba(111,78,55,0.3)]
+          hover:shadow-[0_6px_20px_rgba(111,78,55,0.5)]
+          transition-all duration-300
+          hover:scale-110
+          active:scale-95
+          border-2 border-white"
+        aria-label="Collapse stats"
+      >
+        <ChevronUp className="w-5 h-5 text-white group-hover:-translate-y-0.5 transition-transform duration-200" />
+      </button>
     </div>
   );
 }

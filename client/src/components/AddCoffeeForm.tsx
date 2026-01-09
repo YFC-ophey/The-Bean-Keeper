@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Camera, Upload, Loader2, CheckCircle2, ScanText, ChevronDown, Image, Coffee } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { apiRequest } from "@/lib/queryClient";
@@ -76,6 +83,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     weight: "",
     price: "",
   });
+
+  const [currency, setCurrency] = useState<string>("USD");
 
   const isOCRRunningRef = useRef(false);
   const pendingOCRRef = useRef(false);
@@ -1056,19 +1065,47 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
             </div>
             <div>
               <Label htmlFor="price">{t('forms:addCoffee.labels.price')}</Label>
-              <Input
-                id="price"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                onBlur={(e) => {
-                  const value = e.target.value.trim();
-                  if (value && !value.startsWith('$')) {
-                    setFormData({ ...formData, price: '$' + value });
-                  }
-                }}
-                placeholder={t('forms:addCoffee.placeholders.price')}
-                data-testid="input-price"
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={currency}
+                  onValueChange={(value) => {
+                    setCurrency(value);
+                    // Update existing price with new currency symbol
+                    if (formData.price) {
+                      const numericValue = formData.price.replace(/[^0-9.]/g, '');
+                      const symbol = value === 'USD' || value === 'CAD' ? '$' : '€';
+                      setFormData({ ...formData, price: symbol + numericValue });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">$ USD</SelectItem>
+                    <SelectItem value="CAD">$ CAD</SelectItem>
+                    <SelectItem value="EUR">€ EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="price"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onBlur={(e) => {
+                    const value = e.target.value.trim();
+                    if (value) {
+                      const numericValue = value.replace(/[^0-9.]/g, '');
+                      const symbol = currency === 'EUR' ? '€' : '$';
+                      if (numericValue) {
+                        setFormData({ ...formData, price: symbol + numericValue });
+                      }
+                    }
+                  }}
+                  placeholder={currency === 'EUR' ? '€18.99' : '$18.99'}
+                  data-testid="input-price"
+                  className="flex-1"
+                />
+              </div>
             </div>
           </div>
         </CollapsibleContent>

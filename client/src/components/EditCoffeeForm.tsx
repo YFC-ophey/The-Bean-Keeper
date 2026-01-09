@@ -4,6 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CoffeeEntry } from "@shared/schema";
 import StarRating from "./StarRating";
 import { Heart } from "lucide-react";
@@ -32,6 +39,15 @@ interface EditCoffeeFormProps {
 
 export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffeeFormProps) {
   const { t } = useTranslation(['forms', 'coffee', 'common']);
+
+  // Detect currency from existing price
+  const detectCurrency = (price: string | null) => {
+    if (!price) return "USD";
+    if (price.includes('€')) return "EUR";
+    return "USD"; // Default for $ symbol (could be USD or CAD)
+  };
+
+  const [currency, setCurrency] = useState<string>(detectCurrency(entry.price));
   const [formData, setFormData] = useState({
     roasterName: entry.roasterName,
     roasterWebsite: entry.roasterWebsite || "",
@@ -156,19 +172,47 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
         </div>
         <div>
           <Label htmlFor="price">{t('forms:addCoffee.labels.price')}</Label>
-          <Input
-            id="price"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            onBlur={(e) => {
-              const value = e.target.value.trim();
-              if (value && !value.startsWith('$')) {
-                setFormData({ ...formData, price: '$' + value });
-              }
-            }}
-            placeholder={t('forms:addCoffee.placeholders.price')}
-            data-testid="input-edit-price"
-          />
+          <div className="flex gap-2">
+            <Select
+              value={currency}
+              onValueChange={(value) => {
+                setCurrency(value);
+                // Update existing price with new currency symbol
+                if (formData.price) {
+                  const numericValue = formData.price.replace(/[^0-9.]/g, '');
+                  const symbol = value === 'USD' || value === 'CAD' ? '$' : '€';
+                  setFormData({ ...formData, price: symbol + numericValue });
+                }
+              }}
+            >
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">$ USD</SelectItem>
+                <SelectItem value="CAD">$ CAD</SelectItem>
+                <SelectItem value="EUR">€ EUR</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              id="price"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              onBlur={(e) => {
+                const value = e.target.value.trim();
+                if (value) {
+                  const numericValue = value.replace(/[^0-9.]/g, '');
+                  const symbol = currency === 'EUR' ? '€' : '$';
+                  if (numericValue) {
+                    setFormData({ ...formData, price: symbol + numericValue });
+                  }
+                }
+              }}
+              placeholder={currency === 'EUR' ? '€18.99' : '$18.99'}
+              data-testid="input-edit-price"
+              className="flex-1"
+            />
+          </div>
         </div>
       </div>
 
