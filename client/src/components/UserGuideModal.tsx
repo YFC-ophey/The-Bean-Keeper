@@ -66,7 +66,13 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right))',
+      }}
       onClick={onClose}
     >
       {/* Backdrop with coffee tint */}
@@ -75,14 +81,14 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
       {/* Modal Container */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl animate-slide-up"
+        className="relative w-full max-w-[95vw] sm:max-w-3xl md:max-w-4xl animate-slide-up"
       >
         {/* Decorative coffee stains */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-[#6F4E37]/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
         <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-[#8B6F47]/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
 
         {/* Modal Card - Coffee Book Aesthetic */}
-        <div className="relative bg-gradient-to-br from-[#F5EFE7] via-[#F0E6D2] to-[#E8DCC8] rounded-3xl shadow-2xl overflow-hidden border-4 border-[#D4C5B0]">
+        <div className="relative bg-gradient-to-br from-[#F5EFE7] via-[#F0E6D2] to-[#E8DCC8] rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-2 sm:border-4 border-[#D4C5B0]">
           {/* Vintage paper texture overlay */}
           <div
             className="absolute inset-0 opacity-[0.15] pointer-events-none mix-blend-multiply"
@@ -100,30 +106,30 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
           <div className="absolute top-10 right-14 w-12 h-12 rounded-full border-3 border-[#6F4E37]/15 opacity-30" />
 
           {/* Header */}
-          <div className="relative p-6 md:p-8 border-b-2 border-[#D4C5B0]/60">
+          <div className="relative p-4 sm:p-6 md:p-8 border-b-2 border-[#D4C5B0]/60">
             <button
               onClick={onClose}
-              className="absolute top-6 right-6 w-11 h-11 flex items-center justify-center rounded-full bg-[#6F4E37]/10 hover:bg-[#6F4E37]/20 transition-all duration-300 group shadow-md hover:shadow-lg"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-[#6F4E37]/10 hover:bg-[#6F4E37]/20 transition-all duration-300 group shadow-md hover:shadow-lg z-10"
               aria-label="Close guide"
             >
-              <X className="w-5 h-5 text-[#6F4E37] group-hover:rotate-90 transition-transform duration-300" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#6F4E37] group-hover:rotate-90 transition-transform duration-300" />
             </button>
 
-            <div className="pr-14">
-              <h2 className="text-3xl md:text-5xl font-serif font-bold text-[#2C1810] mb-3 tracking-tight">
+            <div className="pr-12 sm:pr-14 md:pr-16">
+              <h2 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-serif font-bold text-[#2C1810] mb-2 sm:mb-3 tracking-tight leading-tight">
                 {t('header.title')}
               </h2>
-              <p className="text-[#6F4E37] font-serif italic text-base md:text-lg">
+              <p className="text-[#6F4E37] font-serif italic text-sm sm:text-base md:text-lg leading-relaxed">
                 {t('header.subtitle')}
               </p>
             </div>
           </div>
 
           {/* Carousel Section */}
-          <div className="p-6 md:p-8 lg:p-10">
+          <div className="p-4 sm:p-6 md:p-8 lg:p-10">
             <div className="relative">
               {/* Main carousel container */}
-              <div className="relative overflow-hidden rounded-2xl">
+              <div className="relative overflow-hidden rounded-xl sm:rounded-2xl">
                 <div
                   className="flex transition-transform duration-700 ease-out"
                   style={{ transform: `translateX(-${currentSlide * 100}%)` }}
@@ -135,7 +141,7 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
                         key={step.step}
                         className="w-full flex-shrink-0"
                       >
-                        <div className="bg-white/40 backdrop-blur-sm rounded-2xl border-2 border-[#D4C5B0]/50 shadow-lg overflow-hidden">
+                        <div className="bg-white/40 backdrop-blur-sm rounded-xl sm:rounded-2xl border-2 border-[#D4C5B0]/50 shadow-lg overflow-hidden">
                           {/* Step Image/Visual Area */}
                           <div className={`relative aspect-[16/9] bg-gradient-to-br ${step.color} flex items-center justify-center overflow-hidden`}>
                             {/* Decorative elements */}
@@ -152,21 +158,21 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
 
                             {/* Main icon/placeholder */}
                             <div className="relative z-10 text-center">
-                              <div className="mb-6 transform hover:scale-110 transition-transform duration-500">
-                                <Icon className="w-32 h-32 md:w-40 md:h-40 text-white/90 mx-auto drop-shadow-2xl" strokeWidth={1.5} />
+                              <div className="mb-4 sm:mb-6 transform hover:scale-110 transition-transform duration-500">
+                                <Icon className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 text-white/90 mx-auto drop-shadow-2xl" strokeWidth={1.5} />
                               </div>
 
                               {/* Large emoji placeholder for visual interest */}
-                              <div className="text-8xl md:text-9xl opacity-20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                              <div className="text-6xl sm:text-8xl md:text-9xl opacity-20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                                 {step.imagePlaceholder}
                               </div>
                             </div>
 
                             {/* Step number badge - vintage stamp style */}
-                            <div className="absolute top-4 left-4 md:top-6 md:left-6">
+                            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 md:top-6 md:left-6">
                               <div className="relative">
-                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl border-3 border-white/50 transform -rotate-12">
-                                  <span className="text-2xl md:text-3xl font-bold text-[#6F4E37] font-serif">
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl border-2 sm:border-3 border-white/50 transform -rotate-12">
+                                  <span className="text-xl sm:text-2xl md:text-3xl font-bold text-[#6F4E37] font-serif">
                                     {step.step}
                                   </span>
                                 </div>
@@ -179,14 +185,14 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
                           </div>
 
                           {/* Step Content */}
-                          <div className="p-6 md:p-8">
-                            <h3 className="text-2xl md:text-3xl font-serif font-bold text-[#2C1810] mb-3 tracking-tight">
+                          <div className="p-4 sm:p-6 md:p-8">
+                            <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-serif font-bold text-[#2C1810] mb-2 sm:mb-3 tracking-tight leading-tight">
                               {step.title}
                             </h3>
-                            <p className="text-[#6F4E37] text-base md:text-lg mb-4 leading-relaxed">
+                            <p className="text-[#6F4E37] text-sm sm:text-base md:text-lg mb-3 sm:mb-4 leading-relaxed">
                               {step.description}
                             </p>
-                            <p className="text-[#8B6F47] text-sm md:text-base leading-relaxed border-l-4 border-[#D4C5B0] pl-4 italic">
+                            <p className="text-[#8B6F47] text-xs sm:text-sm md:text-base leading-relaxed border-l-4 border-[#D4C5B0] pl-3 sm:pl-4 italic">
                               {step.details}
                             </p>
                           </div>
@@ -200,22 +206,22 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
               {/* Navigation Arrows - Vintage Book Page Style */}
               <button
                 onClick={prevSlide}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-6 w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-[#F5EFE7] to-[#E8DCC8] border-3 border-[#D4C5B0] shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-10"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-4 md:-translate-x-6 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-[#F5EFE7] to-[#E8DCC8] border-2 sm:border-3 border-[#D4C5B0] shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-10"
                 aria-label="Previous step"
               >
-                <ChevronLeft className="w-6 h-6 md:w-7 md:h-7 text-[#6F4E37] group-hover:-translate-x-1 transition-transform" strokeWidth={2.5} />
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#6F4E37] group-hover:-translate-x-1 transition-transform" strokeWidth={2.5} />
               </button>
 
               <button
                 onClick={nextSlide}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-6 w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-[#F5EFE7] to-[#E8DCC8] border-3 border-[#D4C5B0] shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-10"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-4 md:translate-x-6 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-[#F5EFE7] to-[#E8DCC8] border-2 sm:border-3 border-[#D4C5B0] shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-10"
                 aria-label="Next step"
               >
-                <ChevronRight className="w-6 h-6 md:w-7 md:h-7 text-[#6F4E37] group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#6F4E37] group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
               </button>
 
               {/* Navigation Dots - Coffee Beans */}
-              <div className="flex justify-center gap-3 mt-6 md:mt-8">
+              <div className="flex justify-center gap-2 sm:gap-3 mt-4 sm:mt-6 md:mt-8">
                 {guideSteps.map((step, index) => (
                   <button
                     key={step.step}
@@ -227,19 +233,19 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
                   >
                     {/* Coffee bean shaped indicator */}
                     <div className="relative">
-                      <div className={`w-12 h-6 rounded-full transition-all duration-300 ${
+                      <div className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full transition-all duration-300 ${
                         currentSlide === index
                           ? 'bg-gradient-to-br from-[#6F4E37] to-[#8B6F47] shadow-lg'
                           : 'bg-[#D4C5B0]/60 group-hover:bg-[#D4C5B0]'
                       }`}>
                         {/* Coffee bean center line */}
-                        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-px ${
+                        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 sm:w-8 h-px ${
                           currentSlide === index ? 'bg-white/30' : 'bg-[#8B6F47]/30'
                         }`} />
                       </div>
 
                       {/* Step number inside bean */}
-                      <span className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs font-bold ${
+                      <span className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] sm:text-xs font-bold ${
                         currentSlide === index ? 'text-white' : 'text-[#6F4E37]/70'
                       }`}>
                         {step.step}
@@ -251,19 +257,24 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-6 md:px-8 py-5 md:py-6 bg-gradient-to-r from-[#F5EFE7] via-[#F0E6D2] to-[#E8DCC8] border-t-2 border-[#D4C5B0]/60">
-            <div className="flex items-center justify-between gap-4">
+          {/* Footer - Safe area padding for iOS home indicator */}
+          <div
+            className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 bg-gradient-to-r from-[#F5EFE7] via-[#F0E6D2] to-[#E8DCC8] border-t-2 border-[#D4C5B0]/60"
+            style={{
+              paddingBottom: 'max(1rem, calc(1rem + env(safe-area-inset-bottom)))',
+            }}
+          >
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
               {/* Progress indicator */}
-              <div className="hidden md:flex items-center gap-2 text-sm text-[#6F4E37]/70 font-medium">
+              <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[#6F4E37]/70 font-medium">
                 <Coffee className="w-4 h-4" />
                 <span>{t('footer.progress', { current: currentSlide + 1, total: guideSteps.length })}</span>
               </div>
 
-              {/* CTA Button */}
+              {/* CTA Button - Full width on mobile, auto on desktop */}
               <button
                 onClick={onClose}
-                className="flex-1 md:flex-initial py-3 md:py-4 px-8 md:px-12 bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] text-white font-bold text-base md:text-lg rounded-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] shadow-lg border-2 border-[#5D4029]/20"
+                className="w-full sm:w-auto sm:flex-initial py-3.5 sm:py-3 md:py-4 px-6 sm:px-8 md:px-12 bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] text-white font-bold text-base sm:text-base md:text-lg rounded-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg border-2 border-[#5D4029]/20 min-h-[44px]"
               >
                 {currentSlide === guideSteps.length - 1 ? t('footer.startTracking') : t('footer.gotIt')}
               </button>
