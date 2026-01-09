@@ -1,7 +1,9 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Notion database ID - this will be the same for all users since we're using a single database
-const NOTION_DATABASE_ID = "a12cbbbc-b1a4-421d-83f0-2fac3436c39d";
+// Notion database ID - local development uses separate database from production
+// Local dev: 2e375dba-9d93-8038-b2e2-d7ec275e9b68
+// Production (Render): a12cbbbc-b1a4-421d-83f0-2fac3436c39d
+const NOTION_DATABASE_ID = "2e375dba-9d93-8038-b2e2-d7ec275e9b68";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {

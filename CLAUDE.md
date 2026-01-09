@@ -16,7 +16,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 📱 Mobile-optimized with dual photo upload methods (camera + file picker)
 - ☕ Vintage coffee journal aesthetic
 
-**Current Status:** ✅ Migration complete - App now uses Notion-only storage + Groq AI. PostgreSQL has been removed.
+**Current Status:** ✅ Production-ready - Deployed to Render with Cloudinary photo storage, Notion database, and Groq AI. PostgreSQL has been removed.
+
+**Live URL:** https://the-bean-keeper.onrender.com
 
 ## Development Commands
 
@@ -53,8 +55,11 @@ npx tsx test-groq.ts
 **Storage:**
 - Notion API as the single source of truth (no PostgreSQL)
 - Direct CRUD operations via `@notionhq/client`
-- Uses Internal Integration (API key) for testing/development
-- All coffee entries stored as Notion pages in a shared database
+- Uses Internal Integration (API key)
+- **Separate databases:**
+  - Local dev: `2e375dba-9d93-8038-b2e2-d7ec275e9b68`
+  - Production (Render): `a12cbbbc-b1a4-421d-83f0-2fac3436c39d`
+- All coffee entries stored as Notion pages in database
 
 **Photo Storage:**
 - **Production:** Cloudinary for persistent cloud storage (recommended)
@@ -141,11 +146,13 @@ notionStorage.deleteCoffeeEntry(id)     // Archives Notion page
 
 ### Backend Core
 - `server/index.ts` - Express app entry point
-- `server/routes.ts` - API endpoints (direct Notion operations)
+- `server/routes.ts` - API endpoints (direct Notion operations + Cloudinary uploads)
 - `server/notion-storage.ts` - **Notion storage layer** (replaces PostgreSQL)
 - `server/notion.ts` - Notion API client and database operations
 - `server/groq.ts` - Groq AI client for coffee data extraction
-- `server/objectStorage.ts` - Google Cloud Storage integration
+- `server/cloudinary-storage.ts` - **Cloudinary photo storage service** (production)
+- `server/local-storage.ts` - Local file system fallback (development)
+- `server/objectStorage.ts` - Google Cloud Storage integration (legacy/Replit)
 
 ### Legacy Files (Not Used)
 - `server/storage.ts` - Removed (PostgreSQL abstraction)
@@ -226,10 +233,38 @@ POST   /api/notion/create-database
 ### Photo Upload
 ```typescript
 POST   /api/upload-url
-  // Returns presigned URL for Google Cloud Storage
+  // Returns upload URL - Cloudinary if configured, otherwise local
+  // Production: Returns /api/cloudinary-upload/:fileId
+  // Development: Returns /api/local-upload/:fileId
+
+PUT    /api/cloudinary-upload/:fileId
+  // Upload file to Cloudinary (production)
+  // Returns: { url: "https://res.cloudinary.com/..." }
+
+PUT    /api/local-upload/:fileId
+  // Upload file to local filesystem (development fallback)
+  // Returns: { url: "/api/local-files/:filename" }
+
+GET    /api/local-files/:filename
+  // Serves locally stored photos (development only)
 
 GET    /objects/:objectPath
-  // Serves uploaded photos
+  // Serves uploaded photos from GCS (legacy/Replit)
+```
+
+### Diagnostic Endpoints
+```typescript
+GET    /api/health
+  // Health check for Render monitoring
+  Returns: { status, timestamp, uptime, environment }
+
+GET    /api/debug/env
+  // Check environment configuration
+  Returns: { nodeEnv, hasGroqKey, hasNotionKey, hasCloudinary, storageMode }
+
+GET    /api/debug/groq
+  // Test Groq API connectivity
+  Returns: { success, extracted, message }
 ```
 
 ## Environment Variables
@@ -240,14 +275,32 @@ GROQ_API_KEY=gsk_xxx
 
 # Notion Internal Integration (Required)
 NOTION_API_KEY=ntn_xxx              # Get from notion.so/my-integrations
-NOTION_DATABASE_ID=xxx-xxx-xxx      # Created via create-database.ts
 
-# Google Cloud Storage (Replit sidecar)
-PRIVATE_OBJECT_DIR=gs://bucket/path
+# Notion Database IDs
+# Local development database
+NOTION_DATABASE_ID=2e375dba-9d93-8038-b2e2-d7ec275e9b68
+# Production database (on Render): a12cbbbc-b1a4-421d-83f0-2fac3436c39d
 
-# Port (Optional - defaults to 5000)
-PORT=3000
+# Cloudinary (Production photo storage - Recommended)
+CLOUDINARY_CLOUD_NAME=dog6jqdmz
+CLOUDINARY_API_KEY=821276162312258
+CLOUDINARY_API_SECRET=xxx
+
+# Google Maps API (Optional - for embedded maps)
+VITE_GOOGLE_MAPS_API_KEY=xxx
+
+# Server Configuration
+PORT=5000                           # Default port for local dev
+NODE_ENV=development                # 'development' or 'production'
+
+# Legacy/Optional (Replit only)
+PRIVATE_OBJECT_DIR=gs://bucket/path  # Google Cloud Storage (Replit sidecar)
 ```
+
+**Environment Setup:**
+- **Local Development:** Uses `.env` file with dev database ID
+- **Production (Render):** Environment variables set in Render dashboard with production database ID
+- **Photo Storage:** Cloudinary for production (persistent), local filesystem for dev (ephemeral)
 
 **Note:** PostgreSQL variables (`DATABASE_URL`) and Notion OAuth variables are no longer used.
 
@@ -284,9 +337,27 @@ See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically incl
 
 ### Photo Storage
 
-- **Upload**: Client requests presigned URL → uploads directly to GCS
-- **Retrieval**: URLs normalized and served via `/objects/:path`
-- **Replit Sidecar**: Uses custom GCS credentials flow on port 1106
+**Production (Cloudinary):**
+- Client requests upload URL via `/api/upload-url`
+- Returns Cloudinary upload endpoint `/api/cloudinary-upload/:fileId`
+- Client uploads directly to server, which streams to Cloudinary
+- Cloudinary URL returned: `https://res.cloudinary.com/dog6jqdmz/...`
+- Features:
+  - Persistent storage (25GB free tier)
+  - Automatic image optimization
+  - CDN delivery worldwide
+  - Survives Render deployments/restarts
+
+**Development (Local Filesystem):**
+- Uploads saved to `.local/uploads` directory
+- Served via `/api/local-files/:filename`
+- Ephemeral (deleted on server restart)
+- Automatic fallback if Cloudinary not configured
+
+**Legacy (Replit GCS):**
+- Uses Replit sidecar on port 1106
+- Only works on Replit environment
+- URLs normalized and served via `/objects/:path`
 
 ### Design Principles
 
@@ -660,10 +731,22 @@ If API requests fail with "Database not initialized":
 - `price` stored as string with currency symbol (e.g., "$18.99", "€15.00", "$25.00 CAD")
 
 ### Photo Upload Flow
-1. Frontend requests presigned URL from `/api/upload-url`
-2. Client uploads directly to GCS using presigned URL
-3. URL is normalized before storing in database
-4. Both front and back photos follow same flow
+**Production (with Cloudinary):**
+1. Frontend requests upload URL from `/api/upload-url`
+2. Server returns `/api/cloudinary-upload/:fileId`
+3. Client uploads file to server endpoint
+4. Server streams file to Cloudinary
+5. Cloudinary returns permanent URL: `https://res.cloudinary.com/...`
+6. URL stored in Notion database
+7. Both front and back photos follow same flow
+
+**Development (without Cloudinary):**
+1. Frontend requests upload URL from `/api/upload-url`
+2. Server returns `/api/local-upload/:fileId`
+3. Client uploads file to server
+4. Server saves to `.local/uploads` directory
+5. Returns local URL: `/api/local-files/:filename`
+6. Files persist until server restart
 
 ### Google Maps Place URL Auto-Generation
 The `placeUrl` field is automatically generated when creating or updating coffee entries:
