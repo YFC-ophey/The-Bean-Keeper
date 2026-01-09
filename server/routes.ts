@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { notionStorage } from "./notion-storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { localStorageService } from "./local-storage";
+import { cloudinaryStorageService } from "./cloudinary-storage";
 import { insertCoffeeEntrySchema, updateCoffeeEntrySchema, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
 import { z } from "zod";
 import { extractCoffeeInfoWithAI } from "./groq";
@@ -91,11 +92,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get upload URL for photo - use local storage
+  // Get upload URL for photo - use Cloudinary if configured, otherwise local storage
   app.post("/api/upload-url", async (req, res) => {
     try {
-      const uploadURL = await localStorageService.getUploadURL();
-      res.json({ uploadURL });
+      // Prefer Cloudinary if configured
+      if (cloudinaryStorageService.isConfigured()) {
+        const uploadURL = await cloudinaryStorageService.getUploadURL();
+        res.json({ uploadURL });
+      } else {
+        // Fallback to local storage
+        const uploadURL = await localStorageService.getUploadURL();
+        res.json({ uploadURL });
+      }
     } catch (error) {
       console.error("Error generating upload URL:", error);
       res.status(500).json({ error: "Failed to generate upload URL" });
@@ -118,6 +126,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error uploading file:", error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+
+  // Cloudinary upload endpoint
+  app.put("/api/cloudinary-upload/:fileId", async (req, res) => {
+    try {
+      const { fileId } = req.params;
+      const contentType = req.headers['content-type'] || 'image/jpeg';
+
+      // Collect the raw body data
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk) => chunks.push(chunk));
+      req.on('end', async () => {
+        try {
+          const buffer = Buffer.concat(chunks);
+          const fileUrl = await cloudinaryStorageService.saveFile(fileId, buffer, contentType);
+          res.json({ url: fileUrl });
+        } catch (uploadError) {
+          console.error("Error uploading to Cloudinary:", uploadError);
+          res.status(500).json({ error: "Failed to upload file to Cloudinary" });
+        }
+      });
+    } catch (error) {
+      console.error("Error in Cloudinary upload endpoint:", error);
       res.status(500).json({ error: "Failed to upload file" });
     }
   });

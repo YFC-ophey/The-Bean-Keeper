@@ -57,8 +57,10 @@ npx tsx test-groq.ts
 - All coffee entries stored as Notion pages in a shared database
 
 **Photo Storage:**
-- Photos stored in Google Cloud Storage (Replit sidecar)
-- Presigned URLs for direct client uploads
+- **Production:** Cloudinary for persistent cloud storage (recommended)
+- **Local Dev:** Google Cloud Storage (Replit sidecar) or local file system
+- Automatic fallback: Uses Cloudinary if configured, otherwise local storage
+- Direct client uploads with automatic image optimization
 - URLs stored in Notion page properties
 
 ### Tech Stack
@@ -75,7 +77,8 @@ npx tsx test-groq.ts
 - Express.js + TypeScript
 - Groq AI (Llama 3.1 8B Instant) for coffee data extraction
 - Notion SDK (`@notionhq/client`) for database operations
-- Google Cloud Storage for photos (via Replit sidecar)
+- Cloudinary for persistent photo storage (production)
+- Local file system fallback (development/testing)
 - **No PostgreSQL or Drizzle ORM** (fully removed)
 
 **AI/ML Pipeline:**
