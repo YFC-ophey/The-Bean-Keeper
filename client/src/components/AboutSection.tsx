@@ -62,23 +62,23 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
   // Expanded state - full content
   return (
     <section className="relative mb-8 md:mb-12 animate-in fade-in slide-in-from-top-4 duration-600">
-      {/* Main container with vintage paper texture */}
-      <div className="relative overflow-visible rounded-2xl bg-gradient-to-br from-[#F5EFE7] via-[#E8DCC8] to-[#F5EFE7] p-6 md:p-8 pb-12 shadow-[0_4px_20px_rgba(111,78,55,0.15)] border-2 border-[#D4C5B0]">
+      {/* Main container with vintage paper texture - Mobile optimized padding */}
+      <div className="relative overflow-visible rounded-xl md:rounded-2xl bg-gradient-to-br from-[#F5EFE7] via-[#E8DCC8] to-[#F5EFE7] p-4 sm:p-6 md:p-8 pb-10 sm:pb-12 shadow-[0_4px_20px_rgba(111,78,55,0.15)] border-2 border-[#D4C5B0]">
 
         {/* Decorative coffee stain watermark */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-[#6F4E37]/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#8B6F47]/5 rounded-full blur-3xl" />
 
-        {/* Quick Guide Floating Card - Top Left */}
+        {/* Quick Guide Floating Card - Responsive Positioning */}
         {onOpenGuide && (
           <button
             onClick={onOpenGuide}
-            className="group absolute top-3 left-3 z-10"
+            className="group absolute top-2 left-2 sm:top-3 sm:left-3 z-10"
             aria-label="Open Quick Guide"
           >
-            <div className="relative flex items-center gap-2 px-3 py-2
+            <div className="relative flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2
               bg-gradient-to-br from-white via-[#F5EFE7] to-[#E8DCC8]
-              rounded-xl
+              rounded-lg sm:rounded-xl
               border-2 border-[#8B6F47]/30
               shadow-[0_4px_12px_rgba(111,78,55,0.2),inset_0_1px_2px_rgba(255,255,255,0.8)]
               group-hover:shadow-[0_6px_16px_rgba(111,78,55,0.3),inset_0_1px_3px_rgba(255,255,255,0.9)]
@@ -86,8 +86,8 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
               group-hover:-translate-y-0.5
               active:translate-y-0">
 
-              {/* Coffee cup icon - compact */}
-              <div className="relative w-8 h-8 shrink-0">
+              {/* Coffee cup icon - compact, smaller on mobile */}
+              <div className="relative w-6 h-6 sm:w-8 sm:h-8 shrink-0">
                 <svg viewBox="0 0 100 100" className="w-full h-full">
                   <defs>
                     <clipPath id="cupShapeSmall">
@@ -141,25 +141,25 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                 </div>
               </div>
 
-              {/* Text content */}
-              <div className="flex flex-col items-start">
+              {/* Text content - Show coffee cup only on smallest screens */}
+              <div className="hidden min-[400px]:flex flex-col items-start">
                 <span
-                  className="text-[10px] text-[#6F4E37] font-bold leading-tight tracking-wide"
+                  className="text-[9px] sm:text-[10px] text-[#6F4E37] font-bold leading-tight tracking-wide"
                   style={{ fontFamily: "'Clash Display', sans-serif" }}>
                   Quick Guide
                 </span>
-                <span className="text-[9px] text-[#6F4E37]/60 font-serif leading-tight">
-                  Learn in 4 steps
+                <span className="text-[8px] sm:text-[9px] text-[#6F4E37]/60 font-serif leading-tight">
+                  4 steps
                 </span>
               </div>
 
-              {/* Arrow hint */}
+              {/* Arrow hint - Hidden on mobile */}
               <svg
-                width="12"
-                height="12"
+                width="10"
+                height="10"
                 viewBox="0 0 16 16"
                 fill="none"
-                className="text-[#8B6F47] opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200 shrink-0"
+                className="hidden sm:block text-[#8B6F47] opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200 shrink-0"
               >
                 <path
                   d="M6 12L10 8L6 4"
@@ -170,15 +170,15 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                 />
               </svg>
 
-              {/* "NEW" badge */}
-              <div className="absolute -top-1.5 -right-1.5
+              {/* "NEW" badge - Smaller on mobile */}
+              <div className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5
                 bg-gradient-to-br from-[#C4A57B] to-[#8B6F47]
-                px-1.5 py-0.5 rounded-full
+                px-1 py-0.5 sm:px-1.5 sm:py-0.5 rounded-full
                 shadow-[0_2px_6px_rgba(111,78,55,0.3)]
                 rotate-12
                 group-hover:rotate-6
                 transition-all duration-200">
-                <span className="text-white text-[8px] font-bold tracking-wide"
+                <span className="text-white text-[7px] sm:text-[8px] font-bold tracking-wide"
                   style={{ fontFamily: "'Clash Display', sans-serif" }}>
                   NEW
                 </span>
@@ -203,53 +203,53 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
 
         {/* Content */}
         <div className="relative">
-          {/* Header with decorative border */}
-          <div className="flex items-center justify-center mb-6 md:mb-8">
-            <div className="flex items-center gap-3">
-              {/* Left coffee bean */}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#6F4E37] opacity-60">
+          {/* Header with decorative border - Mobile optimized */}
+          <div className="flex items-center justify-center mb-4 sm:mb-6 md:mb-8">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Left coffee bean - Hide on small screens */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="hidden min-[400px]:block sm:w-5 sm:h-5 text-[#6F4E37] opacity-60">
                 <ellipse cx="12" cy="12" rx="7" ry="10" fill="currentColor" opacity="0.3" transform="rotate(-25 12 12)" />
                 <path d="M7 12 Q12 10, 17 12" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
               </svg>
 
               <h2
-                className="text-2xl md:text-3xl font-bold text-[#6F4E37] tracking-tight"
+                className="text-lg min-[400px]:text-xl sm:text-2xl md:text-3xl font-bold text-[#6F4E37] tracking-tight text-center"
                 style={{ fontFamily: "'Clash Display', sans-serif" }}
               >
                 About The Bean Keeper
               </h2>
 
-              {/* Right coffee bean */}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#6F4E37] opacity-60">
+              {/* Right coffee bean - Hide on small screens */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="hidden min-[400px]:block sm:w-5 sm:h-5 text-[#6F4E37] opacity-60">
                 <ellipse cx="12" cy="12" rx="7" ry="10" fill="currentColor" opacity="0.3" transform="rotate(25 12 12)" />
                 <path d="M7 12 Q12 10, 17 12" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
               </svg>
             </div>
           </div>
 
-          {/* Introduction text */}
-          <p className="text-center text-[#6F4E37]/80 text-base md:text-lg mb-8 max-w-2xl mx-auto leading-relaxed font-serif">
+          {/* Introduction text - Mobile optimized */}
+          <p className="text-center text-[#6F4E37]/80 text-sm sm:text-base md:text-lg mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed font-serif">
             Your personal coffee journal powered by AI.
             <span className="block mt-1 font-medium text-[#6F4E37]">
               Capture, remember, and celebrate every roast that tells your story.
             </span>
           </p>
 
-          {/* Three-step process */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
-            {/* Step 1 - Capture */}
+          {/* Three-step process - Mobile optimized */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
+            {/* Step 1 - Capture - Mobile optimized */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#6F4E37]/5 to-transparent rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
-              <div className="relative bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-[#D4C5B0]/50 hover:border-[#8B6F47] transition-all duration-300 hover:shadow-md">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#6F4E37] to-[#8B6F47] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <Camera className="w-6 h-6 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#6F4E37]/5 to-transparent rounded-lg sm:rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+              <div className="relative bg-white/60 backdrop-blur-sm rounded-lg sm:rounded-xl p-4 sm:p-5 border border-[#D4C5B0]/50 hover:border-[#8B6F47] transition-all duration-300 hover:shadow-md min-h-[120px] sm:min-h-0">
+                <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#6F4E37] to-[#8B6F47] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#6F4E37] mb-1 text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
+                    <h3 className="font-bold text-[#6F4E37] mb-1 text-base sm:text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
                       1. Capture
                     </h3>
-                    <p className="text-sm text-[#6F4E37]/70 font-serif leading-snug">
+                    <p className="text-xs sm:text-sm text-[#6F4E37]/70 font-serif leading-snug">
                       Snap photos of your coffee bags
                     </p>
                   </div>
@@ -257,19 +257,19 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
               </div>
             </div>
 
-            {/* Step 2 - Extract */}
+            {/* Step 2 - Extract - Mobile optimized */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#8B6F47]/5 to-transparent rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
-              <div className="relative bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-[#D4C5B0]/50 hover:border-[#8B6F47] transition-all duration-300 hover:shadow-md">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B6F47] to-[#C4A57B] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <Sparkles className="w-6 h-6 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#8B6F47]/5 to-transparent rounded-lg sm:rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+              <div className="relative bg-white/60 backdrop-blur-sm rounded-lg sm:rounded-xl p-4 sm:p-5 border border-[#D4C5B0]/50 hover:border-[#8B6F47] transition-all duration-300 hover:shadow-md min-h-[120px] sm:min-h-0">
+                <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#8B6F47] to-[#C4A57B] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#6F4E37] mb-1 text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
+                    <h3 className="font-bold text-[#6F4E37] mb-1 text-base sm:text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
                       2. Extract
                     </h3>
-                    <p className="text-sm text-[#6F4E37]/70 font-serif leading-snug">
+                    <p className="text-xs sm:text-sm text-[#6F4E37]/70 font-serif leading-snug">
                       AI reads roaster, origin, notes
                     </p>
                   </div>
@@ -277,19 +277,19 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
               </div>
             </div>
 
-            {/* Step 3 - Remember */}
+            {/* Step 3 - Remember - Mobile optimized */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#C4A57B]/5 to-transparent rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
-              <div className="relative bg-white/60 backdrop-blur-sm rounded-xl p-5 border border-[#D4C5B0]/50 hover:border-[#8B6F47] transition-all duration-300 hover:shadow-md">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#C4A57B] to-[#6F4E37] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <BookOpen className="w-6 h-6 text-white" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#C4A57B]/5 to-transparent rounded-lg sm:rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+              <div className="relative bg-white/60 backdrop-blur-sm rounded-lg sm:rounded-xl p-4 sm:p-5 border border-[#D4C5B0]/50 hover:border-[#8B6F47] transition-all duration-300 hover:shadow-md min-h-[120px] sm:min-h-0">
+                <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#C4A57B] to-[#6F4E37] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#6F4E37] mb-1 text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
+                    <h3 className="font-bold text-[#6F4E37] mb-1 text-base sm:text-lg" style={{ fontFamily: "'Clash Display', sans-serif" }}>
                       3. Remember
                     </h3>
-                    <p className="text-sm text-[#6F4E37]/70 font-serif leading-snug">
+                    <p className="text-xs sm:text-sm text-[#6F4E37]/70 font-serif leading-snug">
                       Build your coffee story
                     </p>
                   </div>
