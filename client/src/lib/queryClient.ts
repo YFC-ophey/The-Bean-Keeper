@@ -1,10 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Notion database ID - local development uses separate database from production
-// Local dev: 2e375dba-9d93-8038-b2e2-d7ec275e9b68
-// Production (Render): a12cbbbc-b1a4-421d-83f0-2fac3436c39d
-const NOTION_DATABASE_ID = "2e375dba-9d93-8038-b2e2-d7ec275e9b68";
-
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -13,9 +8,7 @@ async function throwIfResNotOk(res: Response) {
 }
 
 function getHeaders(includeContentType: boolean = false): HeadersInit {
-  const headers: HeadersInit = {
-    "X-Notion-Database-Id": NOTION_DATABASE_ID,
-  };
+  const headers: HeadersInit = {};
 
   if (includeContentType) {
     headers["Content-Type"] = "application/json";

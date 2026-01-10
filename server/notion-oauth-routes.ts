@@ -44,7 +44,7 @@ export function registerNotionOAuthRoutes(app: Express) {
       const { code, state, error } = req.query;
 
       if (error) {
-        return res.redirect(`/?error=${error}`);
+        return res.redirect(`/?login=error`);
       }
 
       if (!code || typeof code !== "string") {
@@ -68,26 +68,59 @@ export function registerNotionOAuthRoutes(app: Express) {
 
       console.log("Database created:", databaseId);
 
-      // Store the token and database ID
-      // In production, you'd store this in your database associated with the user
-      // For now, we'll store it in an environment variable or session
+      // STORE IN SESSION (secure, server-side storage)
+      req.session.userId = tokenData.bot_id;
+      req.session.accessToken = tokenData.access_token;
+      req.session.databaseId = databaseId;
+      req.session.workspaceName = tokenData.workspace_name;
 
-      // For demo purposes, redirect to success page with credentials
-      const credentials = Buffer.from(
-        JSON.stringify({
-          accessToken: tokenData.access_token,
-          databaseId,
-          botId: tokenData.bot_id,
-          workspaceId: tokenData.workspace_id,
-          workspaceName: tokenData.workspace_name,
-        })
-      ).toString("base64");
+      // Save session before redirect
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.redirect('/?login=error');
+        }
 
-      res.redirect(`/?notion_auth=success&credentials=${encodeURIComponent(credentials)}`);
+        // Redirect to frontend (session cookie is automatically sent)
+        console.log('Session saved successfully, redirecting to dashboard');
+        res.redirect('/?login=success');
+      });
+
     } catch (error: any) {
       console.error("Error in Notion OAuth callback:", error);
-      res.redirect(`/?error=${encodeURIComponent(error.message)}`);
+      res.redirect(`/?login=error`);
     }
+  });
+
+  /**
+   * Check if user is authenticated
+   * GET /api/auth/me
+   */
+  app.get("/api/auth/me", (req, res) => {
+    if (!req.session.accessToken) {
+      return res.status(401).json({ authenticated: false });
+    }
+
+    res.json({
+      authenticated: true,
+      workspaceName: req.session.workspaceName,
+      databaseId: req.session.databaseId,
+    });
+  });
+
+  /**
+   * Logout - destroy session
+   * POST /api/auth/logout
+   */
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Session destroy error:', err);
+        return res.status(500).json({ error: 'Logout failed' });
+      }
+      res.clearCookie('connect.sid'); // Default session cookie name
+      res.json({ success: true });
+    });
   });
 
   /**

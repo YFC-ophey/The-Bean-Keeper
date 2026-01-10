@@ -8,6 +8,7 @@ import { insertCoffeeEntrySchema, updateCoffeeEntrySchema, type InsertCoffeeEntr
 import { z } from "zod";
 import { extractCoffeeInfoWithAI } from "./groq";
 import { createCoffeeDatabase } from "./notion";
+import { requireAuth } from "./middleware/auth";
 
 /**
  * Generates a Google Maps Place URL based on roaster information
@@ -69,12 +70,19 @@ function generatePlaceUrl(entry: Partial<InsertCoffeeEntry | UpdateCoffeeEntry> 
 export async function registerRoutes(app: Express): Promise<Server> {
   const objectStorageService = new ObjectStorageService();
 
-  // Middleware to set Notion database ID from header
-  app.use((req, res, next) => {
-    const databaseId = req.headers['x-notion-database-id'] as string;
-    if (databaseId) {
-      notionStorage.setDatabaseId(databaseId);
+  // Middleware to set Notion database ID from session (for authenticated routes)
+  // This runs BEFORE individual route handlers, so database ID is set for all requests
+  app.use('/api/coffee-entries', requireAuth, (req, res, next) => {
+    const databaseId = req.session.databaseId;
+
+    if (!databaseId) {
+      return res.status(401).json({
+        error: 'No database configured',
+        message: 'Please log in again to configure your database'
+      });
     }
+
+    notionStorage.setDatabaseId(databaseId);
     next();
   });
 
@@ -93,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get upload URL for photo - use Cloudinary if configured, otherwise local storage
-  app.post("/api/upload-url", async (req, res) => {
+  app.post("/api/upload-url", requireAuth, async (req, res) => {
     try {
       // Prefer Cloudinary if configured
       if (cloudinaryStorageService.isConfigured()) {
@@ -111,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Local file upload endpoint
-  app.put("/api/local-upload/:fileId", async (req, res) => {
+  app.put("/api/local-upload/:fileId", requireAuth, async (req, res) => {
     try {
       const { fileId } = req.params;
       const contentType = req.headers['content-type'] || 'image/jpeg';
@@ -131,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cloudinary upload endpoint
-  app.put("/api/cloudinary-upload/:fileId", async (req, res) => {
+  app.put("/api/cloudinary-upload/:fileId", requireAuth, async (req, res) => {
     try {
       const { fileId } = req.params;
       const contentType = req.headers['content-type'] || 'image/jpeg';
@@ -295,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI-powered OCR extraction endpoint
-  app.post("/api/extract-coffee-info", async (req, res) => {
+  app.post("/api/extract-coffee-info", requireAuth, async (req, res) => {
     try {
       const { text } = req.body;
 

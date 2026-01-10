@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { sessionMiddleware } from "./session";
+import { registerNotionOAuthRoutes } from "./notion-oauth-routes";
 
 const app = express();
 
@@ -15,6 +17,12 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Session middleware - MUST be before routes
+app.use(sessionMiddleware);
+
+// Register OAuth routes
+registerNotionOAuthRoutes(app);
 
 app.use((req, res, next) => {
   const start = Date.now();

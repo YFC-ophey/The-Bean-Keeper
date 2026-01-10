@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, X, ArrowLeft } from "lucide-react";
+import { Plus, Search, X, ArrowLeft, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
+  const { logout, workspaceName } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -404,6 +406,15 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="flex items-center gap-1 px-2 py-1.5 min-h-[36px] text-xs"
+                  aria-label="Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </Button>
                 <NotionButton />
                 <LanguageSwitcher />
               </div>
@@ -412,8 +423,20 @@ export default function Dashboard() {
 
           {/* TABLET & DESKTOP LAYOUT (≥ 640px): Centered with proper spacing */}
           <div className="hidden sm:flex sm:flex-col sm:items-center mb-6 md:mb-8">
-            {/* Language Switcher & Notion Button - Top Right with safe spacing */}
+            {/* Logout, Language Switcher & Notion Button - Top Right with safe spacing */}
             <div className="self-end flex items-center gap-2 mb-3 md:mb-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                className="flex items-center gap-2"
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">
+                  {workspaceName || t('common:buttons.logout', 'Logout')}
+                </span>
+              </Button>
               <NotionButton />
               <LanguageSwitcher />
             </div>
