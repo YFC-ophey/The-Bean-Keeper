@@ -74,12 +74,15 @@ npx tsx test-groq.ts
 - React 18 + TypeScript + Vite
 - TanStack Query (React Query) for server state
 - Wouter for routing
+- React Context API for authentication state management
 - shadcn/ui (Radix primitives) + Tailwind CSS
 - Tesseract.js for client-side OCR
 - i18next (react-i18next) for internationalization (English + Chinese)
 
 **Backend:**
 - Express.js + TypeScript
+- express-session for session management
+- Authentication middleware for protected routes
 - Groq AI (Llama 3.1 8B Instant) for coffee data extraction
 - Notion SDK (`@notionhq/client`) for database operations
 - Cloudinary for persistent photo storage (production)
@@ -98,7 +101,7 @@ npx tsx test-groq.ts
 **Implementation (`server/notion-storage.ts`):**
 - `NotionStorage` class implementing CRUD operations
 - Direct Notion API calls via `@notionhq/client`
-- Database ID set via `X-Notion-Database-Id` header from frontend
+- Database ID configured via `NOTION_DATABASE_ID` environment variable
 - Uses Notion page IDs as entry identifiers
 - All operations synchronous to Notion (no local caching)
 
@@ -147,6 +150,8 @@ notionStorage.deleteCoffeeEntry(id)     // Archives Notion page
 ### Backend Core
 - `server/index.ts` - Express app entry point
 - `server/routes.ts` - API endpoints (direct Notion operations + Cloudinary uploads)
+- `server/session.ts` - Session configuration and management
+- `server/middleware/auth.ts` - Authentication middleware for protected routes
 - `server/notion-storage.ts` - **Notion storage layer** (replaces PostgreSQL)
 - `server/notion.ts` - Notion API client and database operations
 - `server/groq.ts` - Groq AI client for coffee data extraction
@@ -163,9 +168,11 @@ notionStorage.deleteCoffeeEntry(id)     // Archives Notion page
 - `server/sync.ts` - Not actively used
 
 ### Frontend Core
-- `client/src/App.tsx` - Router setup
+- `client/src/App.tsx` - Router setup with protected routes
 - `client/src/pages/Dashboard.tsx` - Main coffee list view
-- `client/src/lib/queryClient.ts` - **API client with Notion headers**
+- `client/src/pages/LoginPage.tsx` - User authentication page (bilingual)
+- `client/src/context/AuthContext.tsx` - Authentication state management
+- `client/src/lib/queryClient.ts` - **API client for server communication**
 - `client/src/components/AddCoffeeForm.tsx` - Photo upload + OCR + AI extraction
 - `client/src/components/CoffeeCard.tsx` - Instagram-style entry card
 - `client/src/components/CoffeeDetail.tsx` - Full entry modal view
@@ -179,11 +186,11 @@ notionStorage.deleteCoffeeEntry(id)     // Archives Notion page
 
 ### Internationalization (i18n)
 - `client/src/i18n/config.ts` - i18next configuration with language detection
-- `client/src/i18n/locales/en/*.json` - English translations (common, dashboard, forms, modals, guide, coffee)
+- `client/src/i18n/locales/en/*.json` - English translations (common, dashboard, forms, modals, guide, coffee, auth)
 - `client/src/i18n/locales/zh/*.json` - Chinese translations (繁體中文)
 - Language persistence via localStorage (`beankeeper_language` key)
 - Automatic detection from browser settings
-- Namespace organization: common, dashboard, forms, modals, guide, coffee
+- Namespace organization: common, dashboard, forms, modals, guide, coffee, auth
 
 ### Schema & Types
 - `shared/schema.ts` - TypeScript interfaces + Zod validation (no Drizzle)
@@ -193,25 +200,20 @@ notionStorage.deleteCoffeeEntry(id)     // Archives Notion page
 ### Coffee Entries (Direct Notion Storage)
 ```typescript
 POST   /api/coffee-entries
-  Headers: X-Notion-Database-Id (required)
   Body: InsertCoffeeEntry
-  // Creates Notion page directly
+  // Creates Notion page directly using NOTION_DATABASE_ID from environment
 
 PATCH  /api/coffee-entries/:id
-  Headers: X-Notion-Database-Id (required)
   Body: UpdateCoffeeEntry
   // Updates Notion page directly
 
 GET    /api/coffee-entries
-  Headers: X-Notion-Database-Id (required)
   // Queries all pages from Notion database
 
 GET    /api/coffee-entries/:id
-  Headers: X-Notion-Database-Id (required)
   // Retrieves single page from Notion
 
 DELETE /api/coffee-entries/:id
-  Headers: X-Notion-Database-Id (required)
   // Archives Notion page
 ```
 
@@ -276,7 +278,7 @@ GROQ_API_KEY=gsk_xxx
 # Notion Internal Integration (Required)
 NOTION_API_KEY=ntn_xxx              # Get from notion.so/my-integrations
 
-# Notion Database IDs
+# Notion Database ID (Required - Backend reads from environment)
 # Local development database
 NOTION_DATABASE_ID=2e375dba-9d93-8038-b2e2-d7ec275e9b68
 # Production database (on Render): a12cbbbc-b1a4-421d-83f0-2fac3436c39d
@@ -309,13 +311,16 @@ PRIVATE_OBJECT_DIR=gs://bucket/path  # Google Cloud Storage (Replit sidecar)
 ### Direct Notion Storage
 
 All CRUD operations go directly to Notion:
-1. Frontend sends `X-Notion-Database-Id` header with every API request
-2. Backend middleware (`server/routes.ts`) sets database ID on `notionStorage`
-3. Operations execute directly against Notion API
-4. No local caching or PostgreSQL involved
+1. Backend reads `NOTION_DATABASE_ID` from environment variables on startup
+2. Backend initializes `notionStorage` with configured database ID
+3. Frontend makes standard API requests (no custom headers required)
+4. Operations execute directly against Notion API
+5. No local caching or PostgreSQL involved
 
-**Frontend Header Setup:**
-See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically includes database ID from constant.
+**Backend Configuration:**
+- `NOTION_DATABASE_ID` environment variable must be set before starting server
+- Local development: Uses dev database (`2e375dba-9d93-8038-b2e2-d7ec275e9b68`)
+- Production (Render): Uses production database (`a12cbbbc-b1a4-421d-83f0-2fac3436c39d`)
 
 ### OCR + AI Extraction Flow
 
@@ -579,6 +584,38 @@ See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically incl
     - Select component from shadcn/ui with coffee-themed styling
     - Currency symbol automatically updates when switching currencies
 
+15. **Authentication System (January 2026):**
+    - User authentication with session-based management
+    - **Backend:**
+      - express-session for secure session storage
+      - Auth middleware protecting API routes (`server/middleware/auth.ts`)
+      - Session configuration in `server/session.ts`
+    - **Frontend:**
+      - AuthContext for global auth state management
+      - LoginPage with bilingual support (EN/ZH)
+      - Protected routes with automatic redirect to login
+      - Auth translations in dedicated namespace
+    - **Files added:**
+      - `client/src/context/AuthContext.tsx`
+      - `client/src/pages/LoginPage.tsx`
+      - `client/src/i18n/locales/en/auth.json`
+      - `client/src/i18n/locales/zh/auth.json`
+      - `server/session.ts`
+      - `server/middleware/auth.ts`
+
+16. **Database Configuration Update (January 2026):**
+    - **Removed frontend database header system:**
+      - Frontend no longer sends `X-Notion-Database-Id` header
+      - Simplified API client in `queryClient.ts`
+    - **Backend environment-based configuration:**
+      - Backend reads `NOTION_DATABASE_ID` from environment variables
+      - Database ID configured once at server startup
+      - Separate database IDs for local dev and production
+    - **Benefits:**
+      - Simpler frontend code
+      - Centralized configuration management
+      - Easier environment-specific deployment
+
 **New Components Added:**
 - `client/src/components/ScrollSidebar.tsx` - Coffee-themed scroll progress indicator
 - `client/src/components/UserGuideModal.tsx` - 4-step onboarding carousel
@@ -588,15 +625,25 @@ See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically incl
 - `client/src/components/CoffeeFilters.tsx` - Advanced filtering and sorting
 - `client/src/components/CoffeeStats.tsx` - Collection statistics panel
 - `client/src/components/NotionButton.tsx` - Notion database connection button
+- `client/src/context/AuthContext.tsx` - Authentication state management
+- `client/src/pages/LoginPage.tsx` - User authentication page
+- `server/session.ts` - Session configuration
+- `server/middleware/auth.ts` - Authentication middleware
 
 **Modified Components:**
+- `client/src/App.tsx` - Added protected routes with authentication
+- `client/src/main.tsx` - Wrapped app with AuthProvider
+- `client/src/lib/queryClient.ts` - Removed X-Notion-Database-Id header, simplified API client
+- `client/src/pages/Dashboard.tsx` - Integrated all new features (stats, filters, language switcher, scroll sidebar, help button, user guide, Notion button)
 - `client/src/components/CoffeeCard.tsx` - Optimized sizing and mobile layout
 - `client/src/components/AddCoffeeForm.tsx` - Dual upload options + duplicate detection + i18n + currency selection
 - `client/src/components/EditCoffeeForm.tsx` - Currency selection for price field
 - `client/src/components/AboutSection.tsx` - Arrow-only collapsible toggle (overflow-visible for button positioning)
 - `client/src/components/EmptyState.tsx` - Arrow-only collapsible toggle
 - `client/src/components/CoffeeStats.tsx` - Added collapsible toggle functionality
-- `client/src/pages/Dashboard.tsx` - Integrated all new features (stats, filters, language switcher, scroll sidebar, help button, user guide, Notion button)
+- `server/index.ts` - Added session middleware and auth routes
+- `server/routes.ts` - Database ID now from environment variables
+- `server/notion-oauth-routes.ts` - Updated for new authentication flow
 - All form and modal components - Full i18n integration
 
 ## Setup Guide for New Environments
@@ -633,8 +680,10 @@ See `client/src/lib/queryClient.ts` - `getHeaders()` function automatically incl
    # Save the returned database ID
    ```
 
-6. **Update Frontend:**
-   - Add database ID to `client/src/lib/queryClient.ts` → `NOTION_DATABASE_ID`
+6. **Update .env with Database ID:**
+   ```env
+   NOTION_DATABASE_ID=your-database-id-here
+   ```
 
 7. **Start Development:**
    ```bash
@@ -675,6 +724,7 @@ npx tsx test-groq.ts
 - `modals`: Modal dialogs (rating, guide, duplicates)
 - `guide`: User guide and onboarding content
 - `coffee`: Coffee-specific terms (roast levels, origins, flavor notes)
+- `auth`: Authentication and login page content
 
 **Example Usage:**
 ```tsx
@@ -706,9 +756,10 @@ PORT=3000 npm run dev
 ### Fixing Missing Notion Database ID
 
 If API requests fail with "Database not initialized":
-1. Check `.env` has `NOTION_DATABASE_ID`
-2. Verify database ID in `client/src/lib/queryClient.ts` matches `.env`
-3. Restart dev server after changing either file
+1. Check `.env` has `NOTION_DATABASE_ID` set correctly
+2. Verify the database ID format includes hyphens (e.g., `2e375dba-9d93-8038-b2e2-d7ec275e9b68`)
+3. Restart dev server after changing `.env` file
+4. For production (Render), ensure `NOTION_DATABASE_ID` is set in Render dashboard environment variables
 
 ## Documentation
 
@@ -766,13 +817,19 @@ The `placeUrl` field is automatically generated when creating or updating coffee
 - Validate and sanitize AI response fields
 - Temperature 0 for deterministic output
 
-### Notion Database Header
-Frontend automatically includes in **all** API requests:
-```
-X-Notion-Database-Id: a12cbbbc-b1a4-421d-83f0-2fac3436c39d
-```
+### Authentication System (January 2026)
 
-This is set in `client/src/lib/queryClient.ts` as a constant and included by `getHeaders()` helper.
+**Backend Session Management:**
+- express-session for server-side session storage
+- Session configuration in `server/session.ts`
+- Auth middleware in `server/middleware/auth.ts` protects API routes
+- Sessions persist across page reloads
+
+**Frontend Auth State:**
+- AuthContext (`client/src/context/AuthContext.tsx`) manages authentication state
+- LoginPage (`client/src/pages/LoginPage.tsx`) with bilingual support
+- Protected routes redirect to login when unauthenticated
+- Auth translations in `auth.json` namespace (EN/ZH)
 
 ### Internationalization Best Practices
 - Language preference stored in localStorage as `beankeeper_language`
