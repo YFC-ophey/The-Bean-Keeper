@@ -9,6 +9,7 @@ import formsEN from './locales/en/forms.json';
 import modalsEN from './locales/en/modals.json';
 import guideEN from './locales/en/guide.json';
 import coffeeEN from './locales/en/coffee.json';
+import authEN from './locales/en/auth.json';
 
 import commonZH from './locales/zh/common.json';
 import dashboardZH from './locales/zh/dashboard.json';
@@ -16,6 +17,7 @@ import formsZH from './locales/zh/forms.json';
 import modalsZH from './locales/zh/modals.json';
 import guideZH from './locales/zh/guide.json';
 import coffeeZH from './locales/zh/coffee.json';
+import authZH from './locales/zh/auth.json';
 
 const resources = {
   en: {
@@ -25,6 +27,7 @@ const resources = {
     modals: modalsEN,
     guide: guideEN,
     coffee: coffeeEN,
+    auth: authEN,
   },
   zh: {
     common: commonZH,
@@ -33,6 +36,7 @@ const resources = {
     modals: modalsZH,
     guide: guideZH,
     coffee: coffeeZH,
+    auth: authZH,
   },
 };
 
@@ -43,7 +47,7 @@ i18n
     resources,
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'dashboard', 'forms', 'modals', 'guide', 'coffee'],
+    ns: ['common', 'dashboard', 'forms', 'modals', 'guide', 'coffee', 'auth'],
 
     detection: {
       order: ['localStorage', 'navigator'],

@@ -70,15 +70,16 @@ function generatePlaceUrl(entry: Partial<InsertCoffeeEntry | UpdateCoffeeEntry> 
 export async function registerRoutes(app: Express): Promise<Server> {
   const objectStorageService = new ObjectStorageService();
 
-  // Middleware to set Notion database ID from session (for authenticated routes)
-  // This runs BEFORE individual route handlers, so database ID is set for all requests
-  app.use('/api/coffee-entries', requireAuth, (req, res, next) => {
-    const databaseId = req.session.databaseId;
+  // Middleware to set Notion database ID from session or environment
+  // Guest users (no session): Use owner's database from NOTION_DATABASE_ID
+  // Authenticated users: Use their own database from session
+  app.use('/api/coffee-entries', (req, res, next) => {
+    const databaseId = req.session.databaseId || process.env.NOTION_DATABASE_ID;
 
     if (!databaseId) {
-      return res.status(401).json({
-        error: 'No database configured',
-        message: 'Please log in again to configure your database'
+      return res.status(500).json({
+        error: 'Database not configured',
+        message: 'Server configuration error - database ID missing'
       });
     }
 
@@ -207,8 +208,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create coffee entry
-  app.post("/api/coffee-entries", async (req, res) => {
+  // Create coffee entry (protected - requires authentication)
+  app.post("/api/coffee-entries", requireAuth, async (req, res) => {
     try {
       // Validate request body
       const validatedData = insertCoffeeEntrySchema.parse(req.body);
@@ -240,8 +241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update coffee entry
-  app.patch("/api/coffee-entries/:id", async (req, res) => {
+  // Update coffee entry (protected - requires authentication)
+  app.patch("/api/coffee-entries/:id", requireAuth, async (req, res) => {
     try {
       // Validate request body
       const validatedData = updateCoffeeEntrySchema.parse(req.body);
@@ -287,8 +288,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete coffee entry
-  app.delete("/api/coffee-entries/:id", async (req, res) => {
+  // Delete coffee entry (protected - requires authentication)
+  app.delete("/api/coffee-entries/:id", requireAuth, async (req, res) => {
     try {
       const deleted = await notionStorage.deleteCoffeeEntry(req.params.id);
       if (!deleted) {

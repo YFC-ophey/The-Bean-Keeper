@@ -8,7 +8,7 @@ import { createCoffeeDatabase } from "./notion";
  */
 const NOTION_CLIENT_ID = process.env.NOTION_CLIENT_ID;
 const NOTION_CLIENT_SECRET = process.env.NOTION_CLIENT_SECRET;
-const NOTION_REDIRECT_URI = process.env.NOTION_REDIRECT_URI || "http://localhost:5000/api/auth/notion/callback";
+const NOTION_REDIRECT_URI = process.env.NOTION_REDIRECT_URI || "http://localhost:5001/api/auth/notion/callback";
 const NOTION_TEMPLATE_DATABASE_ID = process.env.NOTION_TEMPLATE_DATABASE_ID;
 
 /**
@@ -124,14 +124,37 @@ export function createUserNotionClient(accessToken: string): Client {
 }
 
 /**
- * Duplicate the template database to user's workspace
- * This creates a fresh copy of The Bean Keeper database for the user
+ * Get or create the user's Coffee Collection database
+ * First checks if user already has a database, reuses it if found
+ * Only creates a new database for first-time users
  */
 export async function duplicateTemplateDatabaseToUserWorkspace(
   accessToken: string,
   parentPageId?: string
 ): Promise<string> {
   const notion = createUserNotionClient(accessToken);
+
+  // FIRST: Check if user already has a Bean Keeper database
+  // Note: Notion search API filter only accepts "page" or "data_source", so we search all and filter in code
+  // Database is named "The Bean Keeper - Coffee Collection"
+  const existingDb = await notion.search({
+    query: "Bean Keeper",
+    page_size: 10,
+  });
+
+  // Look for a database that matches our schema (has "Roaster" property)
+  for (const result of existingDb.results) {
+    if (result.object === "database") {
+      const db = result as any;
+      // Check if this is our Coffee Collection database by looking for key properties
+      if (db.properties && (db.properties["Roaster"] || db.properties["Name"])) {
+        console.log("Found existing Bean Keeper database:", db.id);
+        return db.id;
+      }
+    }
+  }
+
+  console.log("No existing database found, creating new one...");
 
   // If no parent page specified, we need to find or create one
   if (!parentPageId) {
@@ -167,7 +190,7 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
     }
   }
 
-  // Create the database structure
+  // Create the database structure (only for new users)
   const databaseId = await createCoffeeDatabase(parentPageId);
 
   return databaseId;

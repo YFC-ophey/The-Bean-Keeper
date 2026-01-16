@@ -1,40 +1,44 @@
-import React from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 /**
- * NotionButton - Clean, minimal Notion integration button
- * Matches Notion's official design language: simple, professional, confident
+ * NotionButton - Notion logo button that links to user's database
+ * Shows just the Notion logo, links to user's own Notion database when authenticated
  */
 
 export default function NotionButton() {
-  const notionUrl = "https://www.notion.so/opheliayfchen/a12cbbbcb1a4421d83f02fac3436c39d?v=04b501d749ef4201b184d89b21d9868b&source=copy_link";
+  const { isAuthenticated, databaseId } = useAuth();
+
+  // Build Notion URL - use user's database if authenticated, otherwise owner's database
+  const ownerDatabaseUrl = "https://www.notion.so/opheliayfchen/a12cbbbcb1a4421d83f02fac3436c39d";
+  const userDatabaseUrl = databaseId
+    ? `https://www.notion.so/${databaseId.replace(/-/g, '')}`
+    : ownerDatabaseUrl;
+
+  const notionUrl = isAuthenticated ? userDatabaseUrl : ownerDatabaseUrl;
 
   return (
     <a
       href={notionUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="group inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5
+      className="group inline-flex items-center justify-center p-2
         bg-white hover:bg-[#F7F6F5]
         border border-[#E3E2E0] hover:border-[#D3D2CF]
         rounded-md
-        text-[#37352F] text-sm font-medium
+        text-[#37352F]
         no-underline
         transition-all duration-150 ease-out
         shadow-[0_1px_2px_rgba(0,0,0,0.05)]
         hover:shadow-[0_1px_3px_rgba(0,0,0,0.08)]
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#000000]
         shrink-0
-        min-h-[36px]"
-      aria-label="Connect to Notion"
+        min-h-[36px] min-w-[36px]"
+      aria-label={isAuthenticated ? "Open your Notion database" : "View owner's Notion database"}
+      title={isAuthenticated ? "Open your Notion database" : "View owner's Notion database"}
     >
-      {/* Text - Hidden on very small screens, shown on larger */}
-      <span className="hidden xs:inline text-[11px] sm:text-[13px] tracking-[-0.01em] font-normal">
-        Connect to
-      </span>
-
-      {/* Notion logo - Slightly larger on mobile for better touch target */}
+      {/* Notion logo */}
       <svg
-        className="shrink-0 w-[20px] h-[20px] sm:w-[18px] sm:h-[18px] transition-transform duration-200 group-hover:scale-105"
+        className="shrink-0 w-[20px] h-[20px] transition-transform duration-200 group-hover:scale-110"
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"

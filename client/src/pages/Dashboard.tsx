@@ -39,7 +39,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { logout, workspaceName } = useAuth();
+  const { isAuthenticated, logout, workspaceName, login } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -406,15 +406,17 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={logout}
-                  className="flex items-center gap-1 px-2 py-1.5 min-h-[36px] text-xs"
-                  aria-label="Logout"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </Button>
+                {isAuthenticated && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={logout}
+                    className="flex items-center gap-1 px-2 py-1.5 min-h-[36px] text-xs"
+                    aria-label="Logout"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </Button>
+                )}
                 <NotionButton />
                 <LanguageSwitcher />
               </div>
@@ -425,18 +427,20 @@ export default function Dashboard() {
           <div className="hidden sm:flex sm:flex-col sm:items-center mb-6 md:mb-8">
             {/* Logout, Language Switcher & Notion Button - Top Right with safe spacing */}
             <div className="self-end flex items-center gap-2 mb-3 md:mb-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={logout}
-                className="flex items-center gap-2"
-                aria-label="Logout"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">
-                  {workspaceName || t('common:buttons.logout', 'Logout')}
-                </span>
-              </Button>
+              {isAuthenticated && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="flex items-center gap-2"
+                  aria-label="Logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline text-sm">
+                    {workspaceName || t('common:buttons.logout', 'Logout')}
+                  </span>
+                </Button>
+              )}
               <NotionButton />
               <LanguageSwitcher />
             </div>
@@ -472,7 +476,13 @@ export default function Dashboard() {
               />
             </div>
             <Button
-              onClick={() => setShowAddForm(true)}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  login(); // Trigger Notion OAuth for guests
+                } else {
+                  setShowAddForm(true); // Show form for authenticated users
+                }
+              }}
               data-testid="button-add-coffee"
               className="shrink-0 organic-radius px-4 md:px-6 py-3 md:py-6 gap-1.5 md:gap-2 whitespace-nowrap font-serif font-semibold text-sm md:text-base shadow-md hover:shadow-lg transition-all duration-300 bg-primary hover:bg-primary/90"
             >
@@ -527,7 +537,13 @@ export default function Dashboard() {
             <p className="text-muted-foreground font-serif text-lg">{t('common:loading.brewing')}</p>
           </div>
         ) : filteredAndSortedEntries.length === 0 && !searchQuery && !activeRoastFilter && !activeRatingFilter && !activeOriginFilter ? (
-          <EmptyState onAddClick={() => setShowAddForm(true)} />
+          <EmptyState onAddClick={() => {
+            if (!isAuthenticated) {
+              login(); // Trigger Notion OAuth for guests
+            } else {
+              setShowAddForm(true); // Show form for authenticated users
+            }
+          }} />
         ) : (
           <div>
             {/* Coffee Statistics Summary Bar */}
@@ -591,6 +607,7 @@ export default function Dashboard() {
                           onClick={() => setSelectedEntry(entry)}
                           isHighestRated={isHighestRated}
                           isRecent={isRecent}
+                          isGuest={!isAuthenticated}
                         />
                       </div>
                     );

@@ -5,6 +5,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   workspaceName: string | null;
+  databaseId: string | null;
   login: () => void;
   logout: () => Promise<void>;
 }
@@ -15,6 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [workspaceName, setWorkspaceName] = useState<string | null>(null);
+  const [databaseId, setDatabaseId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -28,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.authenticated) {
         setIsAuthenticated(true);
         setWorkspaceName(data.workspaceName);
+        setDatabaseId(data.databaseId);
       }
     } catch (error) {
       setIsAuthenticated(false);
@@ -45,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest('POST', '/api/auth/logout');
       setIsAuthenticated(false);
       setWorkspaceName(null);
-      window.location.href = '/login';
+      setDatabaseId(null);
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -56,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated,
       isLoading,
       workspaceName,
+      databaseId,
       login,
       logout
     }}>

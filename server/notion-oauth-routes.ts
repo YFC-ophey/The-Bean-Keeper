@@ -5,10 +5,7 @@ import {
   duplicateTemplateDatabaseToUserWorkspace,
   getNotionUser,
   testNotionConnection,
-  createUserNotionClient,
 } from "./notion-oauth";
-import { storage } from "./storage";
-import { createNotionCoffeePage } from "./notion";
 
 /**
  * Register Notion OAuth routes
@@ -146,52 +143,18 @@ export function registerNotionOAuthRoutes(app: Express) {
   /**
    * Export all coffee entries to user's Notion database
    * POST /api/export/notion
+   * NOTE: This endpoint is for legacy migration only and not used in OAuth flow
    */
-  app.post("/api/export/notion", async (req, res) => {
+  app.post("/api/export/notion", async (_req, res) => {
     try {
-      const { accessToken, databaseId } = req.body;
-
-      if (!accessToken || !databaseId) {
-        return res.status(400).json({
-          error: "Access token and database ID required",
-        });
-      }
-
-      // Get all coffee entries
-      const entries = await storage.getAllCoffeeEntries();
-
-      console.log(`Exporting ${entries.length} entries to Notion...`);
-
-      // Create Notion client for this user
-      const notion = createUserNotionClient(accessToken);
-
-      let successCount = 0;
-      let failedCount = 0;
-      const errors: string[] = [];
-
-      // Export each entry
-      for (const entry of entries) {
-        try {
-          await createNotionCoffeePage(databaseId, entry);
-          successCount++;
-          console.log(`✓ Exported: ${entry.roasterName}`);
-        } catch (error: any) {
-          failedCount++;
-          const errorMsg = `Failed to export ${entry.roasterName}: ${error.message}`;
-          errors.push(errorMsg);
-          console.error(`✗ ${errorMsg}`);
-        }
-      }
-
-      res.json({
-        success: true,
-        total: entries.length,
-        exported: successCount,
-        failed: failedCount,
-        errors,
+      // This endpoint is deprecated - with OAuth, each user has their own database
+      // No need to export from a shared database anymore
+      res.status(410).json({
+        error: "Export endpoint is deprecated",
+        message: "With OAuth authentication, each user automatically gets their own isolated database"
       });
     } catch (error: any) {
-      console.error("Error exporting to Notion:", error);
+      console.error("Error in export endpoint:", error);
       res.status(500).json({ error: error.message });
     }
   });

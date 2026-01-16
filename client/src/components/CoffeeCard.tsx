@@ -11,9 +11,10 @@ interface CoffeeCardProps {
   onClick?: () => void;
   isHighestRated?: boolean;
   isRecent?: boolean;
+  isGuest?: boolean;
 }
 
-function CoffeeCard({ entry, onClick, isHighestRated, isRecent }: CoffeeCardProps) {
+function CoffeeCard({ entry, onClick, isHighestRated, isRecent, isGuest = false }: CoffeeCardProps) {
   const [isFavorite, setIsFavorite] = useState(entry.purchaseAgain || false);
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -100,18 +101,20 @@ function CoffeeCard({ entry, onClick, isHighestRated, isRecent }: CoffeeCardProp
           )}
         </div>
 
-        {/* Favorite button - appears on hover */}
-        <button
-          onClick={handleFavoriteClick}
-          className="absolute top-3 left-1/2 -translate-x-1/2 p-2.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
-          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Heart
-            className={`w-4 h-4 transition-colors ${
-              isFavorite ? "fill-red-500 text-red-500" : "text-[#2C1810]"
-            }`}
-          />
-        </button>
+        {/* Favorite button - appears on hover (hidden for guests) */}
+        {!isGuest && (
+          <button
+            onClick={handleFavoriteClick}
+            className="absolute top-3 left-1/2 -translate-x-1/2 p-2.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart
+              className={`w-4 h-4 transition-colors ${
+                isFavorite ? "fill-red-500 text-red-500" : "text-[#2C1810]"
+              }`}
+            />
+          </button>
+        )}
 
         {/* Decorative corner accent - bottom right */}
         <div className="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-tl from-white/10 to-transparent pointer-events-none" />
@@ -160,6 +163,7 @@ export default memo(CoffeeCard, (prevProps, nextProps) => {
   return (
     prevProps.entry.id === nextProps.entry.id &&
     prevProps.isHighestRated === nextProps.isHighestRated &&
-    prevProps.isRecent === nextProps.isRecent
+    prevProps.isRecent === nextProps.isRecent &&
+    prevProps.isGuest === nextProps.isGuest
   );
 });
