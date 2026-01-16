@@ -292,6 +292,9 @@ export default function AboutSection({ onOpenGuide }: AboutSectionProps) {
                     <p className="text-xs sm:text-sm text-[#6F4E37]/70 font-serif leading-snug">
                       {t('dashboard:about.step3.description')}
                     </p>
+                    <p className="text-[10px] sm:text-xs text-[#6F4E37]/50 font-serif mt-1 italic">
+                      Build your coffee story and Sync to your Notion Database
+                    </p>
                   </div>
                 </div>
               </div>
