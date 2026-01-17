@@ -39,7 +39,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, logout, workspaceName, login } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, logout, workspaceName, login } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -477,14 +477,18 @@ export default function Dashboard() {
             </div>
             <Button
               onClick={() => {
+                // Wait for auth check to complete before taking action
+                if (isAuthLoading) return;
+
                 if (!isAuthenticated) {
                   login(); // Trigger Notion OAuth for guests
                 } else {
                   setShowAddForm(true); // Show form for authenticated users
                 }
               }}
+              disabled={isAuthLoading}
               data-testid="button-add-coffee"
-              className="shrink-0 organic-radius px-4 md:px-6 py-3 md:py-6 gap-1.5 md:gap-2 whitespace-nowrap font-serif font-semibold text-sm md:text-base shadow-md hover:shadow-lg transition-all duration-300 bg-primary hover:bg-primary/90"
+              className="shrink-0 organic-radius px-4 md:px-6 py-3 md:py-6 gap-1.5 md:gap-2 whitespace-nowrap font-serif font-semibold text-sm md:text-base shadow-md hover:shadow-lg transition-all duration-300 bg-primary hover:bg-primary/90 disabled:opacity-50"
             >
               <Plus className="w-4 md:w-5 h-4 md:h-5" />
               <span className="hidden sm:inline">{t('dashboard:header.addCoffee')}</span>
@@ -538,6 +542,9 @@ export default function Dashboard() {
           </div>
         ) : filteredAndSortedEntries.length === 0 && !searchQuery && !activeRoastFilter && !activeRatingFilter && !activeOriginFilter ? (
           <EmptyState onAddClick={() => {
+            // Wait for auth check to complete before taking action
+            if (isAuthLoading) return;
+
             if (!isAuthenticated) {
               login(); // Trigger Notion OAuth for guests
             } else {

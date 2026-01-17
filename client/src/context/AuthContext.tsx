@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiRequest } from '@/lib/queryClient';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -18,26 +17,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [workspaceName, setWorkspaceName] = useState<string | null>(null);
   const [databaseId, setDatabaseId] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
-      const response = await apiRequest('GET', '/api/auth/me');
-      const data = await response.json();
+      // Use fetch directly to avoid throwing on 401
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
 
-      if (data.authenticated) {
-        setIsAuthenticated(true);
-        setWorkspaceName(data.workspaceName);
-        setDatabaseId(data.databaseId);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+          setWorkspaceName(data.workspaceName);
+          setDatabaseId(data.databaseId);
+
+          // Clean up URL params after successful auth
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('login')) {
+            url.searchParams.delete('login');
+            window.history.replaceState({}, '', url.pathname);
+          }
+          return;
+        }
       }
-    } catch (error) {
+
+      // Not authenticated
       setIsAuthenticated(false);
+      setWorkspaceName(null);
+      setDatabaseId(null);
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setIsAuthenticated(false);
+      setWorkspaceName(null);
+      setDatabaseId(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Check for OAuth callback params
+    const params = new URLSearchParams(window.location.search);
+    const loginStatus = params.get('login');
+
+    if (loginStatus === 'success') {
+      // Just returned from OAuth - check auth immediately
+      checkAuth();
+    } else if (loginStatus === 'error') {
+      // OAuth failed
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('login');
+      window.history.replaceState({}, '', url.pathname);
+    } else {
+      // Normal page load - check auth
+      checkAuth();
+    }
+  }, [checkAuth]);
 
   const login = () => {
     window.location.href = '/api/auth/notion';
@@ -45,7 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await apiRequest('POST', '/api/auth/logout');
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
       setIsAuthenticated(false);
       setWorkspaceName(null);
       setDatabaseId(null);

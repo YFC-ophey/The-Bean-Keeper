@@ -15,6 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 🗺️ Auto-generated Google Maps links for roasters
 - 📱 Mobile-optimized with dual photo upload methods (camera + file picker)
 - ☕ Vintage coffee journal aesthetic
+- 🔐 Notion OAuth authentication with isolated user databases
+- 👀 Guest viewing mode (browse owner's collection without login)
 
 **Current Status:** ✅ Production-ready - Deployed to Render with Cloudinary photo storage, Notion database, and Groq AI. PostgreSQL has been removed.
 
@@ -55,8 +57,11 @@ npx tsx test-groq.ts
 **Storage:**
 - Notion API as the single source of truth (no PostgreSQL)
 - Direct CRUD operations via `@notionhq/client`
-- Uses Internal Integration (API key)
-- **Separate databases:**
+- **Multi-user architecture with Notion OAuth:**
+  - Each authenticated user gets their own isolated Notion database
+  - Guest users see owner's public database (read-only)
+  - Database ID determined by: `req.session.databaseId || process.env.NOTION_DATABASE_ID`
+- **Owner's databases (fallback for guests):**
   - Local dev: `2e375dba-9d93-8038-b2e2-d7ec275e9b68`
   - Production (Render): `a12cbbbc-b1a4-421d-83f0-2fac3436c39d`
 - All coffee entries stored as Notion pages in database
@@ -159,12 +164,14 @@ notionStorage.deleteCoffeeEntry(id)     // Archives Notion page
 - `server/local-storage.ts` - Local file system fallback (development)
 - `server/objectStorage.ts` - Google Cloud Storage integration (legacy/Replit)
 
+### OAuth & Authentication
+- `server/notion-oauth.ts` - **Notion OAuth implementation** (token exchange, database creation)
+- `server/notion-oauth-routes.ts` - **OAuth route handlers** (login, callback, logout, /api/auth/me)
+
 ### Legacy Files (Not Used)
 - `server/storage.ts` - Removed (PostgreSQL abstraction)
 - `server/db.ts` - Removed (Drizzle connection)
 - `server/openai.ts` - Removed (replaced by Groq)
-- `server/notion-oauth.ts` - Not actively used (using Internal Integration instead)
-- `server/notion-oauth-routes.ts` - Not actively used
 - `server/sync.ts` - Not actively used
 
 ### Frontend Core
@@ -254,6 +261,37 @@ GET    /objects/:objectPath
   // Serves uploaded photos from GCS (legacy/Replit)
 ```
 
+### Authentication (Notion OAuth)
+```typescript
+GET    /api/auth/notion
+  // Initiates Notion OAuth flow - redirects to Notion authorization page
+
+GET    /api/auth/notion/callback
+  // OAuth callback - exchanges code for token, creates user database
+  // Stores session: userId, accessToken, databaseId, workspaceName
+  // Redirects to /?login=success or /?login=error
+
+GET    /api/auth/me
+  // Check authentication status
+  Returns: { authenticated: boolean, workspaceName?, databaseId? }
+  // Returns 401 if not authenticated
+
+POST   /api/auth/logout
+  // Destroys session and clears cookie
+  Returns: { success: true }
+```
+
+### Route Protection Strategy
+| Endpoint | Method | Auth Required? | Database Used |
+|----------|--------|----------------|---------------|
+| `/api/coffee-entries` | GET | No (public) | Guest: owner's DB, Auth: user's DB |
+| `/api/coffee-entries/:id` | GET | No (public) | Guest: owner's DB, Auth: user's DB |
+| `/api/coffee-entries` | POST | Yes | User's DB only |
+| `/api/coffee-entries/:id` | PATCH | Yes | User's DB only |
+| `/api/coffee-entries/:id` | DELETE | Yes | User's DB only |
+| `/api/upload-url` | POST | Yes | User's DB only |
+| `/api/extract-coffee-info` | POST | Yes | User's DB only |
+
 ### Diagnostic Endpoints
 ```typescript
 GET    /api/health
@@ -275,13 +313,24 @@ GET    /api/debug/groq
 # Groq AI (Required)
 GROQ_API_KEY=gsk_xxx
 
-# Notion Internal Integration (Required)
+# Notion Internal Integration (Required for backend operations)
 NOTION_API_KEY=ntn_xxx              # Get from notion.so/my-integrations
 
-# Notion Database ID (Required - Backend reads from environment)
+# Notion Database ID (Required - Owner's database for guest viewing)
 # Local development database
 NOTION_DATABASE_ID=2e375dba-9d93-8038-b2e2-d7ec275e9b68
 # Production database (on Render): a12cbbbc-b1a4-421d-83f0-2fac3436c39d
+
+# Notion OAuth (Required for multi-user authentication)
+# Get these from https://www.notion.so/my-integrations (Public Integration)
+NOTION_CLIENT_ID=your_oauth_client_id
+NOTION_CLIENT_SECRET=your_oauth_client_secret
+NOTION_REDIRECT_URI=http://localhost:5001/api/auth/notion/callback
+# Production: https://the-bean-keeper.onrender.com/api/auth/notion/callback
+
+# Session Secret (Required for authentication)
+# Generate a random 32-character string for production
+SESSION_SECRET=your_random_32_char_session_secret
 
 # Cloudinary (Production photo storage - Recommended)
 CLOUDINARY_CLOUD_NAME=dog6jqdmz
@@ -292,7 +341,7 @@ CLOUDINARY_API_SECRET=xxx
 VITE_GOOGLE_MAPS_API_KEY=xxx
 
 # Server Configuration
-PORT=5000                           # Default port for local dev
+PORT=5001                           # Default port for local dev
 NODE_ENV=development                # 'development' or 'production'
 
 # Legacy/Optional (Replit only)
@@ -300,11 +349,12 @@ PRIVATE_OBJECT_DIR=gs://bucket/path  # Google Cloud Storage (Replit sidecar)
 ```
 
 **Environment Setup:**
-- **Local Development:** Uses `.env` file with dev database ID
-- **Production (Render):** Environment variables set in Render dashboard with production database ID
+- **Local Development:** Uses `.env` file with dev database ID and localhost OAuth redirect
+- **Production (Render):** Environment variables set in Render dashboard with production OAuth redirect
 - **Photo Storage:** Cloudinary for production (persistent), local filesystem for dev (ephemeral)
+- **OAuth:** Requires Public Integration setup on Notion (not Internal Integration)
 
-**Note:** PostgreSQL variables (`DATABASE_URL`) and Notion OAuth variables are no longer used.
+**Note:** PostgreSQL variables (`DATABASE_URL`) are no longer used.
 
 ## Critical Implementation Details
 
@@ -616,6 +666,39 @@ All CRUD operations go directly to Notion:
       - Centralized configuration management
       - Easier environment-specific deployment
 
+17. **Guest Viewing + Notion OAuth (January 2026):**
+    - **Guest Mode:**
+      - Users can view owner's coffee collection without logging in
+      - Dashboard loads immediately (no login redirect)
+      - Read-only access to browse, search, and filter
+      - "Add Coffee" button triggers OAuth for guests
+    - **OAuth Implementation:**
+      - Notion Public Integration (OAuth 2.0)
+      - Token exchange and session storage
+      - Automatic database creation in user's workspace
+      - Database reuse on re-login (prevents duplicates)
+    - **Route Protection:**
+      - GET routes public (guest: owner's DB, auth: user's DB)
+      - POST/PATCH/DELETE routes require authentication
+      - Database fallback: `req.session.databaseId || process.env.NOTION_DATABASE_ID`
+    - **NotionButton:**
+      - Shows only Notion logo (no text)
+      - Guest: Triggers Notion OAuth login (button)
+      - Authenticated: Links to user's own database (anchor)
+    - **AuthContext Improvements:**
+      - Handles OAuth callback (`?login=success` param)
+      - Uses fetch directly to avoid 401 throws
+      - Loading state prevents race conditions
+      - Cleans up URL params after auth
+    - **Files modified:**
+      - `server/routes.ts` - Selective auth middleware
+      - `server/notion-oauth.ts` - Database reuse logic
+      - `server/notion-oauth-routes.ts` - Session-based auth
+      - `client/src/pages/Dashboard.tsx` - Guest mode support
+      - `client/src/components/CoffeeCard.tsx` - `isGuest` prop
+      - `client/src/components/NotionButton.tsx` - Dynamic database link
+      - `client/src/context/AuthContext.tsx` - OAuth callback handling
+
 **New Components Added:**
 - `client/src/components/ScrollSidebar.tsx` - Coffee-themed scroll progress indicator
 - `client/src/components/UserGuideModal.tsx` - 4-step onboarding carousel
@@ -631,24 +714,27 @@ All CRUD operations go directly to Notion:
 - `server/middleware/auth.ts` - Authentication middleware
 
 **Modified Components:**
-- `client/src/App.tsx` - Added protected routes with authentication
+- `client/src/App.tsx` - Removed ProtectedRoute wrapper, Dashboard now public
 - `client/src/main.tsx` - Wrapped app with AuthProvider
 - `client/src/lib/queryClient.ts` - Removed X-Notion-Database-Id header, simplified API client
-- `client/src/pages/Dashboard.tsx` - Integrated all new features (stats, filters, language switcher, scroll sidebar, help button, user guide, Notion button)
-- `client/src/components/CoffeeCard.tsx` - Optimized sizing and mobile layout
+- `client/src/pages/Dashboard.tsx` - Guest mode support, auth-aware Add Coffee button, loading state handling
+- `client/src/components/CoffeeCard.tsx` - Added `isGuest` prop to hide edit/delete for guests
 - `client/src/components/AddCoffeeForm.tsx` - Dual upload options + duplicate detection + i18n + currency selection
 - `client/src/components/EditCoffeeForm.tsx` - Currency selection for price field
-- `client/src/components/AboutSection.tsx` - Arrow-only collapsible toggle (overflow-visible for button positioning)
+- `client/src/components/AboutSection.tsx` - Arrow-only collapsible toggle, updated step descriptions
 - `client/src/components/EmptyState.tsx` - Arrow-only collapsible toggle
 - `client/src/components/CoffeeStats.tsx` - Added collapsible toggle functionality
-- `server/index.ts` - Added session middleware and auth routes
-- `server/routes.ts` - Database ID now from environment variables
-- `server/notion-oauth-routes.ts` - Updated for new authentication flow
+- `client/src/components/NotionButton.tsx` - Dynamic link to user's database when authenticated
+- `client/src/context/AuthContext.tsx` - OAuth callback handling, fetch-based auth check, loading state
+- `server/index.ts` - Added session middleware and OAuth routes
+- `server/routes.ts` - Selective auth (public GET, protected writes), database fallback logic
+- `server/notion-oauth.ts` - Database reuse on re-login, improved search query
+- `server/notion-oauth-routes.ts` - Session-based authentication, /api/auth/me endpoint
 - All form and modal components - Full i18n integration
 
 ## Setup Guide for New Environments
 
-### Initial Notion Setup
+### Initial Notion Setup (Internal Integration)
 
 1. **Create Notion Integration:**
    ```bash
@@ -685,10 +771,45 @@ All CRUD operations go directly to Notion:
    NOTION_DATABASE_ID=your-database-id-here
    ```
 
+### Notion OAuth Setup (Public Integration)
+
+Required for multi-user authentication where each user gets their own database.
+
+1. **Create Public Integration:**
+   ```bash
+   # Go to https://www.notion.so/my-integrations
+   # Click "+ New integration" → Select "Public integration"
+   # Name: "The Bean Keeper"
+   # Upload logo from /public/logo.jpeg
+   ```
+
+2. **Configure OAuth:**
+   - **Redirect URIs:**
+     - Development: `http://localhost:5001/api/auth/notion/callback`
+     - Production: `https://your-domain.com/api/auth/notion/callback`
+   - **Capabilities:** Read content, Update content, Insert content
+
+3. **Copy Credentials:**
+   - Copy **OAuth client ID**
+   - Copy **OAuth client secret**
+
+4. **Update .env:**
+   ```env
+   NOTION_CLIENT_ID=your_oauth_client_id
+   NOTION_CLIENT_SECRET=your_oauth_client_secret
+   NOTION_REDIRECT_URI=http://localhost:5001/api/auth/notion/callback
+   SESSION_SECRET=generate_random_32_char_string
+   ```
+
+5. **For Production (Render):**
+   - Add all OAuth environment variables to Render dashboard
+   - Update `NOTION_REDIRECT_URI` to production URL
+   - Generate a secure `SESSION_SECRET`
+
 7. **Start Development:**
    ```bash
-   PORT=3000 npm run dev
-   # Access at http://localhost:3000
+   PORT=5001 npm run dev
+   # Access at http://localhost:5001
    ```
 
 ## Common Development Tasks
@@ -761,6 +882,29 @@ If API requests fail with "Database not initialized":
 3. Restart dev server after changing `.env` file
 4. For production (Render), ensure `NOTION_DATABASE_ID` is set in Render dashboard environment variables
 
+### Troubleshooting Notion OAuth
+
+**"NOTION_CLIENT_ID is not configured" error:**
+1. Ensure `NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET` are set in environment
+2. For production, add these to Render dashboard environment variables
+3. Restart server after adding variables
+
+**OAuth callback fails / login loop:**
+1. Check `NOTION_REDIRECT_URI` matches exactly what's configured in Notion integration
+2. For localhost, use `http://localhost:5001/api/auth/notion/callback`
+3. For production, use `https://your-domain.com/api/auth/notion/callback`
+
+**"Add Coffee" keeps redirecting to login after OAuth:**
+1. Check browser console for auth errors
+2. Verify session cookie is being set (check Application tab in DevTools)
+3. Ensure `SESSION_SECRET` is set in environment
+4. Check if `/api/auth/me` returns `authenticated: true` after login
+
+**Mobile OAuth not working:**
+1. OAuth requires HTTPS in production (localhost won't work from mobile)
+2. Deploy to Render or use ngrok for mobile testing
+3. Update `NOTION_REDIRECT_URI` to match deployed URL
+
 ## Documentation
 
 - `NOTION_SETUP_GUIDE.md` - Complete Notion integration setup guide
@@ -817,18 +961,62 @@ The `placeUrl` field is automatically generated when creating or updating coffee
 - Validate and sanitize AI response fields
 - Temperature 0 for deterministic output
 
+### Guest Viewing + Notion OAuth (January 2026)
+
+**Architecture: Guest Viewing with Protected Writes**
+- **Guest users:** Can browse owner's coffee collection without logging in (read-only)
+- **"Add Coffee" click:** Triggers Notion OAuth login flow for guests
+- **After OAuth:** User gets their own isolated Notion database
+- **Authenticated users:** See only their own coffee collection
+- **Logout:** Returns to guest mode (sees owner's collection again)
+
+**User Flow:**
+1. Visit app → Dashboard loads immediately (no login required)
+2. Guests see owner's public coffee collection
+3. Click "Add Coffee" → Redirects to Notion OAuth authorization
+4. Notion asks for permissions → User approves
+5. Callback creates user's database in their Notion workspace
+6. Session established → User now sees their empty collection
+7. User can add/edit/delete their own entries
+
+**Database Strategy:**
+- Guest users: Read from `process.env.NOTION_DATABASE_ID` (owner's database)
+- Authenticated users: Read/write from `req.session.databaseId` (their isolated database)
+- Database fallback logic: `const databaseId = req.session.databaseId || process.env.NOTION_DATABASE_ID`
+
+**Database Reuse on Re-login:**
+- When user logs in again, system searches for existing "Bean Keeper" database
+- If found (by checking for "Roaster" or "Name" properties), reuses it
+- Only creates new database for first-time users
+- Prevents duplicate database creation
+
+**NotionButton Behavior:**
+- Guest: Triggers Notion OAuth login (button element)
+- Authenticated: Links to user's own Notion database (anchor element)
+- Shows just the Notion logo (no text)
+- Disabled during auth loading state
+
+**Files:**
+- `server/notion-oauth.ts` - OAuth token exchange, database creation/reuse logic
+- `server/notion-oauth-routes.ts` - OAuth endpoints (/api/auth/notion, callback, me, logout)
+- `client/src/context/AuthContext.tsx` - Frontend auth state with OAuth callback handling
+- `client/src/components/NotionButton.tsx` - Dynamic Notion database link
+
 ### Authentication System (January 2026)
 
 **Backend Session Management:**
-- express-session for server-side session storage
+- express-session with MemoryStore for server-side session storage
 - Session configuration in `server/session.ts`
-- Auth middleware in `server/middleware/auth.ts` protects API routes
-- Sessions persist across page reloads
+- Auth middleware in `server/middleware/auth.ts` protects write routes
+- Sessions persist for 7 days with httpOnly, secure cookies
+- Cookie settings: `sameSite: 'lax'` for CSRF protection
 
 **Frontend Auth State:**
 - AuthContext (`client/src/context/AuthContext.tsx`) manages authentication state
-- LoginPage (`client/src/pages/LoginPage.tsx`) with bilingual support
-- Protected routes redirect to login when unauthenticated
+- Handles OAuth callback by detecting `?login=success` URL param
+- Uses fetch directly (not apiRequest) to avoid throwing on 401 responses
+- Cleans up URL params after successful authentication
+- Loading state prevents race conditions on "Add Coffee" button
 - Auth translations in `auth.json` namespace (EN/ZH)
 
 ### Internationalization Best Practices
@@ -839,3 +1027,8 @@ The `placeUrl` field is automatically generated when creating or updating coffee
 - All user-facing text must be in translation files (no hardcoded strings)
 - Keep translation keys organized by feature/namespace
 - When adding new features, add both EN and ZH translations simultaneously
+
+### Recent Translation Updates (January 2026)
+- **About Section:** Updated step 3 description to include "and Sync to your Notion Database"
+  - EN: "Build your coffee story and Sync to your Notion Database"
+  - ZH: "建立您的咖啡故事並同步到您的 Notion 資料庫"
