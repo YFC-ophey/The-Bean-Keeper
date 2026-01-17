@@ -5,6 +5,8 @@ interface AuthContextType {
   isLoading: boolean;
   workspaceName: string | null;
   databaseId: string | null;
+  justLoggedIn: boolean;
+  clearJustLoggedIn: () => void;
   login: () => void;
   logout: () => Promise<void>;
 }
@@ -16,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [workspaceName, setWorkspaceName] = useState<string | null>(null);
   const [databaseId, setDatabaseId] = useState<string | null>(null);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -61,7 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loginStatus = params.get('login');
 
     if (loginStatus === 'success') {
-      // Just returned from OAuth - check auth immediately
+      // Just returned from OAuth - mark as just logged in and check auth
+      setJustLoggedIn(true);
       checkAuth();
     } else if (loginStatus === 'error') {
       // OAuth failed
@@ -96,12 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const clearJustLoggedIn = useCallback(() => {
+    setJustLoggedIn(false);
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
       isLoading,
       workspaceName,
       databaseId,
+      justLoggedIn,
+      clearJustLoggedIn,
       login,
       logout
     }}>

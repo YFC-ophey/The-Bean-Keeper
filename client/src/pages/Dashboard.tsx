@@ -39,7 +39,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, isLoading: isAuthLoading, logout, workspaceName, login } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, logout, workspaceName, login, justLoggedIn, clearJustLoggedIn } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -55,6 +55,14 @@ export default function Dashboard() {
   const [activeOriginFilter, setActiveOriginFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>("newest");
   const { toast } = useToast();
+
+  // Auto-open Add Coffee form after successful OAuth login
+  useEffect(() => {
+    if (justLoggedIn && isAuthenticated && !isAuthLoading) {
+      setShowAddForm(true);
+      clearJustLoggedIn();
+    }
+  }, [justLoggedIn, isAuthenticated, isAuthLoading, clearJustLoggedIn]);
 
   // Scroll-aware header state
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
