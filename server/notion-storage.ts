@@ -1,9 +1,11 @@
 import { type CoffeeEntry, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
-import { notion } from "./notion";
+import { notion, createNotionClient } from "./notion";
 import { createNotionCoffeePage, updateNotionCoffeePage, getNotionCoffeePage, queryNotionCoffeeDatabase, deleteNotionCoffeePage } from "./notion";
+import { Client } from "@notionhq/client";
 
 export class NotionStorage {
   private databaseId: string | null = null;
+  private accessToken: string | null = null;
 
   constructor(databaseId?: string) {
     this.databaseId = databaseId || null;
@@ -11,6 +13,22 @@ export class NotionStorage {
 
   setDatabaseId(databaseId: string) {
     this.databaseId = databaseId;
+  }
+
+  /**
+   * Set the access token for OAuth users
+   * This enables accessing databases in the user's workspace
+   */
+  setAccessToken(accessToken: string | null) {
+    this.accessToken = accessToken;
+  }
+
+  /**
+   * Get the appropriate Notion client
+   * Uses user's OAuth token if set, otherwise falls back to internal integration
+   */
+  private getClient(): Client {
+    return createNotionClient(this.accessToken || undefined);
   }
 
   private ensureDatabaseId(): string {
@@ -23,7 +41,8 @@ export class NotionStorage {
   async getCoffeeEntry(id: string): Promise<CoffeeEntry | undefined> {
     try {
       const databaseId = this.ensureDatabaseId();
-      const entry = await getNotionCoffeePage(id);
+      const client = this.getClient();
+      const entry = await getNotionCoffeePage(id, client);
       return entry || undefined;
     } catch (error) {
       console.error(`Error getting coffee entry ${id}:`, error);
@@ -34,7 +53,8 @@ export class NotionStorage {
   async getAllCoffeeEntries(): Promise<CoffeeEntry[]> {
     try {
       const databaseId = this.ensureDatabaseId();
-      return await queryNotionCoffeeDatabase(databaseId);
+      const client = this.getClient();
+      return await queryNotionCoffeeDatabase(databaseId, client);
     } catch (error) {
       console.error("Error getting all coffee entries:", error);
       return [];
@@ -54,12 +74,14 @@ export class NotionStorage {
         origin: entry.origin ?? null,
         variety: entry.variety ?? null,
         processMethod: entry.processMethod ?? null,
+        roastLevel: entry.roastLevel ?? null,
         roastDate: entry.roastDate ?? null,
         flavorNotes: entry.flavorNotes ?? null,
         farm: entry.farm ?? null,
         roasterLocation: entry.roasterLocation ?? null,
         roasterAddress: entry.roasterAddress ?? null,
         roasterWebsite: entry.roasterWebsite ?? null,
+        placeUrl: entry.placeUrl ?? null,
         rating: entry.rating ?? null,
         tastingNotes: entry.tastingNotes ?? null,
         weight: entry.weight ?? null,
@@ -69,7 +91,8 @@ export class NotionStorage {
       };
 
       // Create in Notion (using entry.id as Notion page ID)
-      const notionPageId = await createNotionCoffeePage(databaseId, fullEntry);
+      const client = this.getClient();
+      const notionPageId = await createNotionCoffeePage(databaseId, fullEntry, client);
 
       // Update entry with Notion page ID
       fullEntry.id = notionPageId;
@@ -112,7 +135,8 @@ export class NotionStorage {
       };
 
       // Update in Notion
-      await updateNotionCoffeePage(id, updatedEntry);
+      const client = this.getClient();
+      await updateNotionCoffeePage(id, updatedEntry, client);
 
       return updatedEntry;
     } catch (error) {
@@ -123,7 +147,8 @@ export class NotionStorage {
 
   async deleteCoffeeEntry(id: string): Promise<boolean> {
     try {
-      await deleteNotionCoffeePage(id);
+      const client = this.getClient();
+      await deleteNotionCoffeePage(id, client);
       return true;
     } catch (error) {
       console.error(`Error deleting coffee entry ${id}:`, error);

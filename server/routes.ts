@@ -70,11 +70,23 @@ function generatePlaceUrl(entry: Partial<InsertCoffeeEntry | UpdateCoffeeEntry> 
 export async function registerRoutes(app: Express): Promise<Server> {
   const objectStorageService = new ObjectStorageService();
 
-  // Middleware to set Notion database ID from session or environment
-  // Guest users (no session): Use owner's database from NOTION_DATABASE_ID
-  // Authenticated users: Use their own database from session
+  // Middleware to set Notion database ID and access token from session or environment
+  // Guest users (no session): Use owner's database from NOTION_DATABASE_ID with internal integration
+  // Authenticated users: Use their own database with their OAuth access token
   app.use('/api/coffee-entries', (req, res, next) => {
-    const databaseId = req.session.databaseId || process.env.NOTION_DATABASE_ID;
+    const sessionDbId = req.session.databaseId;
+    const sessionAccessToken = req.session.accessToken;
+    const envDbId = process.env.NOTION_DATABASE_ID;
+    const databaseId = sessionDbId || envDbId;
+
+    // Log which database is being used (helpful for debugging)
+    if (sessionDbId && sessionAccessToken) {
+      console.log(`📝 Using USER's database: ${sessionDbId.substring(0, 8)}... (with OAuth token)`);
+      notionStorage.setAccessToken(sessionAccessToken);
+    } else {
+      console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
+      notionStorage.setAccessToken(null); // Use internal integration
+    }
 
     if (!databaseId) {
       return res.status(500).json({

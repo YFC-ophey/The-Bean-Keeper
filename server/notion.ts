@@ -5,12 +5,24 @@ import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-// Initialize Notion client
-const notion = new Client({
+// Default Notion client (uses internal integration for owner's database)
+const defaultNotionClient = new Client({
   auth: process.env.NOTION_API_KEY,
 });
 
-export { notion };
+// Export default client for backwards compatibility
+export const notion = defaultNotionClient;
+
+/**
+ * Create a Notion client with a specific access token
+ * Used for OAuth users who need to access their own databases
+ */
+export function createNotionClient(accessToken?: string): Client {
+  if (accessToken) {
+    return new Client({ auth: accessToken });
+  }
+  return defaultNotionClient;
+}
 
 // Type for Notion property values
 type NotionPropertyValue = any;
@@ -372,13 +384,18 @@ function notionPropertiesToCoffeeEntry(properties: any): Partial<CoffeeEntry> {
 
 /**
  * Creates a new coffee page in Notion database
+ * @param databaseId - The database to create the page in
+ * @param entry - The coffee entry data
+ * @param client - Optional Notion client (for OAuth users), defaults to internal integration
  */
 export async function createNotionCoffeePage(
   databaseId: string,
-  entry: CoffeeEntry
+  entry: CoffeeEntry,
+  client?: Client
 ): Promise<string> {
   try {
-    const response = await notion.pages.create({
+    const notionClient = client || notion;
+    const response = await notionClient.pages.create({
       parent: {
         database_id: databaseId,
       },
@@ -394,12 +411,17 @@ export async function createNotionCoffeePage(
 
 /**
  * Updates an existing Notion coffee page
+ * @param pageId - The page ID to update
+ * @param updates - Partial updates to apply
+ * @param client - Optional Notion client (for OAuth users)
  */
 export async function updateNotionCoffeePage(
   pageId: string,
-  updates: Partial<CoffeeEntry>
+  updates: Partial<CoffeeEntry>,
+  client?: Client
 ): Promise<void> {
   try {
+    const notionClient = client || notion;
     // Create a temporary full entry for conversion (merge with empty defaults)
     const tempEntry = {
       id: updates.id || "",
@@ -410,7 +432,7 @@ export async function updateNotionCoffeePage(
       ...updates,
     } as CoffeeEntry;
 
-    await notion.pages.update({
+    await notionClient.pages.update({
       page_id: pageId,
       properties: coffeeEntryToNotionProperties(tempEntry),
     });
@@ -422,10 +444,16 @@ export async function updateNotionCoffeePage(
 
 /**
  * Retrieves a coffee entry from Notion by page ID
+ * @param pageId - The page ID to retrieve
+ * @param client - Optional Notion client (for OAuth users)
  */
-export async function getNotionCoffeePage(pageId: string): Promise<Partial<CoffeeEntry> | null> {
+export async function getNotionCoffeePage(
+  pageId: string,
+  client?: Client
+): Promise<Partial<CoffeeEntry> | null> {
   try {
-    const response = await notion.pages.retrieve({ page_id: pageId });
+    const notionClient = client || notion;
+    const response = await notionClient.pages.retrieve({ page_id: pageId });
 
     if ("properties" in response) {
       return notionPropertiesToCoffeeEntry(response.properties);
@@ -440,13 +468,17 @@ export async function getNotionCoffeePage(pageId: string): Promise<Partial<Coffe
 
 /**
  * Queries all coffee entries from the Notion database
+ * @param databaseId - The database to query
+ * @param client - Optional Notion client (for OAuth users)
  */
 export async function queryNotionCoffeeDatabase(
-  databaseId: string
+  databaseId: string,
+  client?: Client
 ): Promise<CoffeeEntry[]> {
   try {
+    const notionClient = client || notion;
     // Get the data source ID from the database
-    const database: any = await notion.databases.retrieve({ database_id: databaseId });
+    const database: any = await notionClient.databases.retrieve({ database_id: databaseId });
     const dataSourceId = database.data_sources?.[0]?.id;
 
     if (!dataSourceId) {
@@ -458,7 +490,7 @@ export async function queryNotionCoffeeDatabase(
     let startCursor: string | undefined = undefined;
 
     while (hasMore) {
-      const response: any = await notion.dataSources.query({
+      const response: any = await (notionClient as any).dataSources.query({
         data_source_id: dataSourceId,
         start_cursor: startCursor,
         sorts: [
@@ -513,11 +545,17 @@ export async function queryNotionCoffeeDatabase(
 }
 
 /**
- * Deletes a coffee page from Notion (archives it)
+ * Archives (deletes) a Notion coffee page
+ * @param pageId - The page ID to archive
+ * @param client - Optional Notion client (for OAuth users)
  */
-export async function deleteNotionCoffeePage(pageId: string): Promise<void> {
+export async function deleteNotionCoffeePage(
+  pageId: string,
+  client?: Client
+): Promise<void> {
   try {
-    await notion.pages.update({
+    const notionClient = client || notion;
+    await notionClient.pages.update({
       page_id: pageId,
       archived: true,
     });
