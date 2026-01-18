@@ -78,9 +78,25 @@ export function registerNotionOAuthRoutes(app: Express) {
           return res.redirect('/?login=error');
         }
 
-        // Redirect to frontend (session cookie is automatically sent)
-        console.log('Session saved successfully, redirecting to dashboard');
-        res.redirect('/?login=success');
+        // Log session details for debugging
+        console.log('📝 Session saved successfully:');
+        console.log('  Session ID:', req.sessionID);
+        console.log('  Database ID:', req.session.databaseId);
+        console.log('  Access Token:', req.session.accessToken ? 'SET' : 'NOT SET');
+        console.log('  Workspace:', req.session.workspaceName);
+
+        // Check if cookie will be set
+        const cookieHeader = res.getHeader('Set-Cookie');
+        console.log('  Set-Cookie header:', cookieHeader ? 'PRESENT' : 'MISSING');
+        if (cookieHeader) {
+          console.log('  Cookie value:', JSON.stringify(cookieHeader));
+        }
+
+        // Redirect to frontend with session token for mobile fallback
+        // Mobile browsers may block cookies on cross-site redirects (ITP)
+        // We'll pass session ID in URL as backup, frontend will verify via API
+        console.log('🚀 Redirecting to /?login=success');
+        res.redirect(`/?login=success&sid=${req.sessionID}`);
       });
 
     } catch (error: any) {
@@ -129,6 +145,74 @@ export function registerNotionOAuthRoutes(app: Express) {
       databaseIdPrefix: req.session.databaseId?.substring(0, 8) || null,
       workspaceName: req.session.workspaceName || null,
       cookieHeader: req.headers.cookie ? 'present' : 'missing',
+    });
+  });
+
+  /**
+   * Restore session from session ID (mobile fallback for ITP)
+   * POST /api/auth/restore
+   * This endpoint allows restoring a session when cookies are blocked
+   */
+  app.post("/api/auth/restore", (req, res) => {
+    const { sessionId } = req.body;
+
+    console.log('🔄 Session restore requested');
+    console.log('  Provided session ID:', sessionId);
+    console.log('  Current session ID:', req.sessionID);
+    console.log('  Current cookie:', req.headers.cookie ? 'present' : 'missing');
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    // Get the session store
+    const store = req.sessionStore;
+    if (!store) {
+      console.log('  ❌ No session store available');
+      return res.status(500).json({ error: 'Session store not available' });
+    }
+
+    // Try to get the session data from the store
+    store.get(sessionId, (err: any, sessionData: any) => {
+      if (err) {
+        console.log('  ❌ Error getting session:', err);
+        return res.status(500).json({ error: 'Failed to retrieve session' });
+      }
+
+      if (!sessionData) {
+        console.log('  ❌ Session not found in store');
+        return res.status(404).json({ error: 'Session not found or expired' });
+      }
+
+      console.log('  ✅ Found session data:', {
+        hasAccessToken: !!sessionData.accessToken,
+        hasDatabaseId: !!sessionData.databaseId,
+        workspaceName: sessionData.workspaceName,
+      });
+
+      // Copy the session data to the current session
+      req.session.userId = sessionData.userId;
+      req.session.accessToken = sessionData.accessToken;
+      req.session.databaseId = sessionData.databaseId;
+      req.session.workspaceName = sessionData.workspaceName;
+
+      // Save the current session with the restored data
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.log('  ❌ Error saving restored session:', saveErr);
+          return res.status(500).json({ error: 'Failed to save session' });
+        }
+
+        console.log('  ✅ Session restored successfully');
+        console.log('  New session ID:', req.sessionID);
+
+        res.json({
+          success: true,
+          authenticated: true,
+          workspaceName: req.session.workspaceName,
+          databaseId: req.session.databaseId,
+        });
+      });
     });
   });
 
