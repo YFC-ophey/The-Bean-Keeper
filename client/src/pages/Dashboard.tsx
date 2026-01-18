@@ -39,7 +39,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, isLoading: isAuthLoading, logout, workspaceName, login, justLoggedIn, clearJustLoggedIn } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, logout, workspaceName, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -63,6 +63,27 @@ export default function Dashboard() {
       clearJustLoggedIn();
     }
   }, [justLoggedIn, isAuthenticated, isAuthLoading, clearJustLoggedIn]);
+
+  // Show toast for auth errors
+  useEffect(() => {
+    if (authError) {
+      if (authError === 'NO_PAGES_SHARED') {
+        toast({
+          title: "Notion Setup Required",
+          description: "Please try again and select at least one page to share when authorizing. This allows the app to create your coffee database.",
+          variant: "destructive",
+          duration: 10000, // Show for 10 seconds
+        });
+      } else if (authError === 'LOGIN_FAILED') {
+        toast({
+          title: "Login Failed",
+          description: "Something went wrong during login. Please try again.",
+          variant: "destructive",
+        });
+      }
+      clearAuthError();
+    }
+  }, [authError, clearAuthError, toast]);
 
   // Scroll-aware header state
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);

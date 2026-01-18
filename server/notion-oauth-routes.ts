@@ -5,6 +5,7 @@ import {
   duplicateTemplateDatabaseToUserWorkspace,
   getNotionUser,
   testNotionConnection,
+  NoPagesSharedError,
 } from "./notion-oauth";
 
 /**
@@ -101,6 +102,14 @@ export function registerNotionOAuthRoutes(app: Express) {
 
     } catch (error: any) {
       console.error("Error in Notion OAuth callback:", error);
+
+      // Check for specific error types
+      if (error instanceof NoPagesSharedError) {
+        console.log("🔴 User did not share any pages during OAuth authorization");
+        // Redirect with specific error code so frontend can show helpful message
+        return res.redirect(`/?login=no_pages`);
+      }
+
       res.redirect(`/?login=error`);
     }
   });

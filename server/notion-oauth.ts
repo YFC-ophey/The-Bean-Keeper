@@ -145,8 +145,10 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
   // Look for a database that matches our schema (must have "Roaster" property, not just "Name")
   // All Notion databases have "Name", so we need to check for our specific properties
   for (const result of existingDb.results) {
-    if (result.object === "database") {
-      const db = result as any;
+    // Cast to any to avoid TypeScript's strict object type checking
+    const resultObj = result as any;
+    if (resultObj.object === "database") {
+      const db = resultObj;
       // Check if this is our Coffee Collection database by looking for key properties
       // Must have "Roaster" AND "Front Photo" to be considered our database
       if (db.properties && db.properties["Roaster"] && db.properties["Front Photo"]) {
@@ -203,6 +205,16 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
 }
 
 /**
+ * Custom error for when user hasn't shared any pages
+ */
+export class NoPagesSharedError extends Error {
+  constructor() {
+    super("NO_PAGES_SHARED");
+    this.name = "NoPagesSharedError";
+  }
+}
+
+/**
  * Get the root page ID of a workspace (first page the bot can access)
  */
 async function getWorkspaceRootPageId(notion: Client): Promise<string> {
@@ -212,7 +224,8 @@ async function getWorkspaceRootPageId(notion: Client): Promise<string> {
   });
 
   if (search.results.length === 0) {
-    throw new Error("No accessible pages found in workspace. Please share at least one page with the integration.");
+    console.log("❌ No pages found - user needs to share at least one page during OAuth");
+    throw new NoPagesSharedError();
   }
 
   return search.results[0].id;

@@ -6,7 +6,9 @@ interface AuthContextType {
   workspaceName: string | null;
   databaseId: string | null;
   justLoggedIn: boolean;
+  authError: string | null;
   clearJustLoggedIn: () => void;
+  clearAuthError: () => void;
   login: () => void;
   logout: () => Promise<void>;
 }
@@ -19,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [workspaceName, setWorkspaceName] = useState<string | null>(null);
   const [databaseId, setDatabaseId] = useState<string | null>(null);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const checkAuth = useCallback(async (sessionIdFromUrl?: string) => {
     try {
@@ -112,10 +115,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Pass session ID for mobile browsers where cookies may be blocked
       setJustLoggedIn(true);
       checkAuth(sessionId || undefined);
+    } else if (loginStatus === 'no_pages') {
+      // User didn't share any pages during OAuth - show helpful message
+      console.log('🔴 OAuth failed: User did not share any pages');
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      setAuthError('NO_PAGES_SHARED');
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('login');
+      window.history.replaceState({}, '', url.pathname);
     } else if (loginStatus === 'error') {
       // OAuth failed
       setIsAuthenticated(false);
       setIsLoading(false);
+      setAuthError('LOGIN_FAILED');
       // Clean up URL
       const url = new URL(window.location.href);
       url.searchParams.delete('login');
@@ -150,6 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setJustLoggedIn(false);
   }, []);
 
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
@@ -157,7 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       workspaceName,
       databaseId,
       justLoggedIn,
+      authError,
       clearJustLoggedIn,
+      clearAuthError,
       login,
       logout
     }}>
