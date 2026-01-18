@@ -6,6 +6,12 @@ import { registerNotionOAuthRoutes } from "./notion-oauth-routes";
 
 const app = express();
 
+// Trust proxy - required for secure cookies behind Render's reverse proxy
+// Without this, secure cookies won't work because Express sees HTTP, not HTTPS
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
