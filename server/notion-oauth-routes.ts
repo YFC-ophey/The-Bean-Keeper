@@ -117,6 +117,22 @@ export function registerNotionOAuthRoutes(app: Express) {
   });
 
   /**
+   * Debug endpoint to check session state
+   * GET /api/auth/debug
+   */
+  app.get("/api/auth/debug", (req, res) => {
+    res.json({
+      sessionID: req.sessionID,
+      hasDatabaseId: !!req.session.databaseId,
+      hasAccessToken: !!req.session.accessToken,
+      hasWorkspaceName: !!req.session.workspaceName,
+      databaseIdPrefix: req.session.databaseId?.substring(0, 8) || null,
+      workspaceName: req.session.workspaceName || null,
+      cookieHeader: req.headers.cookie ? 'present' : 'missing',
+    });
+  });
+
+  /**
    * Logout - destroy session
    * POST /api/auth/logout
    */
