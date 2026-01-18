@@ -94,8 +94,9 @@ export function registerNotionOAuthRoutes(app: Express) {
    * GET /api/auth/me
    */
   app.get("/api/auth/me", (req, res) => {
-    if (!req.session.accessToken) {
-      return res.status(401).json({ authenticated: false });
+    // Check databaseId (same check used by coffee entries endpoint)
+    if (!req.session.databaseId) {
+      return res.json({ authenticated: false });
     }
 
     res.json({
