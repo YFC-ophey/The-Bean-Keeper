@@ -94,11 +94,21 @@ export function registerNotionOAuthRoutes(app: Express) {
    * GET /api/auth/me
    */
   app.get("/api/auth/me", (req, res) => {
+    // Debug logging to understand session state
+    console.log('🔍 /api/auth/me called');
+    console.log('  Session ID:', req.sessionID);
+    console.log('  Session databaseId:', req.session.databaseId);
+    console.log('  Session workspaceName:', req.session.workspaceName);
+    console.log('  Session accessToken:', req.session.accessToken ? 'SET' : 'NOT SET');
+    console.log('  Cookie header:', req.headers.cookie);
+
     // Check databaseId (same check used by coffee entries endpoint)
     if (!req.session.databaseId) {
+      console.log('  ❌ Not authenticated - no databaseId');
       return res.json({ authenticated: false });
     }
 
+    console.log('  ✅ Authenticated');
     res.json({
       authenticated: true,
       workspaceName: req.session.workspaceName,
