@@ -142,13 +142,16 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
     page_size: 10,
   });
 
-  // Look for a database that matches our schema (has "Roaster" property)
+  // Look for a database that matches our schema (must have "Roaster" property, not just "Name")
+  // All Notion databases have "Name", so we need to check for our specific properties
   for (const result of existingDb.results) {
     if (result.object === "database") {
       const db = result as any;
       // Check if this is our Coffee Collection database by looking for key properties
-      if (db.properties && (db.properties["Roaster"] || db.properties["Name"])) {
+      // Must have "Roaster" AND "Front Photo" to be considered our database
+      if (db.properties && db.properties["Roaster"] && db.properties["Front Photo"]) {
         console.log("Found existing Bean Keeper database:", db.id);
+        console.log("  Properties found:", Object.keys(db.properties).join(", "));
         return db.id;
       }
     }
@@ -191,7 +194,10 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
   }
 
   // Create the database structure (only for new users)
-  const databaseId = await createCoffeeDatabase(parentPageId);
+  // IMPORTANT: Pass the user's OAuth client to create the database in THEIR workspace
+  console.log("Creating new database with user's OAuth client...");
+  const databaseId = await createCoffeeDatabase(parentPageId, notion);
+  console.log("Created new database with ID:", databaseId);
 
   return databaseId;
 }

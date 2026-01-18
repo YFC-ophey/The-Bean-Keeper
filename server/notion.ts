@@ -30,10 +30,13 @@ type NotionPropertyValue = any;
 /**
  * Creates a Notion database for coffee tracking with the appropriate schema
  * This should be called once during setup
+ * @param parentPageId - The ID of the parent page where the database will be created
+ * @param client - Optional Notion client (uses default if not provided)
  */
-export async function createCoffeeDatabase(parentPageId: string): Promise<string> {
+export async function createCoffeeDatabase(parentPageId: string, client?: Client): Promise<string> {
+  const notionClient = client || notion;
   try {
-    const response = await notion.databases.create({
+    const response = await notionClient.databases.create({
       parent: {
         type: "page_id",
         page_id: parentPageId,
