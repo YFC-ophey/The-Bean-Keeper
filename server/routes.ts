@@ -116,18 +116,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get upload URL for photo - use Cloudinary if configured, otherwise local storage
   app.post("/api/upload-url", requireAuth, async (req, res) => {
     try {
+      console.log("📷 Upload URL request");
+      console.log("  Session databaseId:", req.session.databaseId ? 'SET' : 'NOT SET');
+      console.log("  Session accessToken:", req.session.accessToken ? 'SET' : 'NOT SET');
+      console.log("  Cookie header:", req.headers.cookie ? 'present' : 'missing');
+
       // Prefer Cloudinary if configured
       if (cloudinaryStorageService.isConfigured()) {
         const uploadURL = await cloudinaryStorageService.getUploadURL();
+        console.log("  ✓ Cloudinary URL generated:", uploadURL);
         res.json({ uploadURL });
       } else {
         // Fallback to local storage
         const uploadURL = await localStorageService.getUploadURL();
+        console.log("  ✓ Local URL generated:", uploadURL);
         res.json({ uploadURL });
       }
     } catch (error) {
-      console.error("Error generating upload URL:", error);
-      res.status(500).json({ error: "Failed to generate upload URL" });
+      console.error("❌ Error generating upload URL:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to generate upload URL", details: errorMessage });
     }
   });
 
@@ -156,6 +164,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fileId } = req.params;
       const contentType = req.headers['content-type'] || 'image/jpeg';
+      console.log("📷 Cloudinary upload request:", { fileId, contentType });
+      console.log("  Session databaseId:", req.session.databaseId ? 'SET' : 'NOT SET');
+      console.log("  Session accessToken:", req.session.accessToken ? 'SET' : 'NOT SET');
 
       // Collect the raw body data
       const chunks: Buffer[] = [];
@@ -163,16 +174,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.on('end', async () => {
         try {
           const buffer = Buffer.concat(chunks);
+          console.log("  Buffer size:", buffer.length);
           const fileUrl = await cloudinaryStorageService.saveFile(fileId, buffer, contentType);
+          console.log("  ✓ Upload successful:", fileUrl);
           res.json({ url: fileUrl });
         } catch (uploadError) {
-          console.error("Error uploading to Cloudinary:", uploadError);
-          res.status(500).json({ error: "Failed to upload file to Cloudinary" });
+          console.error("❌ Error uploading to Cloudinary:", uploadError);
+          const errorMessage = uploadError instanceof Error ? uploadError.message : "Unknown error";
+          res.status(500).json({ error: "Failed to upload file to Cloudinary", details: errorMessage });
         }
       });
     } catch (error) {
-      console.error("Error in Cloudinary upload endpoint:", error);
-      res.status(500).json({ error: "Failed to upload file" });
+      console.error("❌ Error in Cloudinary upload endpoint:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to upload file", details: errorMessage });
     }
   });
 
@@ -223,17 +238,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create coffee entry (protected - requires authentication)
   app.post("/api/coffee-entries", requireAuth, async (req, res) => {
     try {
+      console.log("📝 Creating coffee entry...");
+      console.log("  Session databaseId:", req.session.databaseId);
+      console.log("  Session accessToken:", req.session.accessToken ? 'SET' : 'NOT SET');
+
       // Validate request body
       const validatedData = insertCoffeeEntrySchema.parse(req.body);
+      console.log("  ✓ Request body validated");
 
       // Normalize photo URLs if they're presigned URLs
       const frontPhotoUrl = objectStorageService.normalizeObjectEntityPath(validatedData.frontPhotoUrl);
       const backPhotoUrl = validatedData.backPhotoUrl
         ? objectStorageService.normalizeObjectEntityPath(validatedData.backPhotoUrl)
         : null;
+      console.log("  ✓ Photo URLs normalized:", { frontPhotoUrl, backPhotoUrl });
 
       // Generate Google Maps Place URL
       const placeUrl = generatePlaceUrl(validatedData);
+      console.log("  ✓ Place URL generated");
 
       const entry = await notionStorage.createCoffeeEntry({
         ...validatedData,
@@ -246,10 +268,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(entry);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("❌ Validation error:", error.errors);
         return res.status(400).json({ error: "Invalid request data", details: error.errors });
       }
-      console.error("Error creating coffee entry:", error);
-      res.status(500).json({ error: "Failed to create coffee entry" });
+      console.error("❌ Error creating coffee entry:", error);
+      // Return more detailed error for debugging
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ error: "Failed to create coffee entry", details: errorMessage });
     }
   });
 
