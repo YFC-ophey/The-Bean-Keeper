@@ -675,8 +675,9 @@ export default function Dashboard() {
               Crafted with care for coffee enthusiasts
             </p>
             <p className="text-muted-foreground/60 font-serif text-xs">
-              © 2025 The Bean Keeper · Track, taste, remember
+              © 2025 The Bean Keeper · Ophelia Chen · opheliayf.chen@gmail.com
             </p>
+            
           </div>
         </div>
       </footer>
