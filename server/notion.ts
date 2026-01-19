@@ -30,136 +30,92 @@ type NotionPropertyValue = any;
 /**
  * Creates a Notion database for coffee tracking with the appropriate schema
  * This should be called once during setup
+ *
+ * NOTE: This function uses direct HTTP fetch instead of the Notion SDK because
+ * SDK v5.4.0 has a bug where createDatabase.bodyParams doesn't include 'properties',
+ * causing the SDK to strip out the properties field before sending to the API.
+ *
  * @param parentPageId - The ID of the parent page where the database will be created
- * @param client - Optional Notion client (uses default if not provided)
+ * @param accessToken - The OAuth access token for the user
  */
-export async function createCoffeeDatabase(parentPageId: string, client?: Client): Promise<string> {
-  const notionClient = client || notion;
-  try {
-    const response = await notionClient.databases.create({
-      parent: {
-        type: "page_id",
-        page_id: parentPageId,
-      },
-      title: [
-        {
-          type: "text",
-          text: {
-            content: "The Bean Keeper - Coffee Collection",
-          },
-        },
-      ],
-      properties: {
-        "Name": {
-          title: {},
-        },
-        "Created": {
-          created_time: {},
-        },
-        "Roaster": {
-          rich_text: {},
-        },
-        "Website": {
-          url: {},
-        },
-        "Place": {
-          url: {},
-        },
-        "Origin": {
-          rich_text: {},
-        },
-        "Variety": {
-          multi_select: {
-            options: [
-              { name: "Bourbon", color: "brown" },
-              { name: "Typica", color: "yellow" },
-              { name: "Gesha", color: "green" },
-              { name: "Caturra", color: "orange" },
-              { name: "SL28", color: "red" },
-              { name: "SL34", color: "pink" },
-              { name: "Heirloom", color: "purple" },
-            ],
-          },
-        },
-        "Process": {
-          select: {
-            options: [
-              { name: "Washed", color: "blue" },
-              { name: "Natural", color: "green" },
-              { name: "Honey", color: "yellow" },
-              { name: "Anaerobic", color: "red" },
-              { name: "Carbonic Maceration", color: "purple" },
-            ],
-          },
-        },
-        "Roast Level": {
-          select: {
-            options: [
-              { name: "Light", color: "yellow" },
-              { name: "Medium", color: "orange" },
-              { name: "Dark", color: "brown" },
-            ],
-          },
-        },
-        "Flavor Notes": {
-          multi_select: {
-            options: [
-              { name: "Chocolate", color: "brown" },
-              { name: "Citrus", color: "orange" },
-              { name: "Floral", color: "pink" },
-              { name: "Berry", color: "purple" },
-              { name: "Nutty", color: "brown" },
-              { name: "Caramel", color: "yellow" },
-              { name: "Fruity", color: "red" },
-              { name: "Spicy", color: "orange" },
-              { name: "Herbal", color: "green" },
-              { name: "Tea-like", color: "green" },
-            ],
-          },
-        },
-        "Weight": {
-          rich_text: {},
-        },
-        "Price": {
-          rich_text: {},
-        },
-        "Purchase Again": {
-          checkbox: {},
-        },
-        "Rating": {
-          number: {
-            format: "number",
-          },
-        },
-        "Front Photo": {
-          url: {},
-        },
-        "Back Photo": {
-          url: {},
-        },
-        "App ID": {
-          rich_text: {},
-        },
-        "Address": {
-          rich_text: {},
-        },
-        "Farm": {
-          rich_text: {},
-        },
-        "Roast Date": {
-          date: {},
-        },
-        "Tasting Notes": {
-          rich_text: {},
-        },
-      },
-    });
+export async function createCoffeeDatabase(parentPageId: string, accessToken: string): Promise<string> {
+  console.log("Creating database with direct API call (bypassing SDK bug)...");
 
-    return response.id;
-  } catch (error) {
-    console.error("Error creating Notion database:", error);
-    throw error;
+  const response = await fetch('https://api.notion.com/v1/databases', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Notion-Version': '2022-06-28',
+    },
+    body: JSON.stringify({
+      parent: { type: "page_id", page_id: parentPageId },
+      title: [{ type: "text", text: { content: "The Bean Keeper - Coffee Collection" } }],
+      properties: {
+        "Name": { title: {} },
+        "Created": { created_time: {} },
+        "Roaster": { rich_text: {} },
+        "Website": { url: {} },
+        "Place": { url: {} },
+        "Origin": { rich_text: {} },
+        "Variety": { multi_select: { options: [
+          { name: "Bourbon", color: "brown" },
+          { name: "Typica", color: "yellow" },
+          { name: "Gesha", color: "green" },
+          { name: "Caturra", color: "orange" },
+          { name: "SL28", color: "red" },
+          { name: "SL34", color: "pink" },
+          { name: "Heirloom", color: "purple" },
+        ]}},
+        "Process": { select: { options: [
+          { name: "Washed", color: "blue" },
+          { name: "Natural", color: "green" },
+          { name: "Honey", color: "yellow" },
+          { name: "Anaerobic", color: "red" },
+          { name: "Carbonic Maceration", color: "purple" },
+        ]}},
+        "Roast Level": { select: { options: [
+          { name: "Light", color: "yellow" },
+          { name: "Medium", color: "orange" },
+          { name: "Dark", color: "brown" },
+        ]}},
+        "Flavor Notes": { multi_select: { options: [
+          { name: "Chocolate", color: "brown" },
+          { name: "Citrus", color: "orange" },
+          { name: "Floral", color: "pink" },
+          { name: "Berry", color: "purple" },
+          { name: "Nutty", color: "brown" },
+          { name: "Caramel", color: "yellow" },
+          { name: "Fruity", color: "red" },
+          { name: "Spicy", color: "orange" },
+          { name: "Herbal", color: "green" },
+          { name: "Tea-like", color: "green" },
+        ]}},
+        "Weight": { rich_text: {} },
+        "Price": { rich_text: {} },
+        "Purchase Again": { checkbox: {} },
+        "Rating": { number: { format: "number" } },
+        "Front Photo": { url: {} },
+        "Back Photo": { url: {} },
+        "App ID": { rich_text: {} },
+        "Address": { rich_text: {} },
+        "Farm": { rich_text: {} },
+        "Roast Date": { date: {} },
+        "Tasting Notes": { rich_text: {} },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error("Failed to create database:", error);
+    throw new Error(`Failed to create database: ${JSON.stringify(error)}`);
   }
+
+  const data = await response.json();
+  console.log("Database created successfully with ID:", data.id);
+  console.log("Properties created:", Object.keys(data.properties).join(", "));
+  return data.id;
 }
 
 /**

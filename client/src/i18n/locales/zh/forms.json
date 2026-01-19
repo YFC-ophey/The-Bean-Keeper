@@ -61,7 +61,7 @@
     },
     "placeholders": {
       "roasterName": "例如：Happy Goat Coffee Co.",
-      "roasterWebsite": "例如：https://happygoat.ca",
+      "roasterWebsite": "例如：https://thebeankeeper.ca",
       "roasterAddress": "街道地址，用於地圖定位",
       "farm": "例如：Finca El Paraíso",
       "origin": "例如：衣索比亞、哥倫比亞",

@@ -196,9 +196,10 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
   }
 
   // Create the database structure (only for new users)
-  // IMPORTANT: Pass the user's OAuth client to create the database in THEIR workspace
-  console.log("Creating new database with user's OAuth client...");
-  const databaseId = await createCoffeeDatabase(parentPageId, notion);
+  // IMPORTANT: Pass the user's access token to create the database in THEIR workspace
+  // NOTE: Using direct fetch instead of SDK due to SDK bug (see notion.ts for details)
+  console.log("Creating new database with user's access token...");
+  const databaseId = await createCoffeeDatabase(parentPageId, accessToken);
   console.log("Created new database with ID:", databaseId);
 
   return databaseId;

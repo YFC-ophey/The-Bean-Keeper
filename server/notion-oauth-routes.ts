@@ -58,13 +58,22 @@ export function registerNotionOAuthRoutes(app: Express) {
         workspace_name: tokenData.workspace_name,
       });
 
-      // Create database in user's workspace
-      console.log("Creating database in user's workspace...");
-      const databaseId = await duplicateTemplateDatabaseToUserWorkspace(
-        tokenData.access_token
-      );
+      // Get or create database in user's workspace
+      let databaseId: string;
 
-      console.log("Database created:", databaseId);
+      // Check if Notion duplicated our template (user chose "Use a template" option)
+      if (tokenData.duplicated_template_id) {
+        console.log("✅ Using Notion-duplicated template database:", tokenData.duplicated_template_id);
+        databaseId = tokenData.duplicated_template_id;
+      } else {
+        // Fallback: User chose "Select pages" option - create database manually
+        console.log("📝 No template used, creating database manually...");
+        databaseId = await duplicateTemplateDatabaseToUserWorkspace(
+          tokenData.access_token
+        );
+      }
+
+      console.log("Database ID:", databaseId);
 
       // STORE IN SESSION (secure, server-side storage)
       req.session.userId = tokenData.bot_id;

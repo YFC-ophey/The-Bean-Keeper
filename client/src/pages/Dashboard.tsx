@@ -32,6 +32,7 @@ import HelpButton from "@/components/HelpButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotionButton from "@/components/NotionButton";
 import AboutSection from "@/components/AboutSection";
+import { NotionAuthModal } from "@/components/NotionAuthModal";
 import { CoffeeEntry } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +46,8 @@ export default function Dashboard() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'instructions' | 'error'>('instructions');
   const [selectedEntry, setSelectedEntry] = useState<CoffeeEntry | null>(null);
   const [editEntry, setEditEntry] = useState<CoffeeEntry | null>(null);
   const [pendingEntry, setPendingEntry] = useState<CoffeeEntry | null>(null);
@@ -64,16 +67,13 @@ export default function Dashboard() {
     }
   }, [justLoggedIn, isAuthenticated, isAuthLoading, clearJustLoggedIn]);
 
-  // Show toast for auth errors
+  // Show modal for auth errors
   useEffect(() => {
     if (authError) {
       if (authError === 'NO_PAGES_SHARED') {
-        toast({
-          title: "Notion Setup Required",
-          description: "Please try again and select at least one page to share when authorizing. This allows the app to create your coffee database.",
-          variant: "destructive",
-          duration: 10000, // Show for 10 seconds
-        });
+        // Show the error modal instead of just a toast
+        setAuthModalMode('error');
+        setShowAuthModal(true);
       } else if (authError === 'LOGIN_FAILED') {
         toast({
           title: "Login Failed",
@@ -401,6 +401,25 @@ export default function Dashboard() {
     setActiveOriginFilter(null);
   };
 
+  // Handle Add Coffee button click - show auth modal for guests
+  const handleAddCoffeeClick = () => {
+    if (isAuthLoading) return;
+
+    if (!isAuthenticated) {
+      // Show pre-auth instructions modal for guests
+      setAuthModalMode('instructions');
+      setShowAuthModal(true);
+    } else {
+      setShowAddForm(true);
+    }
+  };
+
+  // Handle auth modal continue - proceed to Notion OAuth
+  const handleAuthModalContinue = () => {
+    setShowAuthModal(false);
+    login(); // Redirect to Notion OAuth
+  };
+
   return (
     <div className="min-h-screen bg-background coffee-texture">
       <header
@@ -505,16 +524,7 @@ export default function Dashboard() {
               />
             </div>
             <Button
-              onClick={() => {
-                // Wait for auth check to complete before taking action
-                if (isAuthLoading) return;
-
-                if (!isAuthenticated) {
-                  login(); // Trigger Notion OAuth for guests
-                } else {
-                  setShowAddForm(true); // Show form for authenticated users
-                }
-              }}
+              onClick={handleAddCoffeeClick}
               disabled={isAuthLoading}
               data-testid="button-add-coffee"
               className="shrink-0 organic-radius px-4 md:px-6 py-3 md:py-6 gap-1.5 md:gap-2 whitespace-nowrap font-serif font-semibold text-sm md:text-base shadow-md hover:shadow-lg transition-all duration-300 bg-primary hover:bg-primary/90 disabled:opacity-50"
@@ -570,16 +580,7 @@ export default function Dashboard() {
             <p className="text-muted-foreground font-serif text-lg">{t('common:loading.brewing')}</p>
           </div>
         ) : filteredAndSortedEntries.length === 0 && !searchQuery && !activeRoastFilter && !activeRatingFilter && !activeOriginFilter ? (
-          <EmptyState onAddClick={() => {
-            // Wait for auth check to complete before taking action
-            if (isAuthLoading) return;
-
-            if (!isAuthenticated) {
-              login(); // Trigger Notion OAuth for guests
-            } else {
-              setShowAddForm(true); // Show form for authenticated users
-            }
-          }} />
+          <EmptyState onAddClick={handleAddCoffeeClick} />
         ) : (
           <div>
             {/* Coffee Statistics Summary Bar */}
@@ -789,6 +790,14 @@ export default function Dashboard() {
       <UserGuideModal
         isOpen={showGuideModal}
         onClose={() => setShowGuideModal(false)}
+      />
+
+      {/* Notion Auth Modal - Pre-auth instructions and error handling */}
+      <NotionAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onContinue={handleAuthModalContinue}
+        mode={authModalMode}
       />
     </div>
   );
