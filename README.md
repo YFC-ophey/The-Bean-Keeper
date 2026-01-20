@@ -233,6 +233,8 @@ MIT License - See [LICENSE](LICENSE) file for details
 - [Tesseract.js](https://tesseract.projectnaptha.com/) - OCR engine
 - [shadcn/ui](https://ui.shadcn.com/) - UI components
 - [Clash Display](https://www.fontshare.com/fonts/clash-display) - Typography
+- [Render](https://render.com/) - Cloud Application Platform
+- [Cloudinary](https://cloudinary.com/) - Image and Media API Platform
 
 ---
 
