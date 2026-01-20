@@ -220,9 +220,9 @@ MIT License - See [LICENSE](LICENSE) file for details
 ## 👨‍💻 Author
 
 **Ophelia Chen**
-- Portfolio: [your-portfolio.com]
-- LinkedIn: [https://www.linkedin.com/in/opheliandata/]
-- GitHub: [@YFC-ophey]
+- Portfolio: Coming Soon
+- LinkedIn: https://www.linkedin.com/in/opheliandata/
+- GitHub: @YFC-ophey
 
 ## 🙏 Acknowledgments
 
