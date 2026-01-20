@@ -33,7 +33,8 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 - Express.js + TypeScript
 - Groq AI (Llama 3.1 8B Instant)
 - Notion SDK (database)
-- Google Cloud Storage (photos)
+- Render.com Web Services
+- Claudinary Cloud Storage (photos)
 
 ### AI/ML Pipeline
 1. User uploads coffee bag photo
@@ -192,7 +193,7 @@ The-Bean-Keeper/
 - **Graceful Fallback**: Regex extraction if AI fails
 
 ### Internationalization
-- Full bilingual support (EN + 繁體中文)
+- Full bilingual support (EN + ZH 繁體中文)
 - Automatic language detection
 - LocalStorage persistence
 - 6 translation namespaces
@@ -226,6 +227,7 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ## 🙏 Acknowledgments
 
+- [Claude Code](https://claude.ai/code) - My Fav Vibe Coding Tool
 - [Groq](https://groq.com) - Lightning-fast AI inference
 - [Notion](https://notion.so) - Database and API
 - [Tesseract.js](https://tesseract.projectnaptha.com/) - OCR engine
