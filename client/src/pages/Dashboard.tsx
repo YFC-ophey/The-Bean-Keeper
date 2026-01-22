@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, X, ArrowLeft, LogOut } from "lucide-react";
+import { Plus, Search, X, ArrowLeft, LogOut, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
@@ -454,7 +454,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                {isAuthenticated && (
+                {isAuthenticated ? (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -463,6 +463,17 @@ export default function Dashboard() {
                     aria-label="Logout"
                   >
                     <LogOut className="w-3.5 h-3.5" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.href = '/api/auth/notion'}
+                    disabled={isAuthLoading}
+                    className="flex items-center gap-1 px-2 py-1.5 min-h-[36px] text-xs bg-white border-[#E3E2E0] hover:bg-[#F7F6F5]"
+                    aria-label="Login with Notion"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
                   </Button>
                 )}
                 <NotionButton />
@@ -475,7 +486,7 @@ export default function Dashboard() {
           <div className="hidden sm:flex sm:flex-col sm:items-center mb-6 md:mb-8">
             {/* Logout, Language Switcher & Notion Button - Top Right with safe spacing */}
             <div className="self-end flex items-center gap-2 mb-3 md:mb-4">
-              {isAuthenticated && (
+              {isAuthenticated ? (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -487,6 +498,18 @@ export default function Dashboard() {
                   <span className="hidden sm:inline text-sm">
                     {workspaceName || t('common:buttons.logout', 'Logout')}
                   </span>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = '/api/auth/notion'}
+                  disabled={isAuthLoading}
+                  className="flex items-center gap-2 bg-white border-[#E3E2E0] hover:bg-[#F7F6F5] text-[#37352F]"
+                  aria-label="Login with Notion"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden sm:inline text-sm">{t('common:buttons.login', 'Login')}</span>
                 </Button>
               )}
               <NotionButton />

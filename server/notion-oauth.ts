@@ -135,12 +135,16 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
   const notion = createUserNotionClient(accessToken);
 
   // FIRST: Check if user already has a Bean Keeper database
-  // Note: Notion search API filter only accepts "page" or "data_source", so we search all and filter in code
+  // Search with exact title and larger page_size for reliability
   // Database is named "The Bean Keeper - Coffee Collection"
+  console.log("🔍 Searching for existing Bean Keeper database...");
+
   const existingDb = await notion.search({
-    query: "Bean Keeper",
-    page_size: 10,
+    query: "The Bean Keeper - Coffee Collection",
+    page_size: 100,
   });
+
+  console.log(`📊 Search returned ${existingDb.results.length} results`);
 
   // Look for a database that matches our schema (must have "Roaster" property, not just "Name")
   // All Notion databases have "Name", so we need to check for our specific properties
@@ -149,17 +153,46 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
     const resultObj = result as any;
     if (resultObj.object === "database") {
       const db = resultObj;
+      const hasRoaster = !!db.properties?.["Roaster"];
+      const hasFrontPhoto = !!db.properties?.["Front Photo"];
+
+      console.log(`  Checking database ${db.id.substring(0, 8)}...`);
+      console.log(`    Roaster: ${hasRoaster}, Front Photo: ${hasFrontPhoto}`);
+
       // Check if this is our Coffee Collection database by looking for key properties
       // Must have "Roaster" AND "Front Photo" to be considered our database
-      if (db.properties && db.properties["Roaster"] && db.properties["Front Photo"]) {
-        console.log("Found existing Bean Keeper database:", db.id);
+      if (hasRoaster && hasFrontPhoto) {
+        console.log("✅ Found existing Bean Keeper database:", db.id);
         console.log("  Properties found:", Object.keys(db.properties).join(", "));
         return db.id;
       }
     }
   }
 
-  console.log("No existing database found, creating new one...");
+  // Fallback: Try a broader search in case title doesn't match exactly
+  console.log("🔍 No exact match found, trying broader search...");
+  const broadSearch = await notion.search({
+    query: "Bean Keeper",
+    page_size: 100,
+  });
+
+  console.log(`📊 Broad search returned ${broadSearch.results.length} results`);
+
+  for (const result of broadSearch.results) {
+    const resultObj = result as any;
+    if (resultObj.object === "database") {
+      const db = resultObj;
+      const hasRoaster = !!db.properties?.["Roaster"];
+      const hasFrontPhoto = !!db.properties?.["Front Photo"];
+
+      if (hasRoaster && hasFrontPhoto) {
+        console.log("✅ Found Bean Keeper database (broad search):", db.id);
+        return db.id;
+      }
+    }
+  }
+
+  console.log("❌ No existing database found, creating new one...");
 
   // If no parent page specified, we need to find or create one
   if (!parentPageId) {

@@ -10,7 +10,9 @@
     "next": "Next",
     "skip": "Skip for now",
     "confirm": "Confirm",
-    "saveAnyway": "Save Anyway"
+    "saveAnyway": "Save Anyway",
+    "login": "Login",
+    "logout": "Logout"
   },
   "loading": {
     "default": "Loading...",
