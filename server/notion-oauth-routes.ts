@@ -6,7 +6,9 @@ import {
   getNotionUser,
   testNotionConnection,
   NoPagesSharedError,
+  createUserNotionClient,
 } from "./notion-oauth";
+import { getDatabaseIdForWorkspace, saveDatabaseIdForWorkspace } from "./user-database-mapping";
 
 /**
  * Register Notion OAuth routes
@@ -61,8 +63,30 @@ export function registerNotionOAuthRoutes(app: Express) {
       // Get or create database in user's workspace
       let databaseId: string;
 
-      // Check if Notion duplicated our template (user chose "Use a template" option)
-      if (tokenData.duplicated_template_id) {
+      // FIRST: Check if we have a stored database ID for this workspace (re-login case)
+      const storedDatabaseId = getDatabaseIdForWorkspace(tokenData.workspace_id);
+      if (storedDatabaseId) {
+        console.log("🔍 Found stored database ID for workspace:", storedDatabaseId);
+
+        // Verify database is still accessible with user's new token
+        const notion = createUserNotionClient(tokenData.access_token);
+        try {
+          await notion.databases.retrieve({ database_id: storedDatabaseId });
+          console.log("✅ Stored database still accessible, reusing it");
+          databaseId = storedDatabaseId;
+        } catch (error) {
+          console.log("⚠️ Stored database not accessible, will search/create new one");
+          // Fall through to create/search logic below
+          if (tokenData.duplicated_template_id) {
+            console.log("✅ Using Notion-duplicated template database:", tokenData.duplicated_template_id);
+            databaseId = tokenData.duplicated_template_id;
+          } else {
+            console.log("📝 No template used, creating database manually...");
+            databaseId = await duplicateTemplateDatabaseToUserWorkspace(tokenData.access_token);
+          }
+        }
+      } else if (tokenData.duplicated_template_id) {
+        // Check if Notion duplicated our template (user chose "Use a template" option)
         console.log("✅ Using Notion-duplicated template database:", tokenData.duplicated_template_id);
         databaseId = tokenData.duplicated_template_id;
       } else {
@@ -72,6 +96,9 @@ export function registerNotionOAuthRoutes(app: Express) {
           tokenData.access_token
         );
       }
+
+      // ALWAYS persist the mapping for future re-logins
+      saveDatabaseIdForWorkspace(tokenData.workspace_id, databaseId, tokenData.workspace_name);
 
       console.log("Database ID:", databaseId);
 
