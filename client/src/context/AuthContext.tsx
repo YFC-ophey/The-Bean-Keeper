@@ -25,7 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async (sessionIdFromUrl?: string) => {
     try {
-      console.log('🔍 Checking auth...', { sessionIdFromUrl });
+      // Get stored session ID from localStorage (for ITP/Safari persistence)
+      const storedSessionId = localStorage.getItem('beankeeper_session_id');
+      const sessionIdToUse = sessionIdFromUrl || storedSessionId;
+
+      console.log('🔍 Checking auth...', {
+        sessionIdFromUrl,
+        storedSessionId: storedSessionId ? 'present' : 'absent',
+        sessionIdToUse: sessionIdToUse ? 'present' : 'absent'
+      });
 
       // Use fetch directly to avoid throwing on 401
       const response = await fetch('/api/auth/me', {
@@ -53,16 +61,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Cookie auth failed - try session restore if we have a session ID from URL
+      // Cookie auth failed - try session restore if we have a session ID
       // This handles mobile browsers where cookies are blocked due to ITP
-      if (sessionIdFromUrl) {
-        console.log('  ⚠️ Cookie auth failed, trying session restore...');
+      // Check both URL param AND localStorage for session ID
+      if (sessionIdToUse) {
+        console.log('  ⚠️ Cookie auth failed, trying session restore with:', sessionIdToUse.substring(0, 8) + '...');
 
         const restoreResponse = await fetch('/api/auth/restore', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ sessionId: sessionIdFromUrl }),
+          body: JSON.stringify({ sessionId: sessionIdToUse }),
         });
 
         if (restoreResponse.ok) {
@@ -75,6 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setWorkspaceName(restoreData.workspaceName);
             setDatabaseId(restoreData.databaseId);
 
+            // Store the session ID in localStorage for future page loads (ITP workaround)
+            if (sessionIdFromUrl) {
+              localStorage.setItem('beankeeper_session_id', sessionIdFromUrl);
+              console.log('  💾 Saved session ID to localStorage');
+            }
+
             // Clean up URL params after successful auth
             const url = new URL(window.location.href);
             url.searchParams.delete('login');
@@ -84,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           console.log('  ❌ Session restore failed:', restoreResponse.status);
+          // If restore failed, clear the stored session ID
+          localStorage.removeItem('beankeeper_session_id');
         }
       }
 
@@ -151,6 +168,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         credentials: 'include',
       });
+      // Clear session ID from localStorage (ITP workaround)
+      localStorage.removeItem('beankeeper_session_id');
+      console.log('🚪 Logged out, cleared session from localStorage');
       setIsAuthenticated(false);
       setWorkspaceName(null);
       setDatabaseId(null);
