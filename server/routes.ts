@@ -73,29 +73,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to set Notion database ID and access token from session or environment
   // Guest users (no session): Use owner's database from NOTION_DATABASE_ID with internal integration
   // Authenticated users: Use their own database with their OAuth access token
-  app.use('/api/coffee-entries', (req, res, next) => {
+  // Also verifies database is accessible before proceeding (clears stale sessions)
+  app.use('/api/coffee-entries', async (req, res, next) => {
     const sessionDbId = req.session.databaseId;
     const sessionAccessToken = req.session.accessToken;
     const envDbId = process.env.NOTION_DATABASE_ID;
-    const databaseId = sessionDbId || envDbId;
 
     // Log which database is being used (helpful for debugging)
     if (sessionDbId && sessionAccessToken) {
-      console.log(`📝 Using USER's database: ${sessionDbId.substring(0, 8)}... (with OAuth token)`);
-      notionStorage.setAccessToken(sessionAccessToken);
+      console.log(`📝 Checking USER's database: ${sessionDbId.substring(0, 8)}... (with OAuth token)`);
+
+      // Verify the database is still accessible with user's token
+      // This catches stale sessions where the user revoked access or database was deleted
+      try {
+        const { Client } = await import("@notionhq/client");
+        const userClient = new Client({ auth: sessionAccessToken });
+        await userClient.databases.retrieve({ database_id: sessionDbId });
+        console.log(`✅ Database verified accessible`);
+        notionStorage.setAccessToken(sessionAccessToken);
+        notionStorage.setDatabaseId(sessionDbId);
+      } catch (error: any) {
+        console.log(`⚠️ User's database not accessible: ${error.code || error.message}`);
+        console.log(`🔄 Clearing stale session, falling back to guest mode`);
+
+        // Clear the stale session data
+        req.session.databaseId = undefined;
+        req.session.accessToken = undefined;
+        req.session.workspaceName = undefined;
+
+        // Fall back to guest mode (owner's database)
+        if (envDbId) {
+          console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
+          notionStorage.setAccessToken(null);
+          notionStorage.setDatabaseId(envDbId);
+        } else {
+          return res.status(500).json({
+            error: 'Database not configured',
+            message: 'Server configuration error - database ID missing'
+          });
+        }
+      }
     } else {
       console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
       notionStorage.setAccessToken(null); // Use internal integration
+
+      if (!envDbId) {
+        return res.status(500).json({
+          error: 'Database not configured',
+          message: 'Server configuration error - database ID missing'
+        });
+      }
+
+      notionStorage.setDatabaseId(envDbId);
     }
 
-    if (!databaseId) {
-      return res.status(500).json({
-        error: 'Database not configured',
-        message: 'Server configuration error - database ID missing'
-      });
-    }
-
-    notionStorage.setDatabaseId(databaseId);
     next();
   });
 
