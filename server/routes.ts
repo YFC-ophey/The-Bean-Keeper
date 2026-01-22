@@ -9,6 +9,8 @@ import { z } from "zod";
 import { extractCoffeeInfoWithAI } from "./groq";
 import { createCoffeeDatabase } from "./notion";
 import { requireAuth } from "./middleware/auth";
+import { duplicateTemplateDatabaseToUserWorkspace } from "./notion-oauth";
+import { saveDatabaseIdForWorkspace } from "./user-database-mapping";
 
 /**
  * Generates a Google Maps Place URL based on roaster information
@@ -94,23 +96,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notionStorage.setDatabaseId(sessionDbId);
       } catch (error: any) {
         console.log(`⚠️ User's database not accessible: ${error.code || error.message}`);
-        console.log(`🔄 Clearing stale session, falling back to guest mode`);
+        console.log(`🔍 Searching for user's existing database...`);
 
-        // Clear the stale session data
-        req.session.databaseId = undefined;
-        req.session.accessToken = undefined;
-        req.session.workspaceName = undefined;
+        // Don't immediately fall back to guest mode - try to find the user's database
+        try {
+          // Use the access token to search for their existing database
+          const foundDatabaseId = await duplicateTemplateDatabaseToUserWorkspace(sessionAccessToken);
 
-        // Fall back to guest mode (owner's database)
-        if (envDbId) {
-          console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
-          notionStorage.setAccessToken(null);
-          notionStorage.setDatabaseId(envDbId);
-        } else {
-          return res.status(500).json({
-            error: 'Database not configured',
-            message: 'Server configuration error - database ID missing'
-          });
+          if (foundDatabaseId) {
+            console.log(`✅ Found user's database: ${foundDatabaseId.substring(0, 8)}...`);
+
+            // Update session with correct database ID
+            req.session.databaseId = foundDatabaseId;
+
+            // Save the mapping for future reference (if we have workspace info)
+            if (req.session.userId) {
+              // Note: userId in our session is actually the bot_id/workspace_id
+              saveDatabaseIdForWorkspace(req.session.userId, foundDatabaseId, req.session.workspaceName);
+            }
+
+            notionStorage.setAccessToken(sessionAccessToken);
+            notionStorage.setDatabaseId(foundDatabaseId);
+          } else {
+            throw new Error('No database found or created');
+          }
+        } catch (searchError: any) {
+          console.log(`❌ Could not find/create database: ${searchError.message}`);
+          console.log(`🔄 Clearing stale session, falling back to guest mode`);
+
+          // Clear the stale session data
+          req.session.databaseId = undefined;
+          req.session.accessToken = undefined;
+          req.session.workspaceName = undefined;
+
+          // Fall back to guest mode (owner's database)
+          if (envDbId) {
+            console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
+            notionStorage.setAccessToken(null);
+            notionStorage.setDatabaseId(envDbId);
+          } else {
+            return res.status(500).json({
+              error: 'Database not configured',
+              message: 'Server configuration error - database ID missing'
+            });
+          }
         }
       }
     } else {
