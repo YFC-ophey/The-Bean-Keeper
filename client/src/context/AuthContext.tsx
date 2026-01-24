@@ -7,10 +7,12 @@ interface AuthContextType {
   databaseId: string | null;
   justLoggedIn: boolean;
   authError: string | null;
+  isOwner: boolean;
   clearJustLoggedIn: () => void;
   clearAuthError: () => void;
   login: () => void;
   logout: () => Promise<void>;
+  ownerLogin: (password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,16 +24,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [databaseId, setDatabaseId] = useState<string | null>(null);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   const checkAuth = useCallback(async (sessionIdFromUrl?: string) => {
     try {
       // Get stored session ID from localStorage (for ITP/Safari persistence)
       const storedSessionId = localStorage.getItem('beankeeper_session_id');
+      const storedAuthData = localStorage.getItem('beankeeper_auth_data');
       const sessionIdToUse = sessionIdFromUrl || storedSessionId;
 
       console.log('🔍 Checking auth...', {
         sessionIdFromUrl,
         storedSessionId: storedSessionId ? 'present' : 'absent',
+        storedAuthData: storedAuthData ? 'present' : 'absent',
         sessionIdToUse: sessionIdToUse ? 'present' : 'absent'
       });
 
@@ -49,6 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsAuthenticated(true);
           setWorkspaceName(data.workspaceName);
           setDatabaseId(data.databaseId);
+          setIsOwner(data.isOwner || false);
+
+          // Store auth data in localStorage for persistence across sessions
+          localStorage.setItem('beankeeper_auth_data', JSON.stringify({
+            databaseId: data.databaseId,
+            workspaceName: data.workspaceName,
+            isOwner: data.isOwner || false,
+          }));
 
           // Clean up URL params after successful auth
           const url = new URL(window.location.href);
@@ -83,12 +96,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setIsAuthenticated(true);
             setWorkspaceName(restoreData.workspaceName);
             setDatabaseId(restoreData.databaseId);
+            setIsOwner(restoreData.isOwner || false);
 
             // Store the session ID in localStorage for future page loads (ITP workaround)
             if (sessionIdFromUrl) {
               localStorage.setItem('beankeeper_session_id', sessionIdFromUrl);
               console.log('  💾 Saved session ID to localStorage');
             }
+
+            // Store auth data for persistence
+            localStorage.setItem('beankeeper_auth_data', JSON.stringify({
+              databaseId: restoreData.databaseId,
+              workspaceName: restoreData.workspaceName,
+              isOwner: restoreData.isOwner || false,
+            }));
 
             // Clean up URL params after successful auth
             const url = new URL(window.location.href);
@@ -104,16 +125,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Cookie and session restore failed - check if we have stored auth data
+      // This allows us to show the user as "logged in" from localStorage
+      // and verify with the server on the next API call
+      if (storedAuthData) {
+        try {
+          const authData = JSON.parse(storedAuthData);
+          console.log('  📦 Found stored auth data:', authData);
+
+          // For owner, we can restore directly since owner uses server credentials
+          if (authData.isOwner && authData.databaseId) {
+            console.log('  ✅ Restoring owner session from localStorage');
+            setIsAuthenticated(true);
+            setWorkspaceName(authData.workspaceName);
+            setDatabaseId(authData.databaseId);
+            setIsOwner(true);
+            return;
+          }
+
+          // For OAuth users, we show them as logged in but will verify on next API call
+          // If the server doesn't recognize them, they'll be prompted to re-login
+          if (authData.databaseId) {
+            console.log('  ⚠️ Showing cached auth (will verify on next API call)');
+            setIsAuthenticated(true);
+            setWorkspaceName(authData.workspaceName);
+            setDatabaseId(authData.databaseId);
+            setIsOwner(false);
+            return;
+          }
+        } catch (e) {
+          console.log('  ❌ Failed to parse stored auth data');
+          localStorage.removeItem('beankeeper_auth_data');
+        }
+      }
+
       // Not authenticated
       console.log('  ❌ Not authenticated');
       setIsAuthenticated(false);
       setWorkspaceName(null);
       setDatabaseId(null);
+      setIsOwner(false);
     } catch (error) {
       console.error('Auth check failed:', error);
       setIsAuthenticated(false);
       setWorkspaceName(null);
       setDatabaseId(null);
+      setIsOwner(false);
     } finally {
       setIsLoading(false);
     }
@@ -170,13 +227,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       // Clear session ID from localStorage (ITP workaround)
       localStorage.removeItem('beankeeper_session_id');
+      // Clear owner auth data from localStorage
+      localStorage.removeItem('beankeeper_auth_data');
       console.log('🚪 Logged out, cleared session from localStorage');
       setIsAuthenticated(false);
       setWorkspaceName(null);
       setDatabaseId(null);
+      setIsOwner(false);
       window.location.href = '/';
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const ownerLogin = async (password: string): Promise<boolean> => {
+    try {
+      console.log('🔑 Attempting owner login...');
+      const response = await fetch('/api/auth/owner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password }),
+      });
+
+      if (!response.ok) {
+        console.log('❌ Owner login failed:', response.status);
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('✅ Owner login successful:', data);
+
+      if (data.authenticated) {
+        setIsAuthenticated(true);
+        setWorkspaceName(data.workspaceName);
+        setDatabaseId(data.databaseId);
+        setIsOwner(true);
+        setJustLoggedIn(true);
+
+        // Store auth data in localStorage for persistence
+        localStorage.setItem('beankeeper_auth_data', JSON.stringify({
+          databaseId: data.databaseId,
+          workspaceName: data.workspaceName,
+          isOwner: true,
+        }));
+
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Owner login error:', error);
+      return false;
     }
   };
 
@@ -196,10 +298,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       databaseId,
       justLoggedIn,
       authError,
+      isOwner,
       clearJustLoggedIn,
       clearAuthError,
       login,
-      logout
+      logout,
+      ownerLogin
     }}>
       {children}
     </AuthContext.Provider>

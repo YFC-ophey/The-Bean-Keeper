@@ -49,6 +49,16 @@ npx tsx create-database.ts <parent-page-id>
 # Test Groq AI extraction
 npx tsx test-groq.ts
 ```
+# Available Commands
+
+- `/create issue` - Capture ideas fast
+- `/exploration phase [TICKET]` - Deep dive into problem
+- `/create plan` - Generate implementation plan
+- `/review` - Self-review code
+- `/peer review` - Multi-model review
+- `/learning-opp` - The user is learning to become a technical PM.
+```
+
 
 ## Architecture Overview
 
@@ -1032,3 +1042,289 @@ The `placeUrl` field is automatically generated when creating or updating coffee
 - **About Section:** Updated step 3 description to include "and Sync to your Notion Database"
   - EN: "Build your coffee story and Sync to your Notion Database"
   - ZH: "建立您的咖啡故事並同步到您的 Notion 資料庫"
+
+---
+
+## OAuth Debugging History & Lessons Learned (January 2026)
+
+This section documents the complete OAuth debugging journey and all fixes implemented.
+
+### Issue 1: Session Cookies Not Persisting on Mobile (ITP)
+
+**Symptom:** OAuth redirect worked but session was lost on mobile Safari
+
+**Root Cause:** Intelligent Tracking Prevention (ITP) blocks third-party cookies on cross-site redirects
+
+**Fix:** Added session restore fallback via URL parameter
+- OAuth callback redirects to `/?login=success&sid={sessionID}`
+- Frontend checks for `sid` parameter and calls `/api/auth/restore`
+- Session data is copied from original session to current session
+
+**Files Modified:**
+- `server/notion-oauth-routes.ts` - Added `/api/auth/restore` endpoint
+- `client/src/context/AuthContext.tsx` - Added session restore logic
+
+**Additional Fix (localStorage persistence):**
+- Store session ID in localStorage after successful auth (`beankeeper_session_id`)
+- On page load, check localStorage for stored session ID if cookie auth fails
+- Use stored session ID to call `/api/auth/restore`
+- Clear localStorage on explicit logout
+
+---
+
+### Issue 2: `/api/auth/me` Returning False Despite Working Session
+
+**Symptom:** User sees their own database but logout button doesn't show
+
+**Root Cause:** `/api/auth/me` checked `accessToken` but coffee entries endpoint used `databaseId`
+
+**Fix:** Changed `/api/auth/me` to check `databaseId` instead of `accessToken`
+
+**File:** `server/notion-oauth-routes.ts` line 167
+
+---
+
+### Issue 3: "Roaster is not a property" Notion API Error
+
+**Symptom:** Saving coffee entries failed with property errors
+
+**Root Cause:** `createCoffeeDatabase` used internal integration client instead of user's OAuth token
+
+**Fix:** Modified function to accept optional `accessToken` parameter, pass user's OAuth token
+
+**Files:** `server/notion.ts`, `server/notion-oauth.ts`
+
+---
+
+### Issue 4: "No Accessible Pages Found" Error
+
+**Symptom:** Users who don't share pages during OAuth can't use the app
+
+**Root Cause:** Notion OAuth requires explicit page sharing - app can't create pages without access
+
+**Fix:**
+- Added `NoPagesSharedError` custom error class
+- Redirect to `/?login=no_pages` with user-friendly error modal
+- NotionAuthModal shows instructions to share at least one page
+
+**Files:** `server/notion-oauth.ts`, `server/notion-oauth-routes.ts`, `client/src/components/NotionAuthModal.tsx`
+
+---
+
+### Issue 5: Database Created WITHOUT Properties - Notion SDK Bug 🐛
+
+**Symptom:** Database created successfully but saving entries fails with "Roaster is not a property"
+
+**Root Cause:** Notion SDK v5.4.0 bug - `createDatabase` method strips `properties` field
+
+The SDK's `bodyParams` array doesn't include `properties`:
+```typescript
+readonly bodyParams: readonly ["parent", "title", "description", "is_inline", ...];
+// "properties" is NOT in this list!
+```
+
+**Fix:** Bypass SDK and use direct HTTP fetch for database creation
+
+```typescript
+// In server/notion.ts
+const response = await fetch('https://api.notion.com/v1/databases', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+    'Notion-Version': '2022-06-28',
+  },
+  body: JSON.stringify({
+    parent: { type: "page_id", page_id: parentPageId },
+    title: [...],
+    properties: { /* all 20+ properties */ },
+  }),
+});
+```
+
+**Alternative:** Use Notion's template feature (recommended) - configure template database in integration settings, use `duplicated_template_id` from OAuth response
+
+**File:** `server/notion.ts` - `createCoffeeDatabase()` function
+
+---
+
+### Issue 6: "Place is expected to be place" Validation Error
+
+**Symptom:** Saving coffee entries fails with Place property type mismatch
+
+**Root Cause:** Template database had "Place" configured as Location type, but code writes URL data
+
+**Fix:** Changed "Place" property type from Location → URL in Notion template database
+
+**Testing Note:** Must test with fresh OAuth flow - existing duplicated databases retain old schema
+
+---
+
+### Issue 7: Database Not Found on Re-Login
+
+**Symptom:** User logs out, logs back in → sees empty collection, previous entries lost
+
+**Root Causes (Multiple):**
+
+1. **Session-only storage:** Database ID stored in session, lost on logout
+2. **Render's ephemeral filesystem:** `.data/user-databases.json` lost on every redeploy
+3. **MemoryStore sessions:** Lost on server restart
+4. **Weak Notion search:** Query "Bean Keeper" too generic, only checked first 10 results
+
+**Multi-Layer Fix:**
+
+**Layer 1: File-based persistence (cache hint)**
+- Created `server/user-database-mapping.ts` for workspace_id → database_id mapping
+- Stores in `.data/user-databases.json`
+- Works within deployment lifecycle (lost on redeploy)
+
+**Layer 2: Improved Notion search**
+```typescript
+// Exact title search with larger page_size
+const existingDb = await notion.search({
+  query: "The Bean Keeper - Coffee Collection",
+  page_size: 100,
+});
+
+// Fallback broad search
+const broadSearch = await notion.search({
+  query: "Bean Keeper",
+  page_size: 100,
+});
+
+// Property verification
+if (db.properties?.["Roaster"] && db.properties?.["Front Photo"]) {
+  return db.id; // Found our database
+}
+```
+
+**Layer 3: Middleware auto-recovery**
+When database verification fails in `/api/coffee-entries` middleware:
+1. Don't immediately fall back to guest mode
+2. Use access token to search for user's existing database
+3. If found, update session with correct database ID
+4. Only fall back to guest mode if search fails
+
+**Files Modified:**
+- `server/user-database-mapping.ts` (NEW) - Persistence module
+- `server/notion-oauth.ts` - Improved search with exact title, page_size 100, fallback search
+- `server/notion-oauth-routes.ts` - Check stored mapping before search
+- `server/routes.ts` - Auto-recovery middleware when database not accessible
+
+---
+
+### Issue 8: No Login Button for Returning Users
+
+**Symptom:** Users have no clear way to log back in after logging out
+
+**Problem:** No "Login" button for guests - they had to click "Add Coffee" to trigger OAuth
+
+**Fix:** Added Login button in Dashboard header for guests
+
+**Mobile layout:**
+```tsx
+{!isAuthenticated && (
+  <Button variant="outline" size="sm"
+    onClick={() => window.location.href = '/api/auth/notion'}>
+    <LogIn className="w-3.5 h-3.5" />
+  </Button>
+)}
+```
+
+**Desktop layout:** Same but with "Login" text label
+
+**Files Modified:**
+- `client/src/pages/Dashboard.tsx` - Added Login/Logout button toggle
+- `client/src/i18n/locales/en/common.json` - Added `buttons.login`, `buttons.logout`
+- `client/src/i18n/locales/zh/common.json` - Added Chinese translations
+
+---
+
+### Key Debugging Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/auth/me` | Check authentication status |
+| `/api/auth/debug` | Detailed session state (databaseId, accessToken, workspaceName) |
+| `/api/auth/restore` | Restore session from session ID (ITP workaround) |
+| `/api/health` | Server health check |
+| `/api/debug/env` | Environment configuration |
+
+---
+
+### OAuth Flow Diagram (After All Fixes)
+
+```
+1. User clicks "Login" or "Add Coffee"
+   └─> Redirect to /api/auth/notion
+   └─> Redirect to Notion OAuth
+
+2. User authorizes on Notion
+   └─> Notion redirects to /api/auth/notion/callback?code=xxx
+
+3. OAuth Callback:
+   a. Exchange code for access token
+   b. Check file-based mapping for existing database ID
+   c. If found, verify database accessible
+   d. If not found/not accessible:
+      - Check for duplicated_template_id (template option)
+      - Or search for existing database (improved search)
+      - Or create new database (direct HTTP fetch)
+   e. Save mapping to file
+   f. Store in session (userId, accessToken, databaseId, workspaceName)
+   g. Redirect to /?login=success&sid={sessionID}
+
+4. Frontend receives redirect:
+   a. Check /api/auth/me (cookie auth)
+   b. If fails, call /api/auth/restore with sid from URL
+   c. Store session ID in localStorage
+   d. Set authenticated state
+   e. Clean up URL params
+
+5. Subsequent page loads:
+   a. Check /api/auth/me (cookie auth)
+   b. If fails, check localStorage for stored session ID
+   c. Call /api/auth/restore with stored session ID
+   d. If restore fails, clear localStorage, show as guest
+
+6. API requests with stale database ID:
+   a. Middleware verifies database accessible
+   b. If not accessible, search for user's database
+   c. If found, update session
+   d. If not found, fall back to guest mode
+```
+
+---
+
+### Files Reference (OAuth System)
+
+| File | Purpose |
+|------|---------|
+| `server/notion-oauth.ts` | OAuth token exchange, database creation/search |
+| `server/notion-oauth-routes.ts` | OAuth endpoints (/auth/notion, callback, me, restore, logout) |
+| `server/user-database-mapping.ts` | Workspace → Database ID persistence |
+| `server/routes.ts` | Database middleware with auto-recovery |
+| `server/notion.ts` | Database schema, CRUD operations, direct HTTP fetch |
+| `server/session.ts` | Session configuration (MemoryStore, cookie settings) |
+| `server/middleware/auth.ts` | requireAuth middleware for protected routes |
+| `client/src/context/AuthContext.tsx` | Frontend auth state, session restore, localStorage |
+| `client/src/components/NotionAuthModal.tsx` | Pre-auth instructions modal |
+| `client/src/pages/Dashboard.tsx` | Login/Logout button, guest mode handling |
+
+---
+
+### Lessons Learned
+
+1. **Render's filesystem is ephemeral** - Files are lost on every redeploy. Don't rely solely on file-based persistence.
+
+2. **Safari ITP blocks cookies** - Always implement session restore via URL parameters for cross-site OAuth flows.
+
+3. **Notion SDK has bugs** - The `createDatabase` method strips `properties`. Use direct HTTP fetch for database creation.
+
+4. **Notion search is unreliable** - Use exact titles, large page_size (100), and verify by checking specific properties.
+
+5. **Multi-layer fallbacks are essential** - File cache → Notion search → Create new. Each layer catches failures from the previous.
+
+6. **Session ID in localStorage** - For ITP workaround, store session ID in localStorage and use it for session restore on every page load.
+
+7. **Auto-recovery in middleware** - When database verification fails, don't just fall back to guest mode. Try to find/recover the user's database first.

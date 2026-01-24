@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, X, ArrowLeft, LogOut, LogIn } from "lucide-react";
+import { Plus, Search, X, ArrowLeft, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
@@ -40,7 +40,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, isLoading: isAuthLoading, logout, workspaceName, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError, ownerLogin } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -454,17 +454,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                {isAuthenticated ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={logout}
-                    className="flex items-center gap-1 px-2 py-1.5 min-h-[36px] text-xs"
-                    aria-label="Logout"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                  </Button>
-                ) : (
+                {!isAuthenticated && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -484,22 +474,9 @@ export default function Dashboard() {
 
           {/* TABLET & DESKTOP LAYOUT (≥ 640px): Centered with proper spacing */}
           <div className="hidden sm:flex sm:flex-col sm:items-center mb-6 md:mb-8">
-            {/* Logout, Language Switcher & Notion Button - Top Right with safe spacing */}
+            {/* Language Switcher & Notion Button - Top Right with safe spacing */}
             <div className="self-end flex items-center gap-2 mb-3 md:mb-4">
-              {isAuthenticated ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={logout}
-                  className="flex items-center gap-2"
-                  aria-label="Logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline text-sm">
-                    {workspaceName || t('common:buttons.logout', 'Logout')}
-                  </span>
-                </Button>
-              ) : (
+              {!isAuthenticated && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -511,6 +488,11 @@ export default function Dashboard() {
                   <LogIn className="w-4 h-4" />
                   <span className="hidden sm:inline text-sm">{t('common:buttons.login', 'Login')}</span>
                 </Button>
+              )}
+              {isAuthenticated && workspaceName && (
+                <span className="text-sm text-muted-foreground hidden sm:inline">
+                  {workspaceName}
+                </span>
               )}
               <NotionButton />
               <LanguageSwitcher />
@@ -821,6 +803,7 @@ export default function Dashboard() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onContinue={handleAuthModalContinue}
+        onOwnerLogin={ownerLogin}
         mode={authModalMode}
       />
     </div>

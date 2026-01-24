@@ -174,6 +174,7 @@ export function registerNotionOAuthRoutes(app: Express) {
       authenticated: true,
       workspaceName: req.session.workspaceName,
       databaseId: req.session.databaseId,
+      isOwner: req.session.isOwner || false,
     });
   });
 
@@ -256,6 +257,7 @@ export function registerNotionOAuthRoutes(app: Express) {
           authenticated: true,
           workspaceName: req.session.workspaceName,
           databaseId: req.session.databaseId,
+          isOwner: req.session.isOwner || false,
         });
       });
     });
@@ -331,6 +333,64 @@ export function registerNotionOAuthRoutes(app: Express) {
       res.json(user);
     } catch (error: any) {
       console.error("Error getting Notion user:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  /**
+   * Owner password login bypass
+   * POST /api/auth/owner
+   * Allows owner to login with a password instead of OAuth
+   */
+  app.post("/api/auth/owner", async (req, res) => {
+    try {
+      const { password } = req.body;
+      const ownerPassword = process.env.OWNER_PASSWORD;
+      const ownerDatabaseId = process.env.NOTION_DATABASE_ID;
+      const ownerApiKey = process.env.NOTION_API_KEY;
+
+      if (!ownerPassword) {
+        console.log("❌ OWNER_PASSWORD not configured");
+        return res.status(500).json({ error: "Owner login not configured" });
+      }
+
+      if (!password || password !== ownerPassword) {
+        console.log("❌ Invalid owner password attempt");
+        return res.status(401).json({ error: "Invalid password" });
+      }
+
+      if (!ownerDatabaseId || !ownerApiKey) {
+        console.log("❌ Owner database or API key not configured");
+        return res.status(500).json({ error: "Owner database not configured" });
+      }
+
+      console.log("✅ Owner password verified, creating session...");
+
+      // Store in session - use owner's credentials
+      req.session.userId = "owner";
+      req.session.accessToken = ownerApiKey;
+      req.session.databaseId = ownerDatabaseId;
+      req.session.workspaceName = "Owner";
+      req.session.isOwner = true;
+
+      // Save session
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ error: "Failed to create session" });
+        }
+
+        console.log("✅ Owner session created successfully");
+        res.json({
+          success: true,
+          authenticated: true,
+          workspaceName: "Owner",
+          databaseId: ownerDatabaseId,
+          isOwner: true,
+        });
+      });
+    } catch (error: any) {
+      console.error("Error in owner login:", error);
       res.status(500).json({ error: error.message });
     }
   });

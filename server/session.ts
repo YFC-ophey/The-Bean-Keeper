@@ -25,5 +25,6 @@ declare module 'express-session' {
     accessToken?: string;
     databaseId?: string;
     workspaceName?: string;
+    isOwner?: boolean;
   }
 }

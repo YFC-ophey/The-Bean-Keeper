@@ -1,16 +1,43 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, ExternalLink, Key } from 'lucide-react';
 
 interface NotionAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onContinue: () => void;
+  onOwnerLogin?: (password: string) => Promise<boolean>;
   mode: 'instructions' | 'error';
 }
 
-export function NotionAuthModal({ isOpen, onClose, onContinue, mode }: NotionAuthModalProps) {
+export function NotionAuthModal({ isOpen, onClose, onContinue, onOwnerLogin, mode }: NotionAuthModalProps) {
   const { t } = useTranslation(['auth', 'common']);
+  const [showOwnerLogin, setShowOwnerLogin] = useState(false);
+  const [ownerPassword, setOwnerPassword] = useState('');
+  const [ownerLoginError, setOwnerLoginError] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleOwnerLogin = async () => {
+    if (!onOwnerLogin || !ownerPassword.trim()) return;
+
+    setIsLoggingIn(true);
+    setOwnerLoginError(false);
+
+    try {
+      const success = await onOwnerLogin(ownerPassword);
+      if (success) {
+        onClose();
+        setOwnerPassword('');
+        setShowOwnerLogin(false);
+      } else {
+        setOwnerLoginError(true);
+      }
+    } catch (error) {
+      setOwnerLoginError(true);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -88,6 +115,17 @@ export function NotionAuthModal({ isOpen, onClose, onContinue, mode }: NotionAut
                   {t('auth:notion.tip')}
                 </p>
               </div>
+
+              {/* Reminder about re-login on different devices */}
+              <div className="flex items-center gap-2 bg-blue-50/70 rounded-lg p-3 border border-blue-200">
+                <svg className="h-5 w-5 text-blue-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4M12 8h.01" />
+                </svg>
+                <p className="text-blue-800 text-xs">
+                  {t('auth:notion.reminder')}
+                </p>
+              </div>
             </>
           ) : (
             <>
@@ -124,26 +162,87 @@ export function NotionAuthModal({ isOpen, onClose, onContinue, mode }: NotionAut
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-white/30 border-t border-[#D4C5B0] flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-full border-2 border-[#6F4E37] text-[#6F4E37] font-clash-medium hover:bg-[#6F4E37]/10 transition-colors"
-          >
-            {t('common:buttons.cancel')}
-          </button>
-          <button
-            onClick={onContinue}
-            className="flex-1 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] text-white font-clash-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-          >
-            {mode === 'instructions' ? (
-              <>
-                {t('auth:notion.continue')}
-                <ExternalLink className="h-4 w-4" />
-              </>
-            ) : (
-              t('auth:notion.tryAgain')
-            )}
-          </button>
+        <div className="px-6 py-4 bg-white/30 border-t border-[#D4C5B0]">
+          {showOwnerLogin ? (
+            /* Owner Login Form */
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Key className="h-4 w-4 text-[#6F4E37]" />
+                <span className="text-sm font-medium text-[#6F4E37]">{t('auth:login.ownerLogin')}</span>
+              </div>
+              <input
+                type="password"
+                value={ownerPassword}
+                onChange={(e) => {
+                  setOwnerPassword(e.target.value);
+                  setOwnerLoginError(false);
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleOwnerLogin()}
+                placeholder={t('auth:login.ownerPassword')}
+                className={`w-full px-4 py-2.5 rounded-full border-2 ${
+                  ownerLoginError ? 'border-red-400 bg-red-50' : 'border-[#D4C5B0] bg-white'
+                } text-sm focus:outline-none focus:border-[#6F4E37] transition-colors`}
+                autoFocus
+              />
+              {ownerLoginError && (
+                <p className="text-red-600 text-xs">{t('auth:login.error')}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowOwnerLogin(false);
+                    setOwnerPassword('');
+                    setOwnerLoginError(false);
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-full border-2 border-[#6F4E37] text-[#6F4E37] font-clash-medium hover:bg-[#6F4E37]/10 transition-colors text-sm"
+                >
+                  {t('common:buttons.back')}
+                </button>
+                <button
+                  onClick={handleOwnerLogin}
+                  disabled={isLoggingIn || !ownerPassword.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] text-white font-clash-medium hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
+                >
+                  {isLoggingIn ? '...' : t('auth:login.ownerLoginButton')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Normal Login Options */
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2.5 rounded-full border-2 border-[#6F4E37] text-[#6F4E37] font-clash-medium hover:bg-[#6F4E37]/10 transition-colors"
+                >
+                  {t('common:buttons.cancel')}
+                </button>
+                <button
+                  onClick={onContinue}
+                  className="flex-1 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] text-white font-clash-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  {mode === 'instructions' ? (
+                    <>
+                      {t('auth:notion.continue')}
+                      <ExternalLink className="h-4 w-4" />
+                    </>
+                  ) : (
+                    t('auth:notion.tryAgain')
+                  )}
+                </button>
+              </div>
+              {/* Owner Login Link - Only show in instructions mode */}
+              {mode === 'instructions' && onOwnerLogin && (
+                <button
+                  onClick={() => setShowOwnerLogin(true)}
+                  className="w-full text-center text-xs text-[#6F4E37]/60 hover:text-[#6F4E37] transition-colors flex items-center justify-center gap-1"
+                >
+                  <Key className="h-3 w-3" />
+                  {t('auth:login.ownerLogin')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
