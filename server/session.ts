@@ -3,8 +3,14 @@ import createMemoryStore from 'memorystore';
 
 const MemoryStore = createMemoryStore(session);
 
+// Validate session secret in production
+const sessionSecret = process.env.SESSION_SECRET;
+if (process.env.NODE_ENV === 'production' && !sessionSecret) {
+  throw new Error('SESSION_SECRET environment variable is required in production');
+}
+
 export const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET || 'fallback-secret-change-me-in-production',
+  secret: sessionSecret || 'dev-only-fallback-secret-not-for-production',
   resave: false,
   saveUninitialized: false,
   store: new MemoryStore({
@@ -26,5 +32,6 @@ declare module 'express-session' {
     databaseId?: string;
     workspaceName?: string;
     isOwner?: boolean;
+    oauthState?: string; // CSRF state for OAuth flow
   }
 }

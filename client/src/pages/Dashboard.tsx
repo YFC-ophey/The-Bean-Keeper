@@ -33,6 +33,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotionButton from "@/components/NotionButton";
 import AboutSection from "@/components/AboutSection";
 import { NotionAuthModal } from "@/components/NotionAuthModal";
+import { OwnerLoginSection } from "@/components/OwnerLoginSection";
 import { CoffeeEntry } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -803,9 +804,13 @@ export default function Dashboard() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onContinue={handleAuthModalContinue}
-        onOwnerLogin={ownerLogin}
         mode={authModalMode}
       />
+
+      {/* Owner Login Section - Bottom of page for guests only */}
+      {!isAuthenticated && (
+        <OwnerLoginSection ownerLogin={ownerLogin} />
+      )}
     </div>
   );
 }

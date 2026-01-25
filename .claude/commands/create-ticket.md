@@ -1,4 +1,4 @@
-# Create Issue Command
+# Create ticket Command
 
 You are helping capture a quick idea/bug/feature while mid-development.
 

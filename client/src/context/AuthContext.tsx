@@ -125,34 +125,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Cookie and session restore failed - check if we have stored auth data
-      // This allows us to show the user as "logged in" from localStorage
-      // and verify with the server on the next API call
+      // Cookie and session restore failed - handle differently for owner vs OAuth users
+      // SECURITY: Don't trust localStorage for OAuth users without server validation
       if (storedAuthData) {
         try {
           const authData = JSON.parse(storedAuthData);
-          console.log('  📦 Found stored auth data:', authData);
+          console.log('  📦 Found stored auth data (server validation failed)');
 
-          // For owner, we can restore directly since owner uses server credentials
+          // Owner can be restored from localStorage since owner uses server credentials (API key)
+          // The API key is stored server-side, so we just need to verify the database is accessible
           if (authData.isOwner && authData.databaseId) {
-            console.log('  ✅ Restoring owner session from localStorage');
-            setIsAuthenticated(true);
-            setWorkspaceName(authData.workspaceName);
-            setDatabaseId(authData.databaseId);
-            setIsOwner(true);
-            return;
+            console.log('  🔑 Owner data found, attempting quick verification...');
+            try {
+              // Quick test: try to fetch entries - if it works, owner credentials are valid
+              const testResponse = await fetch('/api/coffee-entries?limit=1', {
+                credentials: 'include',
+              });
+              if (testResponse.ok) {
+                console.log('  ✅ Owner credentials verified');
+                setIsAuthenticated(true);
+                setWorkspaceName(authData.workspaceName);
+                setDatabaseId(authData.databaseId);
+                setIsOwner(true);
+                return;
+              }
+            } catch {
+              console.log('  ⚠️ Owner verification failed');
+            }
           }
 
-          // For OAuth users, we show them as logged in but will verify on next API call
-          // If the server doesn't recognize them, they'll be prompted to re-login
-          if (authData.databaseId) {
-            console.log('  ⚠️ Showing cached auth (will verify on next API call)');
-            setIsAuthenticated(true);
-            setWorkspaceName(authData.workspaceName);
-            setDatabaseId(authData.databaseId);
-            setIsOwner(false);
-            return;
-          }
+          // For OAuth users, we must NOT show them as logged in without server confirmation
+          // Their access token may have been revoked or expired
+          console.log('  🔒 Clearing stale auth data - user must re-authenticate');
+          localStorage.removeItem('beankeeper_auth_data');
+          localStorage.removeItem('beankeeper_session_id');
         } catch (e) {
           console.log('  ❌ Failed to parse stored auth data');
           localStorage.removeItem('beankeeper_auth_data');
