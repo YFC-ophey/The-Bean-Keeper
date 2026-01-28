@@ -437,7 +437,7 @@ export function registerNotionOAuthRoutes(app: Express) {
     try {
       const { password } = req.body;
       const ownerPassword = process.env.OWNER_PASSWORD;
-      const ownerDatabaseId = process.env.NOTION_DATABASE_ID;
+      const ownerDatabaseId = process.env.NOTION_DATABASE_ID?.trim();
       const ownerApiKey = process.env.NOTION_API_KEY;
 
       if (!ownerPassword) {

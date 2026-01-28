@@ -19,7 +19,7 @@ export interface SyncReport {
  * Get the Notion database ID from environment variable
  */
 function getNotionDatabaseId(): string {
-  const databaseId = process.env.NOTION_DATABASE_ID;
+  const databaseId = process.env.NOTION_DATABASE_ID?.trim();
   if (!databaseId) {
     throw new Error("NOTION_DATABASE_ID environment variable is not set");
   }

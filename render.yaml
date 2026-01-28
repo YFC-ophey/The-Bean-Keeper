@@ -30,6 +30,10 @@ services:
       - key: NOTION_DATABASE_ID
         sync: false
 
+      # Owner bypass login (optional - set to enable owner password login)
+      - key: OWNER_PASSWORD
+        sync: false
+
       - key: VITE_GOOGLE_MAPS_API_KEY
         sync: false
 

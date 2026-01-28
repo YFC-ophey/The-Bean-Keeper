@@ -12,7 +12,8 @@ export class NotionStorage {
   }
 
   setDatabaseId(databaseId: string) {
-    this.databaseId = databaseId;
+    // Trim whitespace/newlines to prevent Notion API validation errors
+    this.databaseId = databaseId.trim();
   }
 
   /**

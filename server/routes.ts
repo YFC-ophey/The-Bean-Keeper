@@ -79,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/coffee-entries', async (req, res, next) => {
     const sessionDbId = req.session.databaseId;
     const sessionAccessToken = req.session.accessToken;
-    const envDbId = process.env.NOTION_DATABASE_ID;
+    const envDbId = process.env.NOTION_DATABASE_ID?.trim();
 
     // Log which database is being used (helpful for debugging)
     if (sessionDbId && sessionAccessToken) {

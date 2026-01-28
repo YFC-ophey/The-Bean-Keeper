@@ -1,4 +1,4 @@
-# Review Command
+# Code Review Command
 
 You just built a feature. Now review YOUR OWN code.
 
