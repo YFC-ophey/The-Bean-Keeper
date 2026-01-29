@@ -29,6 +29,7 @@ import CoffeeFilters from "@/components/CoffeeFilters";
 import ScrollSidebar from "@/components/ScrollSidebar";
 import UserGuideModal from "@/components/UserGuideModal";
 import HelpButton from "@/components/HelpButton";
+import FloatingWelcomeTooltip from "@/components/FloatingWelcomeTooltip";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotionButton from "@/components/NotionButton";
 import AboutSection from "@/components/AboutSection";
@@ -789,6 +790,9 @@ export default function Dashboard() {
 
       {/* Scroll Sidebar Navigation */}
       <ScrollSidebar />
+
+      {/* Beanito Mascot with Welcome Tooltip */}
+      <FloatingWelcomeTooltip />
 
       {/* Help Button */}
       <HelpButton onClick={() => setShowGuideModal(true)} />

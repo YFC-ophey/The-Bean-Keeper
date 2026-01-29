@@ -25,6 +25,11 @@
   "ui": {
     "quickGuide": "Quick Guide",
     "openUserGuide": "Open user guide",
-    "scrollProgress": "{{progress}}% through collection"
+    "scrollProgress": "{{progress}}% through collection",
+    "close": "Close"
+  },
+  "beanito": {
+    "welcome": "Hi Friends, I'm Beanito! Like my coffee collection? Let me show you how it's done. 80 seconds, and you'll wonder how you ever tracked coffee without me!",
+    "watchHere": "Watch Demo"
   }
 }

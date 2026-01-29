@@ -25,6 +25,11 @@
   "ui": {
     "quickGuide": "快速指南",
     "openUserGuide": "開啟使用指南",
-    "scrollProgress": "已瀏覽 {{progress}}% 的收藏"
+    "scrollProgress": "已瀏覽 {{progress}}% 的收藏",
+    "close": "關閉"
+  },
+  "beanito": {
+    "welcome": "歡迎來到豆誌！我是小豆豆！喜歡我的咖啡收藏嗎？ 按下觀看影片，只要80秒立即學我收藏咖啡豆！",
+    "watchHere": "觀看Demo影片"
   }
 }
