@@ -10,6 +10,16 @@ const NOTION_CLIENT_ID = process.env.NOTION_CLIENT_ID;
 const NOTION_CLIENT_SECRET = process.env.NOTION_CLIENT_SECRET;
 const NOTION_REDIRECT_URI = process.env.NOTION_REDIRECT_URI || "http://localhost:5001/api/auth/notion/callback";
 const NOTION_TEMPLATE_DATABASE_ID = process.env.NOTION_TEMPLATE_DATABASE_ID;
+const OWNER_DATABASE_ID = process.env.NOTION_DATABASE_ID?.trim();
+
+function normalizeNotionId(id?: string | null): string | null {
+  return id ? id.replace(/-/g, '') : null;
+}
+
+function isOwnerDatabaseId(id?: string | null): boolean {
+  if (!OWNER_DATABASE_ID || !id) return false;
+  return normalizeNotionId(id) === normalizeNotionId(OWNER_DATABASE_ID);
+}
 
 /**
  * OAuth URLs
@@ -162,6 +172,10 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
       // Check if this is our Coffee Collection database by looking for key properties
       // Must have "Roaster" AND "Front Photo" to be considered our database
       if (hasRoaster && hasFrontPhoto) {
+        if (isOwnerDatabaseId(db.id)) {
+          console.log("⚠️ Skipping owner database for OAuth user:", db.id);
+          continue;
+        }
         console.log("✅ Found existing Bean Keeper database:", db.id);
         console.log("  Properties found:", Object.keys(db.properties).join(", "));
         return db.id;
@@ -186,6 +200,10 @@ export async function duplicateTemplateDatabaseToUserWorkspace(
       const hasFrontPhoto = !!db.properties?.["Front Photo"];
 
       if (hasRoaster && hasFrontPhoto) {
+        if (isOwnerDatabaseId(db.id)) {
+          console.log("⚠️ Skipping owner database for OAuth user (broad search):", db.id);
+          continue;
+        }
         console.log("✅ Found Bean Keeper database (broad search):", db.id);
         return db.id;
       }

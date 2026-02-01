@@ -11,6 +11,17 @@ import {
 } from "./notion-oauth";
 import { getDatabaseIdForWorkspace, saveDatabaseIdForWorkspace } from "./user-database-mapping";
 
+const OWNER_DATABASE_ID = process.env.NOTION_DATABASE_ID?.trim();
+
+function normalizeNotionId(id?: string | null): string | null {
+  return id ? id.replace(/-/g, '') : null;
+}
+
+function isOwnerDatabaseId(id?: string | null): boolean {
+  if (!OWNER_DATABASE_ID || !id) return false;
+  return normalizeNotionId(id) === normalizeNotionId(OWNER_DATABASE_ID);
+}
+
 /**
  * Rate limiting state for auth endpoints
  * Simple in-memory rate limiter (resets on server restart)
@@ -131,7 +142,11 @@ export function registerNotionOAuthRoutes(app: Express) {
       let databaseId: string;
 
       // FIRST: Check if we have a stored database ID for this workspace (re-login case)
-      const storedDatabaseId = getDatabaseIdForWorkspace(tokenData.workspace_id);
+      let storedDatabaseId = getDatabaseIdForWorkspace(tokenData.workspace_id);
+      if (storedDatabaseId && isOwnerDatabaseId(storedDatabaseId)) {
+        console.log("⚠️ Stored database is owner's DB; ignoring for OAuth user");
+        storedDatabaseId = null;
+      }
       if (storedDatabaseId) {
         console.log("🔍 Found stored database ID for workspace:", storedDatabaseId);
 
@@ -152,11 +167,14 @@ export function registerNotionOAuthRoutes(app: Express) {
             databaseId = await duplicateTemplateDatabaseToUserWorkspace(tokenData.access_token);
           }
         }
-      } else if (tokenData.duplicated_template_id) {
+      } else if (tokenData.duplicated_template_id && !isOwnerDatabaseId(tokenData.duplicated_template_id)) {
         // Check if Notion duplicated our template (user chose "Use a template" option)
         console.log("✅ Using Notion-duplicated template database:", tokenData.duplicated_template_id);
         databaseId = tokenData.duplicated_template_id;
       } else {
+        if (tokenData.duplicated_template_id && isOwnerDatabaseId(tokenData.duplicated_template_id)) {
+          console.log("⚠️ Duplicated template resolved to owner's DB; creating new database instead");
+        }
         // Fallback: User chose "Select pages" option - create database manually
         console.log("📝 No template used, creating database manually...");
         databaseId = await duplicateTemplateDatabaseToUserWorkspace(
@@ -188,6 +206,9 @@ export function registerNotionOAuthRoutes(app: Express) {
         console.log('  Database ID:', req.session.databaseId);
         console.log('  Access Token:', req.session.accessToken ? 'SET' : 'NOT SET');
         console.log('  Workspace:', req.session.workspaceName);
+        // #region agent log H1
+        fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'server/notion-oauth-routes.ts:192',message:'oauth session saved',data:{sessionIdPrefix:req.sessionID?.substring(0,8) || null,dbIdPrefix:req.session.databaseId?.substring(0,8) || null,hasAccessToken:!!req.session.accessToken,hasWorkspaceName:!!req.session.workspaceName},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion agent log H1
 
         // Check if cookie will be set
         const cookieHeader = res.getHeader('Set-Cookie');
@@ -321,6 +342,9 @@ export function registerNotionOAuthRoutes(app: Express) {
       req.session.databaseId = sessionData.databaseId;
       req.session.workspaceName = sessionData.workspaceName;
       req.session.isOwner = sessionData.isOwner;
+      // #region agent log H4
+      fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H4',location:'server/notion-oauth-routes.ts:327',message:'session restore copied data',data:{dbIdPrefix:req.session.databaseId?.substring(0,8) || null,hasAccessToken:!!req.session.accessToken,hasWorkspaceName:!!req.session.workspaceName},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion agent log H4
 
       // Save the current session with the restored data
       req.session.save((saveErr) => {

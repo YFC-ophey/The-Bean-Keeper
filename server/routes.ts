@@ -98,6 +98,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const sessionDbId = req.session.databaseId;
     const sessionAccessToken = req.session.accessToken;
     const envDbId = process.env.NOTION_DATABASE_ID?.trim();
+    // #region agent log H1
+    fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'server/routes.ts:101',message:'coffee-entries middleware entry',data:{method:req.method,path:req.path,hasSessionDbId:!!sessionDbId,hasAccessToken:!!sessionAccessToken,hasCookie:!!req.headers.cookie,sessionIdPrefix:req.sessionID?.substring(0,8) || null,envDbIdPrefix:envDbId?.substring(0,8) || null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion agent log H1
 
     // Log which database is being used (helpful for debugging)
     if (sessionDbId && sessionAccessToken) {
@@ -106,15 +109,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify the database is still accessible with user's token
       // This catches stale sessions where the user revoked access or database was deleted
       try {
+        // #region agent log H2
+        fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'server/routes.ts:110',message:'verifying user database access',data:{dbIdPrefix:sessionDbId.substring(0,8),hasAccessToken:!!sessionAccessToken},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion agent log H2
         const { Client } = await import("@notionhq/client");
         const userClient = new Client({ auth: sessionAccessToken });
         await userClient.databases.retrieve({ database_id: sessionDbId });
         console.log(`✅ Database verified accessible`);
         // Create request-scoped storage with user's credentials
         res.locals.notionStorage = createNotionStorage(sessionDbId, sessionAccessToken);
+        // #region agent log H2
+        fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'server/routes.ts:117',message:'user database verified, using user storage',data:{dbIdPrefix:sessionDbId.substring(0,8)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion agent log H2
       } catch (error: any) {
         console.log(`⚠️ User's database not accessible: ${error.code || error.message}`);
         console.log(`🔍 Searching for user's existing database...`);
+        // #region agent log H2
+        fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'server/routes.ts:121',message:'user database not accessible',data:{dbIdPrefix:sessionDbId.substring(0,8),errorCode:error?.code || null,errorMessage:error?.message || null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion agent log H2
 
         // Don't immediately fall back to guest mode - try to find the user's database
         try {
@@ -152,6 +164,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
             // Create request-scoped storage for guest mode (null token = internal integration)
             res.locals.notionStorage = createNotionStorage(envDbId, null);
+            // #region agent log H3
+            fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3',location:'server/routes.ts:156',message:'fallback to owner database after search failure',data:{envDbIdPrefix:envDbId?.substring(0,8) || null},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion agent log H3
           } else {
             return res.status(500).json({
               error: 'Database not configured',
@@ -162,6 +177,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } else {
       console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
+      // #region agent log H1
+      fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'server/routes.ts:166',message:'no session credentials, using guest storage',data:{hasSessionDbId:!!sessionDbId,hasAccessToken:!!sessionAccessToken,envDbIdPrefix:envDbId?.substring(0,8) || null},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion agent log H1
 
       if (!envDbId) {
         return res.status(500).json({
