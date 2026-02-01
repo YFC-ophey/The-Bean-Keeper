@@ -391,9 +391,17 @@ export async function updateNotionCoffeePage(
       ...updates,
     } as CoffeeEntry;
 
+    const properties = coffeeEntryToNotionProperties(tempEntry);
+    if (Object.prototype.hasOwnProperty.call(updates, "frontPhotoUrl") && updates.frontPhotoUrl === null) {
+      properties["Front Photo"] = { url: null };
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "backPhotoUrl") && updates.backPhotoUrl === null) {
+      properties["Back Photo"] = { url: null };
+    }
+
     await notionClient.pages.update({
       page_id: pageId,
-      properties: coffeeEntryToNotionProperties(tempEntry),
+      properties,
     });
   } catch (error) {
     console.error("Error updating Notion page:", error);

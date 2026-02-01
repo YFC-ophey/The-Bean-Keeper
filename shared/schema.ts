@@ -50,6 +50,8 @@ export const insertCoffeeEntrySchema = z.object({
 
 // Update schema for partial updates
 export const updateCoffeeEntrySchema = z.object({
+  frontPhotoUrl: z.string().nullable().optional(),
+  backPhotoUrl: z.string().nullable().optional(),
   roasterName: z.string().trim().min(1, "Roaster name is required").optional(),
   roasterLocation: z.string().nullable().optional(),
   roasterAddress: z.string().nullable().optional(),

@@ -33,9 +33,10 @@ interface CoffeeDetailProps {
   onClose: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  isGuest?: boolean;
 }
 
-export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }: CoffeeDetailProps) {
+export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete, isGuest = false }: CoffeeDetailProps) {
   const { t } = useTranslation(['coffee', 'common', 'modals']);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null);
@@ -114,7 +115,14 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
             {(onEdit || onDelete) && (
               <div className="flex items-center justify-center gap-2 mt-2">
                 {onEdit && (
-                  <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-entry">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={isGuest ? undefined : onEdit}
+                    disabled={isGuest}
+                    className={isGuest ? "opacity-50 cursor-not-allowed" : undefined}
+                    data-testid="button-edit-entry"
+                  >
                     <Pencil className="w-4 h-4 mr-2" />
                     {t('common:buttons.edit')}
                   </Button>
@@ -123,7 +131,9 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
+                    onClick={isGuest ? undefined : () => setShowDeleteConfirm(true)}
+                    disabled={isGuest}
+                    className={isGuest ? "opacity-50 cursor-not-allowed" : undefined}
                     data-testid="button-delete-entry"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />

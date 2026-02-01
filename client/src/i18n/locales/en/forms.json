@@ -10,6 +10,8 @@
     "dropPhotoHere": "Drop photo here...",
     "takePhoto": "Take Photo",
     "useCamera": "Use camera",
+    "takeOrChoosePhoto": "Take or Choose Photo",
+    "cameraOrLibrary": "Camera or library",
     "choosePhoto": "Choose Photo",
     "fromDevice": "From device",
     "dragAndDrop": "or drag and drop",
@@ -86,6 +88,10 @@
   "editCoffee": {
     "title": "Edit Coffee Entry",
     "save": "Save Changes",
-    "delete": "Delete Entry"
+    "delete": "Delete Entry",
+    "photosTitle": "Photos",
+    "removeFrontPhoto": "Remove front photo",
+    "removeBackPhoto": "Remove back photo",
+    "noPhoto": "No photo"
   }
 }

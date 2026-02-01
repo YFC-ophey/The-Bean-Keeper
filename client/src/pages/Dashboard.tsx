@@ -256,6 +256,8 @@ export default function Dashboard() {
     weight?: string;
     price?: string;
     purchaseAgain?: boolean;
+    frontPhotoUrl?: string | null;
+    backPhotoUrl?: string | null;
   }) => {
     if (!editEntry) return;
 
@@ -276,6 +278,8 @@ export default function Dashboard() {
         weight: data.weight || null,
         price: data.price || null,
         purchaseAgain: data.purchaseAgain ?? false,
+        frontPhotoUrl: data.frontPhotoUrl,
+        backPhotoUrl: data.backPhotoUrl,
       });
 
       await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
@@ -789,6 +793,7 @@ export default function Dashboard() {
         entry={selectedEntry}
         open={!!selectedEntry}
         onClose={() => setSelectedEntry(null)}
+        isGuest={!isAuthenticated}
         onEdit={() => {
           if (selectedEntry) {
             setEditEntry(selectedEntry);

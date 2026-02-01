@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { CoffeeEntry } from "@shared/schema";
 import StarRating from "./StarRating";
-import { Heart } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface EditCoffeeFormProps {
@@ -33,6 +33,8 @@ interface EditCoffeeFormProps {
     weight?: string;
     price?: string;
     purchaseAgain?: boolean;
+    frontPhotoUrl?: string | null;
+    backPhotoUrl?: string | null;
   }) => void;
   onCancel: () => void;
 }
@@ -64,14 +66,81 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
     price: entry.price || "",
     purchaseAgain: entry.purchaseAgain ?? false,
   });
+  const [frontPhotoUrl, setFrontPhotoUrl] = useState<string | null>(entry.frontPhotoUrl || null);
+  const [backPhotoUrl, setBackPhotoUrl] = useState<string | null>(entry.backPhotoUrl || null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      frontPhotoUrl,
+      backPhotoUrl,
+    });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" data-testid="form-edit-coffee">
+      <div className="space-y-3">
+        <Label>{t('forms:editCoffee.photosTitle')}</Label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">{t('forms:addCoffee.frontPhoto')}</p>
+            {frontPhotoUrl ? (
+              <div className="overflow-hidden rounded-lg border border-border">
+                <img
+                  src={frontPhotoUrl}
+                  alt={t('forms:addCoffee.frontAlt')}
+                  className="w-full h-40 object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-40 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
+                {t('forms:editCoffee.noPhoto')}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setFrontPhotoUrl(null)}
+              disabled={!frontPhotoUrl}
+              className="w-full"
+              data-testid="button-remove-front-photo"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              {t('forms:editCoffee.removeFrontPhoto')}
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">{t('forms:addCoffee.backPhoto')}</p>
+            {backPhotoUrl ? (
+              <div className="overflow-hidden rounded-lg border border-border">
+                <img
+                  src={backPhotoUrl}
+                  alt={t('forms:addCoffee.backAlt')}
+                  className="w-full h-40 object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-40 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
+                {t('forms:editCoffee.noPhoto')}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBackPhotoUrl(null)}
+              disabled={!backPhotoUrl}
+              className="w-full"
+              data-testid="button-remove-back-photo"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              {t('forms:editCoffee.removeBackPhoto')}
+            </Button>
+          </div>
+        </div>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="roasterName">{t('forms:addCoffee.labels.roasterName')} *</Label>

@@ -10,6 +10,8 @@
     "dropPhotoHere": "將照片放在這裡...",
     "takePhoto": "拍照",
     "useCamera": "使用相機",
+    "takeOrChoosePhoto": "拍照或選擇照片",
+    "cameraOrLibrary": "相機或相簿",
     "choosePhoto": "選擇照片",
     "fromDevice": "從裝置選擇",
     "dragAndDrop": "或拖放檔案",
@@ -86,6 +88,10 @@
   "editCoffee": {
     "title": "編輯咖啡",
     "save": "儲存變更",
-    "delete": "刪除 ❌"
+    "delete": "刪除 ❌",
+    "photosTitle": "照片",
+    "removeFrontPhoto": "移除正面照片",
+    "removeBackPhoto": "移除背面照片",
+    "noPhoto": "沒有照片"
   }
 }

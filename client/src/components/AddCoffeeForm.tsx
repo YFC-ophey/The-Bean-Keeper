@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Camera, Upload, Loader2, CheckCircle2, ScanText, ChevronDown, Image, Coffee } from "lucide-react";
+import { Camera, Upload, Loader2, CheckCircle2, ScanText, ChevronDown, Coffee } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { apiRequest } from "@/lib/queryClient";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -90,9 +90,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const pendingOCRRef = useRef(false);
 
   // Refs for file inputs
-  const frontCameraInputRef = useRef<HTMLInputElement>(null);
   const frontFileInputRef = useRef<HTMLInputElement>(null);
-  const backCameraInputRef = useRef<HTMLInputElement>(null);
   const backFileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch existing entries for duplicate detection
@@ -631,15 +629,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
               {/* Hidden inputs for drag-and-drop */}
               <input {...frontDropzone.getInputProps()} style={{ display: 'none' }} />
 
-              {/* Manual file inputs */}
-              <input
-                ref={frontCameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFrontFileChange}
-                className="hidden"
-              />
+              {/* Manual file input */}
               <input
                 ref={frontFileInputRef}
                 type="file"
@@ -657,14 +647,12 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                   )}
                 </div>
 
-                {/* Two option buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Take Photo Button */}
+                <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      frontCameraInputRef.current?.click();
+                      frontFileInputRef.current?.click();
                     }}
                     className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#6F4E37] to-[#5D4029] p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] min-h-[110px] flex flex-col items-center justify-center gap-2"
                   >
@@ -676,39 +664,13 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                         <Camera className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm">{t('forms:addCoffee.takePhoto')}</p>
-                        <p className="text-xs text-white/80 mt-0.5">{t('forms:addCoffee.useCamera')}</p>
+                        <p className="font-semibold text-sm">{t('forms:addCoffee.takeOrChoosePhoto')}</p>
+                        <p className="text-xs text-white/80 mt-0.5">{t('forms:addCoffee.cameraOrLibrary')}</p>
                       </div>
                     </div>
 
                     {/* Hover shine effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
-                  </button>
-
-                  {/* Choose from Device Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      frontFileInputRef.current?.click();
-                    }}
-                    className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#E8DCC8] to-[#D4C5B0] p-4 text-[#6F4E37] shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] min-h-[110px] flex flex-col items-center justify-center gap-2 border-2 border-[#D4C5B0]"
-                  >
-                    {/* Subtle pattern overlay */}
-                    <div className="absolute inset-0 opacity-50" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M0 0h20v20H0z\" fill=\"none\"/%3E%3Cpath d=\"M10 0v20M0 10h20\" stroke=\"%236F4E37\" stroke-width=\"0.5\" opacity=\"0.05\"/%3E%3C/svg%3E')" }} />
-
-                    <div className="relative z-10 flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-full bg-white/60 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/80 transition-colors">
-                        <Image className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{t('forms:addCoffee.choosePhoto')}</p>
-                        <p className="text-xs text-[#6F4E37]/70 mt-0.5">{t('forms:addCoffee.fromDevice')}</p>
-                      </div>
-                    </div>
-
-                    {/* Hover shine effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
                   </button>
                 </div>
 
@@ -766,15 +728,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
               {/* Hidden inputs for drag-and-drop */}
               <input {...backDropzone.getInputProps()} style={{ display: 'none' }} />
 
-              {/* Manual file inputs */}
-              <input
-                ref={backCameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleBackFileChange}
-                className="hidden"
-              />
+              {/* Manual file input */}
               <input
                 ref={backFileInputRef}
                 type="file"
@@ -792,14 +746,12 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                   )}
                 </div>
 
-                {/* Two option buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Take Photo Button */}
+                <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      backCameraInputRef.current?.click();
+                      backFileInputRef.current?.click();
                     }}
                     className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#6F4E37] to-[#5D4029] p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] min-h-[110px] flex flex-col items-center justify-center gap-2"
                   >
@@ -811,39 +763,13 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                         <Camera className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm">{t('forms:addCoffee.takePhoto')}</p>
-                        <p className="text-xs text-white/80 mt-0.5">{t('forms:addCoffee.useCamera')}</p>
+                        <p className="font-semibold text-sm">{t('forms:addCoffee.takeOrChoosePhoto')}</p>
+                        <p className="text-xs text-white/80 mt-0.5">{t('forms:addCoffee.cameraOrLibrary')}</p>
                       </div>
                     </div>
 
                     {/* Hover shine effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
-                  </button>
-
-                  {/* Choose from Device Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      backFileInputRef.current?.click();
-                    }}
-                    className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#E8DCC8] to-[#D4C5B0] p-4 text-[#6F4E37] shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] min-h-[110px] flex flex-col items-center justify-center gap-2 border-2 border-[#D4C5B0]"
-                  >
-                    {/* Subtle pattern overlay */}
-                    <div className="absolute inset-0 opacity-50" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M0 0h20v20H0z\" fill=\"none\"/%3E%3Cpath d=\"M10 0v20M0 10h20\" stroke=\"%236F4E37\" stroke-width=\"0.5\" opacity=\"0.05\"/%3E%3C/svg%3E')" }} />
-
-                    <div className="relative z-10 flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-full bg-white/60 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/80 transition-colors">
-                        <Image className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{t('forms:addCoffee.choosePhoto')}</p>
-                        <p className="text-xs text-[#6F4E37]/70 mt-0.5">{t('forms:addCoffee.fromDevice')}</p>
-                      </div>
-                    </div>
-
-                    {/* Hover shine effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
                   </button>
                 </div>
 
