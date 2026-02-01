@@ -112,7 +112,7 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
 
             {/* Edit/Delete buttons - second row under roaster name */}
             {(onEdit || onDelete) && (
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center justify-center gap-2 mt-2">
                 {onEdit && (
                   <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-entry">
                     <Pencil className="w-4 h-4 mr-2" />
