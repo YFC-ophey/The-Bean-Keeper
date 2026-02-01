@@ -258,6 +258,12 @@ export function registerNotionOAuthRoutes(app: Express) {
     }
 
     console.log('  ✅ Authenticated');
+    // #region agent log H5
+    const ownerDbId = process.env.NOTION_DATABASE_ID?.trim();
+    const userDbId = req.session.databaseId;
+    const isOwnerDb = ownerDbId && userDbId && ownerDbId.replace(/-/g, '') === userDbId.replace(/-/g, '');
+    fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H5',location:'server/notion-oauth-routes.ts:262',message:'/api/auth/me returning databaseId',data:{userDbIdPrefix:userDbId?.substring(0,8) || null,ownerDbIdPrefix:ownerDbId?.substring(0,8) || null,isOwnerDb:isOwnerDb,isOwner:req.session.isOwner || false},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion agent log H5
     res.json({
       authenticated: true,
       workspaceName: req.session.workspaceName,

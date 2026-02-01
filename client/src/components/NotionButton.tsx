@@ -14,6 +14,14 @@ export default function NotionButton() {
     ? `https://www.notion.so/${databaseId.replace(/-/g, '')}`
     : null;
 
+  // #region agent log H5
+  if (isAuthenticated && databaseId) {
+    const ownerDbId = import.meta.env.VITE_OWNER_DATABASE_ID || null;
+    const isOwnerDb = ownerDbId && databaseId && ownerDbId.replace(/-/g, '') === databaseId.replace(/-/g, '');
+    fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H5',location:'client/src/components/NotionButton.tsx:18',message:'NotionButton databaseId check',data:{databaseIdPrefix:databaseId.substring(0,8),userDatabaseUrl:userDatabaseUrl,isOwnerDb:isOwnerDb},timestamp:Date.now()})}).catch(()=>{});
+  }
+  // #endregion agent log H5
+
   // Shared styles for both button and link
   const sharedStyles = `group inline-flex items-center justify-center p-2
     bg-white hover:bg-[#F7F6F5]
