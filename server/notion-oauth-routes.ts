@@ -206,9 +206,6 @@ export function registerNotionOAuthRoutes(app: Express) {
         console.log('  Database ID:', req.session.databaseId);
         console.log('  Access Token:', req.session.accessToken ? 'SET' : 'NOT SET');
         console.log('  Workspace:', req.session.workspaceName);
-        // #region agent log H1
-        fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'server/notion-oauth-routes.ts:192',message:'oauth session saved',data:{sessionIdPrefix:req.sessionID?.substring(0,8) || null,dbIdPrefix:req.session.databaseId?.substring(0,8) || null,hasAccessToken:!!req.session.accessToken,hasWorkspaceName:!!req.session.workspaceName},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log H1
 
         // Check if cookie will be set
         const cookieHeader = res.getHeader('Set-Cookie');
@@ -258,12 +255,6 @@ export function registerNotionOAuthRoutes(app: Express) {
     }
 
     console.log('  ✅ Authenticated');
-    // #region agent log H5
-    const ownerDbId = process.env.NOTION_DATABASE_ID?.trim();
-    const userDbId = req.session.databaseId;
-    const isOwnerDb = ownerDbId && userDbId && ownerDbId.replace(/-/g, '') === userDbId.replace(/-/g, '');
-    fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H5',location:'server/notion-oauth-routes.ts:262',message:'/api/auth/me returning databaseId',data:{userDbIdPrefix:userDbId?.substring(0,8) || null,ownerDbIdPrefix:ownerDbId?.substring(0,8) || null,isOwnerDb:isOwnerDb,isOwner:req.session.isOwner || false},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion agent log H5
     res.json({
       authenticated: true,
       workspaceName: req.session.workspaceName,
@@ -348,9 +339,6 @@ export function registerNotionOAuthRoutes(app: Express) {
       req.session.databaseId = sessionData.databaseId;
       req.session.workspaceName = sessionData.workspaceName;
       req.session.isOwner = sessionData.isOwner;
-      // #region agent log H4
-      fetch('http://127.0.0.1:7242/ingest/d2c3724f-ecc9-4b9f-9bcf-d4d7fdd4e8d8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H4',location:'server/notion-oauth-routes.ts:327',message:'session restore copied data',data:{dbIdPrefix:req.session.databaseId?.substring(0,8) || null,hasAccessToken:!!req.session.accessToken,hasWorkspaceName:!!req.session.workspaceName},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion agent log H4
 
       // Save the current session with the restored data
       req.session.save((saveErr) => {
