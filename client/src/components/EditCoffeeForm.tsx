@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
+import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +14,10 @@ import {
 } from "@/components/ui/select";
 import { CoffeeEntry } from "@shared/schema";
 import StarRating from "./StarRating";
-import { Heart, Trash2 } from "lucide-react";
+import { Camera, Heart } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { apiRequest } from "@/lib/queryClient";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface EditCoffeeFormProps {
   entry: CoffeeEntry;
@@ -41,6 +44,7 @@ interface EditCoffeeFormProps {
 
 export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffeeFormProps) {
   const { t } = useTranslation(['forms', 'coffee', 'common']);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Detect currency from existing price
   const detectCurrency = (price: string | null) => {
@@ -68,15 +72,109 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
   });
   const [frontPhotoUrl, setFrontPhotoUrl] = useState<string | null>(entry.frontPhotoUrl || null);
   const [backPhotoUrl, setBackPhotoUrl] = useState<string | null>(entry.backPhotoUrl || null);
+  const [frontPhotoFile, setFrontPhotoFile] = useState<File | null>(null);
+  const [frontPhotoPreview, setFrontPhotoPreview] = useState<string>("");
+  const [backPhotoFile, setBackPhotoFile] = useState<File | null>(null);
+  const [backPhotoPreview, setBackPhotoPreview] = useState<string>("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({
-      ...formData,
-      frontPhotoUrl,
-      backPhotoUrl,
-    });
+  // Refs for file inputs
+  const frontFileInputRef = useRef<HTMLInputElement>(null);
+  const backFileInputRef = useRef<HTMLInputElement>(null);
+
+  const onDropFront = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setFrontPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setFrontPhotoPreview(preview);
+    }
+  }, []);
+
+  const onDropBack = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setBackPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setBackPhotoPreview(preview);
+    }
+  }, []);
+
+  const frontDropzone = useDropzone({
+    onDrop: onDropFront,
+    accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'] },
+    multiple: false,
+  });
+
+  const backDropzone = useDropzone({
+    onDrop: onDropBack,
+    accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'] },
+    multiple: false,
+  });
+
+  // Handlers for manual file input (camera vs file browser)
+  const handleFrontFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFrontPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setFrontPhotoPreview(preview);
+    }
   };
+
+  const handleBackFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setBackPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setBackPhotoPreview(preview);
+    }
+  };
+
+  const uploadPhoto = async (file: File) => {
+    const uploadResponse = await apiRequest('POST', '/api/upload-url');
+    const { uploadURL } = await uploadResponse.json();
+
+    const uploadResult = await fetch(uploadURL, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+
+    const { url } = await uploadResult.json();
+    return url as string;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      let nextFrontPhotoUrl = frontPhotoUrl;
+      let nextBackPhotoUrl = backPhotoUrl;
+
+      if (frontPhotoFile) {
+        nextFrontPhotoUrl = await uploadPhoto(frontPhotoFile);
+      }
+
+      if (backPhotoFile) {
+        nextBackPhotoUrl = await uploadPhoto(backPhotoFile);
+      }
+
+      onSubmit({
+        ...formData,
+        frontPhotoUrl: nextFrontPhotoUrl,
+        backPhotoUrl: nextBackPhotoUrl,
+      });
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      alert('Failed to upload photo. Please try again.');
+    }
+  };
+
+  const hasFrontPhoto = Boolean(frontPhotoPreview || frontPhotoUrl);
+  const hasBackPhoto = Boolean(backPhotoPreview || backPhotoUrl);
+  const frontImageSrc = frontPhotoPreview || frontPhotoUrl || "";
+  const backImageSrc = backPhotoPreview || backPhotoUrl || "";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" data-testid="form-edit-coffee">
@@ -85,59 +183,197 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">{t('forms:addCoffee.frontPhoto')}</p>
-            {frontPhotoUrl ? (
+            {!hasFrontPhoto ? (
+              <div
+                {...frontDropzone.getRootProps()}
+                className={`relative border-2 border-dashed rounded-xl p-6 transition-all ${
+                  frontDropzone.isDragActive
+                    ? 'border-[#8B6F47] bg-[#F5EFE7]/50 scale-[1.02]'
+                    : 'border-[#D4C5B0] bg-gradient-to-br from-[#F5EFE7]/30 to-[#E8DCC8]/30'
+                }`}
+                data-testid="dropzone-edit-front-photo"
+              >
+                {/* Hidden inputs for drag-and-drop */}
+                <input {...frontDropzone.getInputProps()} style={{ display: 'none' }} />
+
+                {/* Manual file input */}
+                <input
+                  ref={frontFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFrontFileChange}
+                  className="hidden"
+                />
+
+                <div className="space-y-3">
+                  {/* Header */}
+                  <div className="text-center pb-2 border-b border-[#D4C5B0]/40">
+                    <p className="font-serif font-medium text-sm text-[#6F4E37]">{t('forms:addCoffee.frontOfBag')}</p>
+                    {frontDropzone.isDragActive && (
+                      <p className="text-xs text-[#8B6F47] mt-1 animate-pulse">{t('forms:addCoffee.dropPhotoHere')}</p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        frontFileInputRef.current?.click();
+                      }}
+                      className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#6F4E37] to-[#5D4029] p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] min-h-[110px] flex flex-col items-center justify-center gap-2"
+                    >
+                      {/* Subtle pattern overlay */}
+                      <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M0 0h20v20H0z\" fill=\"none\"/%3E%3Cpath d=\"M10 0v20M0 10h20\" stroke=\"%23ffffff\" stroke-width=\"0.5\" opacity=\"0.1\"/%3E%3C/svg%3E')" }} />
+
+                      <div className="relative z-10 flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                          <Camera className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{t('forms:addCoffee.takeOrChoosePhoto')}</p>
+                          <p className="text-xs text-white/80 mt-0.5">{t('forms:addCoffee.cameraOrLibrary')}</p>
+                        </div>
+                      </div>
+
+                      {/* Hover shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+                    </button>
+                  </div>
+
+                  {/* Drag and drop hint (desktop only) */}
+                  {!isMobile && (
+                    <p className="text-center text-xs text-[#8B6F47]/60 pt-1 border-t border-[#D4C5B0]/30">
+                      {t('forms:addCoffee.dragAndDrop')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
               <div className="overflow-hidden rounded-lg border border-border">
                 <img
-                  src={frontPhotoUrl}
+                  src={frontImageSrc}
                   alt={t('forms:addCoffee.frontAlt')}
                   className="w-full h-40 object-cover"
                 />
-              </div>
-            ) : (
-              <div className="h-40 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-                {t('forms:editCoffee.noPhoto')}
+                <div className="p-2">
+                  <input
+                    ref={frontFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFrontFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => frontFileInputRef.current?.click()}
+                    className="w-full"
+                    data-testid="button-change-front-photo"
+                  >
+                    {t('forms:addCoffee.change')}
+                  </Button>
+                </div>
               </div>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setFrontPhotoUrl(null)}
-              disabled={!frontPhotoUrl}
-              className="w-full"
-              data-testid="button-remove-front-photo"
-            >
-              <Trash2 className="w-3 h-3 mr-1" />
-              {t('forms:editCoffee.removeFrontPhoto')}
-            </Button>
           </div>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">{t('forms:addCoffee.backPhoto')}</p>
-            {backPhotoUrl ? (
+            {!hasBackPhoto ? (
+              <div
+                {...backDropzone.getRootProps()}
+                className={`relative border-2 border-dashed rounded-xl p-6 transition-all ${
+                  backDropzone.isDragActive
+                    ? 'border-[#8B6F47] bg-[#F5EFE7]/50 scale-[1.02]'
+                    : 'border-[#D4C5B0] bg-gradient-to-br from-[#F5EFE7]/30 to-[#E8DCC8]/30'
+                }`}
+                data-testid="dropzone-edit-back-photo"
+              >
+                {/* Hidden inputs for drag-and-drop */}
+                <input {...backDropzone.getInputProps()} style={{ display: 'none' }} />
+
+                {/* Manual file input */}
+                <input
+                  ref={backFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBackFileChange}
+                  className="hidden"
+                />
+
+                <div className="space-y-3">
+                  {/* Header */}
+                  <div className="text-center pb-2 border-b border-[#D4C5B0]/40">
+                    <p className="font-serif font-medium text-sm text-[#6F4E37]">{t('forms:addCoffee.backOfBag')}</p>
+                    {backDropzone.isDragActive && (
+                      <p className="text-xs text-[#8B6F47] mt-1 animate-pulse">{t('forms:addCoffee.dropPhotoHere')}</p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        backFileInputRef.current?.click();
+                      }}
+                      className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#6F4E37] to-[#5D4029] p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] min-h-[110px] flex flex-col items-center justify-center gap-2"
+                    >
+                      {/* Subtle pattern overlay */}
+                      <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M0 0h20v20H0z\" fill=\"none\"/%3E%3Cpath d=\"M10 0v20M0 10h20\" stroke=\"%23ffffff\" stroke-width=\"0.5\" opacity=\"0.1\"/%3E%3C/svg%3E')" }} />
+
+                      <div className="relative z-10 flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                          <Camera className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{t('forms:addCoffee.takeOrChoosePhoto')}</p>
+                          <p className="text-xs text-white/80 mt-0.5">{t('forms:addCoffee.cameraOrLibrary')}</p>
+                        </div>
+                      </div>
+
+                      {/* Hover shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+                    </button>
+                  </div>
+
+                  {/* Drag and drop hint (desktop only) */}
+                  {!isMobile && (
+                    <p className="text-center text-xs text-[#8B6F47]/60 pt-1 border-t border-[#D4C5B0]/30">
+                      {t('forms:addCoffee.dragAndDrop')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
               <div className="overflow-hidden rounded-lg border border-border">
                 <img
-                  src={backPhotoUrl}
+                  src={backImageSrc}
                   alt={t('forms:addCoffee.backAlt')}
                   className="w-full h-40 object-cover"
                 />
-              </div>
-            ) : (
-              <div className="h-40 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-                {t('forms:editCoffee.noPhoto')}
+                <div className="p-2">
+                  <input
+                    ref={backFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBackFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => backFileInputRef.current?.click()}
+                    className="w-full"
+                    data-testid="button-change-back-photo"
+                  >
+                    {t('forms:addCoffee.change')}
+                  </Button>
+                </div>
               </div>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setBackPhotoUrl(null)}
-              disabled={!backPhotoUrl}
-              className="w-full"
-              data-testid="button-remove-back-photo"
-            >
-              <Trash2 className="w-3 h-3 mr-1" />
-              {t('forms:editCoffee.removeBackPhoto')}
-            </Button>
           </div>
         </div>
       </div>
