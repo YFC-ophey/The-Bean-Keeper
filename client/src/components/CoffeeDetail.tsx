@@ -105,9 +105,14 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-coffee-detail">
           <DialogHeader>
-            {/* Top row: Edit/Delete buttons aligned right */}
+            {/* Roaster name - first row */}
+            <DialogTitle className="text-2xl font-semibold pr-8" data-testid="text-detail-roaster">
+              {entry.roasterName}
+            </DialogTitle>
+
+            {/* Edit/Delete buttons - second row under roaster name */}
             {(onEdit || onDelete) && (
-              <div className="flex items-center justify-end gap-2 -mt-2 mb-2 pr-8">
+              <div className="flex items-center gap-2 mt-2">
                 {onEdit && (
                   <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-entry">
                     <Pencil className="w-4 h-4 mr-2" />
@@ -127,11 +132,6 @@ export default function CoffeeDetail({ entry, open, onClose, onEdit, onDelete }:
                 )}
               </div>
             )}
-
-            {/* Roaster name - full width row */}
-            <DialogTitle className="text-2xl font-semibold" data-testid="text-detail-roaster">
-              {entry.roasterName}
-            </DialogTitle>
           </DialogHeader>
 
         <div className="grid md:grid-cols-2 gap-6">

@@ -6,6 +6,13 @@ If Linear ticket provided ($ARGUMENTS):
 1. Fetch the ticket details
 2. Read and understand it
 
+## Cross-Project Check
+Before diving deep, ask:
+"Have you built something similar in other projects? 
+Should I reference ../[project-name]?"
+
+If yes: Pull patterns first, then adapt.
+
 Then:
 1. Summarize what you understand about the problem
 2. Analyze the codebase (if available) - what files might change?
@@ -19,3 +26,4 @@ Then:
 Format your response like you're an engineering manager talking through this with a PM.
 
 End with: "Ready to create the plan when you are."
+

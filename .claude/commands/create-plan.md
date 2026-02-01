@@ -20,11 +20,25 @@ Each step format:
 - [ ] Step 2: [Clear, specific action]
 - [ ] Step 3: [Clear, specific action]
 
+
+## Planning Style
+Ask user: "Detailed step-by-step plan or high-level milestones?"
+
+If high-level:
+- 3-5 major phases only
+- User will iterate within each
+- Good for exploratory work
+
+If detailed:
+- 10-15 specific steps
+- Good for well-understood features
+
 Add 10-15 steps total. Break it down into chunks that take 15-30 min each.
 
 ## Potential Issues
 - Risk 1 and mitigation
 - Risk 2 and mitigation
+
 ```
 
 Make the plan so detailed that someone could follow it step-by-step.

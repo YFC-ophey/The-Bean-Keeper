@@ -1,6 +1,6 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
-import { notionStorage } from "./notion-storage";
+import { NotionStorage, createNotionStorage } from "./notion-storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { localStorageService } from "./local-storage";
 import { cloudinaryStorageService } from "./cloudinary-storage";
@@ -11,6 +11,23 @@ import { createCoffeeDatabase } from "./notion";
 import { requireAuth } from "./middleware/auth";
 import { duplicateTemplateDatabaseToUserWorkspace } from "./notion-oauth";
 import { saveDatabaseIdForWorkspace } from "./user-database-mapping";
+
+// Extend Express Response.locals to include our request-scoped storage
+declare module 'express-serve-static-core' {
+  interface Locals {
+    notionStorage: NotionStorage;
+  }
+}
+
+/**
+ * Helper to get the request-scoped NotionStorage from res.locals
+ */
+function getStorage(res: Response): NotionStorage {
+  if (!res.locals.notionStorage) {
+    throw new Error('NotionStorage not initialized for this request');
+  }
+  return res.locals.notionStorage;
+}
 
 /**
  * Generates a Google Maps Place URL based on roaster information
@@ -72,10 +89,11 @@ function generatePlaceUrl(entry: Partial<InsertCoffeeEntry | UpdateCoffeeEntry> 
 export async function registerRoutes(app: Express): Promise<Server> {
   const objectStorageService = new ObjectStorageService();
 
-  // Middleware to set Notion database ID and access token from session or environment
+  // Middleware to create request-scoped NotionStorage instance
   // Guest users (no session): Use owner's database from NOTION_DATABASE_ID with internal integration
   // Authenticated users: Use their own database with their OAuth access token
   // Also verifies database is accessible before proceeding (clears stale sessions)
+  // IMPORTANT: Creates a NEW storage instance per request to avoid race conditions
   app.use('/api/coffee-entries', async (req, res, next) => {
     const sessionDbId = req.session.databaseId;
     const sessionAccessToken = req.session.accessToken;
@@ -92,8 +110,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userClient = new Client({ auth: sessionAccessToken });
         await userClient.databases.retrieve({ database_id: sessionDbId });
         console.log(`✅ Database verified accessible`);
-        notionStorage.setAccessToken(sessionAccessToken);
-        notionStorage.setDatabaseId(sessionDbId);
+        // Create request-scoped storage with user's credentials
+        res.locals.notionStorage = createNotionStorage(sessionDbId, sessionAccessToken);
       } catch (error: any) {
         console.log(`⚠️ User's database not accessible: ${error.code || error.message}`);
         console.log(`🔍 Searching for user's existing database...`);
@@ -115,8 +133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               saveDatabaseIdForWorkspace(req.session.userId, foundDatabaseId, req.session.workspaceName);
             }
 
-            notionStorage.setAccessToken(sessionAccessToken);
-            notionStorage.setDatabaseId(foundDatabaseId);
+            // Create request-scoped storage with found database
+            res.locals.notionStorage = createNotionStorage(foundDatabaseId, sessionAccessToken);
           } else {
             throw new Error('No database found or created');
           }
@@ -132,8 +150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Fall back to guest mode (owner's database)
           if (envDbId) {
             console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
-            notionStorage.setAccessToken(null);
-            notionStorage.setDatabaseId(envDbId);
+            // Create request-scoped storage for guest mode (null token = internal integration)
+            res.locals.notionStorage = createNotionStorage(envDbId, null);
           } else {
             return res.status(500).json({
               error: 'Database not configured',
@@ -144,7 +162,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } else {
       console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
-      notionStorage.setAccessToken(null); // Use internal integration
 
       if (!envDbId) {
         return res.status(500).json({
@@ -153,7 +170,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      notionStorage.setDatabaseId(envDbId);
+      // Create request-scoped storage for guest mode (null token = internal integration)
+      res.locals.notionStorage = createNotionStorage(envDbId, null);
     }
 
     next();
@@ -273,7 +291,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all coffee entries
   app.get("/api/coffee-entries", async (req, res) => {
     try {
-      const entries = await notionStorage.getAllCoffeeEntries();
+      const storage = getStorage(res);
+      const entries = await storage.getAllCoffeeEntries();
       res.json(entries);
     } catch (error) {
       console.error("Error fetching coffee entries:", error);
@@ -284,7 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get single coffee entry
   app.get("/api/coffee-entries/:id", async (req, res) => {
     try {
-      const entry = await notionStorage.getCoffeeEntry(req.params.id);
+      const storage = getStorage(res);
+      const entry = await storage.getCoffeeEntry(req.params.id);
       if (!entry) {
         return res.status(404).json({ error: "Coffee entry not found" });
       }
@@ -317,7 +337,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const placeUrl = generatePlaceUrl(validatedData);
       console.log("  ✓ Place URL generated");
 
-      const entry = await notionStorage.createCoffeeEntry({
+      const storage = getStorage(res);
+      const entry = await storage.createCoffeeEntry({
         ...validatedData,
         frontPhotoUrl,
         backPhotoUrl,
@@ -353,11 +374,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       let updatedData = { ...validatedData };
+      const storage = getStorage(res);
 
       // Regenerate placeUrl if location-related fields changed
       if (locationFieldsChanged) {
         // Fetch current entry to merge with updates
-        const currentEntry = await notionStorage.getCoffeeEntry(req.params.id);
+        const currentEntry = await storage.getCoffeeEntry(req.params.id);
         if (!currentEntry) {
           return res.status(404).json({ error: "Coffee entry not found" });
         }
@@ -369,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedData.placeUrl = generatePlaceUrl(mergedData);
       }
 
-      const entry = await notionStorage.updateCoffeeEntry(req.params.id, updatedData);
+      const entry = await storage.updateCoffeeEntry(req.params.id, updatedData);
       if (!entry) {
         return res.status(404).json({ error: "Coffee entry not found" });
       }
@@ -388,7 +410,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete coffee entry (protected - requires authentication)
   app.delete("/api/coffee-entries/:id", requireAuth, async (req, res) => {
     try {
-      const deleted = await notionStorage.deleteCoffeeEntry(req.params.id);
+      const storage = getStorage(res);
+      const deleted = await storage.deleteCoffeeEntry(req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Coffee entry not found" });
       }

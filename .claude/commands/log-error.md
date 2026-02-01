@@ -24,6 +24,7 @@ Ask 5-8 pointed questions focused on USER behavior:
 "Did you verify the subagents received the critical context?"
 "Was this reference material or explicit requirements?"
 "What constraints were in your head but not in the prompt?"
+"Did you reference similar solutions from other projects in linear tickets?" 
 Trace the triggering prompt - Get the EXACT prompt that led to failure.
 Be critical of the user - They asked for this. Don't soften it.
 Log the error with the template below.
@@ -156,6 +157,16 @@ markdown
 - **Seen this before?** [Yes/No - if yes, this is a habit to break]
 
 - **Predictable?** [Should user have anticipated this?]
+
+## Cross-Project Pattern Check
+- **In this project:** [X times this error occurred]
+- **In other projects:** [Have you seen this pattern elsewhere?]
+- **Root habit:** [What's the underlying bad habit across all projects?]
+
+## Success Comparison
+Find a similar task that went well. What was different?
+- Success case: [Reference success log]
+- Difference: [What you did right then vs wrong now]
 
 
 ## One-Line Lesson (for the USER)

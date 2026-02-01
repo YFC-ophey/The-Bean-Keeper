@@ -7,8 +7,14 @@ export class NotionStorage {
   private databaseId: string | null = null;
   private accessToken: string | null = null;
 
-  constructor(databaseId?: string) {
-    this.databaseId = databaseId || null;
+  /**
+   * Create a NotionStorage instance
+   * @param databaseId - The Notion database ID to use
+   * @param accessToken - Optional OAuth access token (null for internal integration)
+   */
+  constructor(databaseId?: string, accessToken?: string | null) {
+    this.databaseId = databaseId?.trim() || null;
+    this.accessToken = accessToken ?? null;
   }
 
   setDatabaseId(databaseId: string) {
@@ -158,5 +164,14 @@ export class NotionStorage {
   }
 }
 
-// Singleton instance
+/**
+ * Create a new NotionStorage instance for a specific request
+ * This avoids race conditions by using request-scoped storage
+ */
+export function createNotionStorage(databaseId: string, accessToken: string | null = null): NotionStorage {
+  return new NotionStorage(databaseId, accessToken);
+}
+
+// Legacy singleton - kept for backward compatibility but should not be used for per-request operations
+// TODO: Remove once all routes are migrated to request-scoped storage
 export const notionStorage = new NotionStorage();

@@ -6,9 +6,9 @@ You are helping the user log a success/win that occurred during agentic coding. 
 
 ## Logs Directory
 
-All logs are stored in: `/Users/opheliachen/Desktop/Claude-code-logs/success`
+All logs are stored in: `/Users/opheliachen/Desktop/Claude-code-logs/successes`
 
-- Successes: `/successes/success-XXX.md`
+- Success: `/successes/success-XXX.md`
 
 - Metadata (for ID tracking): `/metadata.json`
 
@@ -63,6 +63,17 @@ All logs are stored in: `/Users/opheliachen/Desktop/Claude-code-logs/success`
 
 
 5. **Update metadata.json** with the incremented counter.
+
+6. **Pattern Extraction**
+
+After logging success, ask:
+"This is the [X]th time this approach worked. 
+Should we create a playbook/template/standard practice?"
+
+If yes:
+- Extract the pattern
+- Add to `/Users/opheliachen/Desktop/Claude-code-logs/patterns`
+- Reference in future tasks
 
 
 

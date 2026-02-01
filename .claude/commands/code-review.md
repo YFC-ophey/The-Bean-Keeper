@@ -8,6 +8,9 @@ Look for:
 3. Performance problems
 4. Code that doesn't match the plan
 5. Edge cases not handled
+6. Context Check
+     - Could this be simplified by referencing existing patterns from other projects?
+     - Should this be documented in /docs for future reference?
 
 Format output:
 ## Critical Issues
@@ -18,5 +21,9 @@ Format output:
 
 ## Medium Priority
 - [Issue]: [Why it's a problem] [How to fix]
+
+## Context Check
+- Could this be simplified by referencing existing patterns from other projects?
+- Should this be documented in /docs for future reference?
 
 Be thorough. Act like you're reviewing someone else's code, not your own.
