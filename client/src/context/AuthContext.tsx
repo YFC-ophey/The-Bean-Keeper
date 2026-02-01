@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { queryClient } from '@/lib/queryClient';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -56,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setDatabaseId(data.databaseId);
           setIsOwner(data.isOwner || false);
 
+          // Invalidate coffee entries cache to force fresh fetch for this user's database
+          queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+
           // Store auth data in localStorage for persistence across sessions
           localStorage.setItem('beankeeper_auth_data', JSON.stringify({
             databaseId: data.databaseId,
@@ -98,6 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setDatabaseId(restoreData.databaseId);
             setIsOwner(restoreData.isOwner || false);
 
+            // Invalidate coffee entries cache to force fresh fetch for this user's database
+            queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+
             // Store the session ID in localStorage for future page loads (ITP workaround)
             if (sessionIdFromUrl) {
               localStorage.setItem('beankeeper_session_id', sessionIdFromUrl);
@@ -125,44 +132,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Cookie and session restore failed - handle differently for owner vs OAuth users
-      // SECURITY: Don't trust localStorage for OAuth users without server validation
+      // Cookie and session restore failed - clear stale localStorage data
+      // SECURITY: Never trust localStorage without server validation
+      // Both owner and OAuth users must re-authenticate if session is gone
       if (storedAuthData) {
-        try {
-          const authData = JSON.parse(storedAuthData);
-          console.log('  📦 Found stored auth data (server validation failed)');
-
-          // Owner can be restored from localStorage since owner uses server credentials (API key)
-          // The API key is stored server-side, so we just need to verify the database is accessible
-          if (authData.isOwner && authData.databaseId) {
-            console.log('  🔑 Owner data found, attempting quick verification...');
-            try {
-              // Quick test: try to fetch entries - if it works, owner credentials are valid
-              const testResponse = await fetch('/api/coffee-entries?limit=1', {
-                credentials: 'include',
-              });
-              if (testResponse.ok) {
-                console.log('  ✅ Owner credentials verified');
-                setIsAuthenticated(true);
-                setWorkspaceName(authData.workspaceName);
-                setDatabaseId(authData.databaseId);
-                setIsOwner(true);
-                return;
-              }
-            } catch {
-              console.log('  ⚠️ Owner verification failed');
-            }
-          }
-
-          // For OAuth users, we must NOT show them as logged in without server confirmation
-          // Their access token may have been revoked or expired
-          console.log('  🔒 Clearing stale auth data - user must re-authenticate');
-          localStorage.removeItem('beankeeper_auth_data');
-          localStorage.removeItem('beankeeper_session_id');
-        } catch (e) {
-          console.log('  ❌ Failed to parse stored auth data');
-          localStorage.removeItem('beankeeper_auth_data');
-        }
+        console.log('  🔒 Session expired - clearing stale auth data, user must re-authenticate');
+        localStorage.removeItem('beankeeper_auth_data');
+        localStorage.removeItem('beankeeper_session_id');
       }
 
       // Not authenticated
@@ -236,6 +212,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear owner auth data from localStorage
       localStorage.removeItem('beankeeper_auth_data');
       console.log('🚪 Logged out, cleared session from localStorage');
+
+      // Invalidate coffee entries cache to force fresh fetch of owner's collection (guest mode)
+      queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+
       setIsAuthenticated(false);
       setWorkspaceName(null);
       setDatabaseId(null);
@@ -270,6 +250,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDatabaseId(data.databaseId);
         setIsOwner(true);
         setJustLoggedIn(true);
+
+        // Invalidate coffee entries cache to force fresh fetch for owner's database
+        queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
 
         // Store auth data in localStorage for persistence
         localStorage.setItem('beankeeper_auth_data', JSON.stringify({

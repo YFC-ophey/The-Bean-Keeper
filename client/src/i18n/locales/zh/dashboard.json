@@ -1,8 +1,22 @@
 {
   "header": {
     "title": "豆誌",
+    "subtitle": "您的咖啡收藏日誌",
     "searchPlaceholder": "搜尋烘焙店家、產地或品種...",
     "addCoffee": "新增咖啡"
+  },
+  "collection": {
+    "title": "您的收藏",
+    "coffeesFound": "找到 {{count}} 款咖啡",
+    "coffeeFound": "找到 {{count}} 款咖啡",
+    "noCoffeesFound": "沒有找到咖啡",
+    "noResultsFor": "沒有「{{query}}」的搜尋結果",
+    "noFilterMatch": "沒有符合篩選條件的咖啡"
+  },
+  "footer": {
+    "tagline": "為咖啡愛好者精心打造",
+    "support": "贊助我一杯咖啡",
+    "copyright": "© 2025 豆誌 · Ophelia Chen · opheliayf.chen@gmail.com"
   },
   "filters": {
     "all": "全部",

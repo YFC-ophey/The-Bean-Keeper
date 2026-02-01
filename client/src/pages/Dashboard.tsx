@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, X, ArrowLeft, LogIn } from "lucide-react";
+import { Plus, Search, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
@@ -42,7 +41,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError, ownerLogin } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError, ownerLogin } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -54,7 +53,6 @@ export default function Dashboard() {
   const [editEntry, setEditEntry] = useState<CoffeeEntry | null>(null);
   const [pendingEntry, setPendingEntry] = useState<CoffeeEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [activeRoastFilter, setActiveRoastFilter] = useState<string | null>(null);
   const [activeRatingFilter, setActiveRatingFilter] = useState<number | null>(null);
   const [activeOriginFilter, setActiveOriginFilter] = useState<string | null>(null);
@@ -120,8 +118,10 @@ export default function Dashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHeaderVisible]);
 
+  // Include databaseId in query key to separate cache between guest (owner's DB) and authenticated users
+  // This prevents stale guest data from showing after OAuth login
   const { data: entries = [], isLoading } = useQuery<CoffeeEntry[]>({
-    queryKey: ["/api/coffee-entries"],
+    queryKey: ["/api/coffee-entries", { databaseId: databaseId || "guest" }],
   });
 
   const handleAddCoffee = async (frontPhotoUrl: string, backPhotoUrl: string | null, data: {
@@ -191,36 +191,13 @@ export default function Dashboard() {
     if (!pendingEntry) return;
 
     try {
-      // Build update payload - only include fields that have changed
-      const updates: {
-        rating?: number | null;
-        tastingNotes?: string | null;
-        purchaseAgain: boolean;
-      } = {
+      // Always send rating and notes - use null to clear, value to set
+      // This allows users to clear ratings/notes they previously set
+      const updates = {
+        rating: rating > 0 ? rating : null,
+        tastingNotes: notes.trim() || null,
         purchaseAgain,
       };
-
-      // Update rating only if user provided one
-      if (rating > 0) {
-        updates.rating = rating;
-        // Only include notes if user typed something (empty means don't change)
-        if (notes) {
-          updates.tastingNotes = notes;
-        }
-      } else if (pendingEntry.rating) {
-        // Preserve existing rating if user didn't change it
-        updates.rating = pendingEntry.rating;
-        // Only include notes if user typed something
-        if (notes) {
-          updates.tastingNotes = notes;
-        }
-      } else {
-        // No existing rating and no new rating - that's fine for purchaseAgain-only updates
-        // Only include notes if user typed something
-        if (notes) {
-          updates.tastingNotes = notes;
-        }
-      }
 
       await apiRequest("PATCH", `/api/coffee-entries/${pendingEntry.id}`, updates);
 
@@ -455,7 +432,7 @@ export default function Dashboard() {
                     {t('dashboard:header.title')}
                   </h1>
                   <p className="text-muted-foreground font-light text-[10px] tracking-wide">
-                    Your artisan coffee journal
+                    {t('dashboard:header.subtitle')}
                   </p>
                 </div>
               </div>
@@ -517,7 +494,7 @@ export default function Dashboard() {
               {t('dashboard:header.title')}
             </h1>
             <p className="text-muted-foreground font-light text-xs md:text-sm tracking-wide">
-              Your artisan coffee journal
+              {t('dashboard:header.subtitle')}
             </p>
           </div>
 
@@ -546,38 +523,6 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          {/* Active filters display */}
-          {activeFilters.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground font-serif font-medium">Active Filters:</span>
-              {activeFilters.map((filter) => (
-                <Badge
-                  key={filter}
-                  variant="secondary"
-                  className="gap-1.5 hover-elevate active-elevate-2 organic-radius font-medium"
-                  data-testid={`badge-filter-${filter}`}
-                >
-                  {filter}
-                  <button
-                    onClick={() => setActiveFilters(activeFilters.filter((f) => f !== filter))}
-                    className="ml-1 rounded-sm hover-elevate"
-                    data-testid={`button-remove-filter-${filter}`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveFilters([])}
-                className="h-auto py-1 px-3 text-xs font-serif"
-                data-testid="button-clear-filters"
-              >
-                Clear all
-              </Button>
-            </div>
-          )}
         </div>
       </header>
 
@@ -618,11 +563,11 @@ export default function Dashboard() {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
                   <Search className="w-10 h-10 text-muted-foreground/50" />
                 </div>
-                <h3 className="text-2xl font-serif font-semibold mb-2">No coffees found</h3>
+                <h3 className="text-2xl font-serif font-semibold mb-2">{t('dashboard:collection.noCoffeesFound')}</h3>
                 <p className="text-muted-foreground font-serif">
                   {searchQuery
-                    ? `No results for "${searchQuery}"`
-                    : "No coffees match your current filters"}
+                    ? t('dashboard:collection.noResultsFor', { query: searchQuery })
+                    : t('dashboard:collection.noFilterMatch')}
                 </p>
               </div>
             ) : (
@@ -631,10 +576,12 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h2 className="text-2xl font-serif font-semibold text-foreground">
-                      Your Collection
+                      {t('dashboard:collection.title')}
                     </h2>
                     <p className="text-muted-foreground font-serif text-sm mt-1">
-                      {filteredAndSortedEntries.length} {filteredAndSortedEntries.length === 1 ? 'coffee' : 'coffees'} found
+                      {filteredAndSortedEntries.length === 1
+                        ? t('dashboard:collection.coffeeFound', { count: filteredAndSortedEntries.length })
+                        : t('dashboard:collection.coffeesFound', { count: filteredAndSortedEntries.length })}
                     </p>
                   </div>
                 </div>
@@ -694,14 +641,14 @@ export default function Dashboard() {
                 alt="Coffee cup"
                 className="w-5 h-5 brightness-0 invert"
               />
-              Support on Buy me a coffee
+              {t('dashboard:footer.support')}
             </a>
 
             <p className="text-muted-foreground font-serif text-sm mb-2">
-              Crafted with care for coffee enthusiasts
+              {t('dashboard:footer.tagline')}
             </p>
             <p className="text-muted-foreground/60 font-serif text-xs">
-              © 2025 The Bean Keeper · Ophelia Chen · opheliayf.chen@gmail.com
+              {t('dashboard:footer.copyright')}
             </p>
             
           </div>

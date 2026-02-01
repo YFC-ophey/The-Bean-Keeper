@@ -1,8 +1,22 @@
 {
   "header": {
     "title": "The Bean Keeper",
+    "subtitle": "Your artisan coffee journal",
     "searchPlaceholder": "Search by roaster, origin, or variety...",
     "addCoffee": "Add Coffee"
+  },
+  "collection": {
+    "title": "Your Collection",
+    "coffeesFound": "{{count}} coffees found",
+    "coffeeFound": "{{count}} coffee found",
+    "noCoffeesFound": "No coffees found",
+    "noResultsFor": "No results for \"{{query}}\"",
+    "noFilterMatch": "No coffees match your current filters"
+  },
+  "footer": {
+    "tagline": "Crafted with care for coffee enthusiasts",
+    "support": "Support on Buy me a coffee",
+    "copyright": "© 2025 The Bean Keeper · Ophelia Chen · opheliayf.chen@gmail.com"
   },
   "filters": {
     "all": "All",
