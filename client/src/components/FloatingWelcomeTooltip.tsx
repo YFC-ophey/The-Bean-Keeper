@@ -84,7 +84,7 @@ export default function FloatingWelcomeTooltip({ className = '' }: FloatingWelco
 
   return (
     <div
-      className={`fixed bottom-[20%] left-4 sm:left-12 z-[100] flex flex-col items-start sm:items-center max-w-[calc(100vw-2rem)] sm:max-w-sm ${className}`}
+      className={`fixed bottom-[20%] left-4 sm:left-12 z-40 flex flex-col items-start sm:items-center max-w-[calc(100vw-2rem)] sm:max-w-sm ${className}`}
     >
       {/* Tooltip Speech Bubble */}
       {!isTooltipDismissed && (

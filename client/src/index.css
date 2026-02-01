@@ -891,3 +891,17 @@
     opacity: 0.6;
   }
 }
+
+/* Mobile keyboard handling - scroll inputs into view */
+@media (max-width: 768px) {
+  input:focus,
+  textarea:focus,
+  select:focus {
+    scroll-margin-bottom: 200px;
+  }
+
+  /* Ensure drawers adapt to visual viewport when keyboard is open */
+  [vaul-drawer] {
+    max-height: 85dvh !important;
+  }
+}

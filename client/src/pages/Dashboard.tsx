@@ -678,6 +678,21 @@ export default function Dashboard() {
               <div className="h-px w-16 bg-gradient-to-l from-transparent to-border" />
             </div>
 
+            {/* Buy Me a Coffee Button */}
+            <a
+              href="https://buymeacoffee.com/opheliachen"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 mb-6 rounded-full bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] hover:from-[#5D4230] hover:to-[#7A5F3D] text-[#F5EFE7] font-medium text-sm transition-all hover:scale-105 hover:shadow-lg active:scale-95 border border-[#D4A574]/30"
+            >
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/10187/10187444.png"
+                alt="Coffee cup"
+                className="w-5 h-5 brightness-0 invert"
+              />
+              Support on Buy me a coffee
+            </a>
+
             <p className="text-muted-foreground font-serif text-sm mb-2">
               Crafted with care for coffee enthusiasts
             </p>
@@ -691,11 +706,11 @@ export default function Dashboard() {
 
       {isMobile ? (
         <Drawer open={showAddForm} onOpenChange={setShowAddForm}>
-          <DrawerContent className="max-h-[90vh]">
+          <DrawerContent className="max-h-[85dvh]">
             <DrawerHeader className="relative">
               <DrawerTitle data-testid="text-add-coffee-title">Add Coffee</DrawerTitle>
             </DrawerHeader>
-            <div className="p-4 overflow-y-auto">
+            <div className="p-4 overflow-y-auto flex-1">
               <AddCoffeeForm
                 onSubmit={handleAddCoffee}
                 onCancel={() => setShowAddForm(false)}
@@ -719,11 +734,11 @@ export default function Dashboard() {
 
       {isMobile ? (
         <Drawer open={showEditForm} onOpenChange={setShowEditForm}>
-          <DrawerContent className="max-h-[90vh]">
+          <DrawerContent className="max-h-[85dvh]">
             <DrawerHeader className="relative">
               <DrawerTitle data-testid="text-edit-coffee-title">Edit Coffee</DrawerTitle>
             </DrawerHeader>
-            <div className="p-4 overflow-y-auto">
+            <div className="p-4 overflow-y-auto flex-1">
               {editEntry && (
                 <EditCoffeeForm
                   entry={editEntry}
