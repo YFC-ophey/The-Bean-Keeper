@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { queryClient } from '@/lib/queryClient';
+import { invalidateCoffeeEntries } from '@/lib/queryClient';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsOwner(data.isOwner || false);
 
           // Invalidate coffee entries cache to force fresh fetch for this user's database
-          queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+          invalidateCoffeeEntries();
 
           // Store auth data in localStorage for persistence across sessions
           localStorage.setItem('beankeeper_auth_data', JSON.stringify({
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setIsOwner(restoreData.isOwner || false);
 
             // Invalidate coffee entries cache to force fresh fetch for this user's database
-            queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+            invalidateCoffeeEntries();
 
             // Store the session ID in localStorage for future page loads (ITP workaround)
             if (sessionIdFromUrl) {
@@ -214,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🚪 Logged out, cleared session from localStorage');
 
       // Invalidate coffee entries cache to force fresh fetch of owner's collection (guest mode)
-      queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      invalidateCoffeeEntries();
 
       setIsAuthenticated(false);
       setWorkspaceName(null);
@@ -252,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setJustLoggedIn(true);
 
         // Invalidate coffee entries cache to force fresh fetch for owner's database
-        queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+        invalidateCoffeeEntries();
 
         // Store auth data in localStorage for persistence
         localStorage.setItem('beankeeper_auth_data', JSON.stringify({

@@ -35,7 +35,7 @@ import AboutSection from "@/components/AboutSection";
 import { NotionAuthModal } from "@/components/NotionAuthModal";
 import { OwnerLoginSection } from "@/components/OwnerLoginSection";
 import { CoffeeEntry } from "@shared/schema";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { invalidateCoffeeEntries, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -159,7 +159,7 @@ export default function Dashboard() {
       });
 
       const newEntry = await response.json() as CoffeeEntry;
-      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      await invalidateCoffeeEntries();
       
       setPendingEntry(newEntry);
       setShowAddForm(false);
@@ -201,7 +201,7 @@ export default function Dashboard() {
 
       await apiRequest("PATCH", `/api/coffee-entries/${pendingEntry.id}`, updates);
 
-      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      await invalidateCoffeeEntries();
       setPendingEntry(null);
       setShowRatingModal(false);
 
@@ -259,7 +259,7 @@ export default function Dashboard() {
         backPhotoUrl: data.backPhotoUrl,
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      await invalidateCoffeeEntries();
       setEditEntry(null);
       setShowEditForm(false);
       setSelectedEntry(null);
@@ -281,7 +281,7 @@ export default function Dashboard() {
   const handleDeleteCoffee = async (entryId: string) => {
     try {
       await apiRequest("DELETE", `/api/coffee-entries/${entryId}`);
-      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-entries"] });
+      await invalidateCoffeeEntries();
       setSelectedEntry(null);
 
       toast({
