@@ -39,7 +39,21 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const [baseUrl, ...rest] = queryKey as unknown[];
+    if (typeof baseUrl !== "string") {
+      throw new Error("Invalid query key: first element must be a string URL");
+    }
+
+    // Build URL from string/number segments only; ignore objects used for cache keys
+    const pathSegments = rest.filter(
+      (segment): segment is string | number =>
+        typeof segment === "string" || typeof segment === "number",
+    );
+    const requestUrl = pathSegments.length
+      ? `${baseUrl}/${pathSegments.map(String).join("/")}`
+      : baseUrl;
+
+    const res = await fetch(requestUrl, {
       credentials: "include",
       headers: getHeaders(false),
     });
