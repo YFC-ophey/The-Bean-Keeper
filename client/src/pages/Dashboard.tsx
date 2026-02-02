@@ -39,6 +39,24 @@ import { invalidateCoffeeEntries, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
+type CoffeeFormData = {
+  roasterName: string;
+  roasterWebsite?: string;
+  farm?: string;
+  origin?: string;
+  variety?: string;
+  processMethod?: string;
+  roastDate?: string;
+  flavorNotes?: string;
+  rating?: number;
+  tastingNotes?: string;
+  weight?: string;
+  price?: string;
+  purchaseAgain?: boolean;
+  frontPhotoUrl?: string | null;
+  backPhotoUrl?: string | null;
+};
+
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
   const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError, ownerLogin } = useAuth();
@@ -124,18 +142,11 @@ export default function Dashboard() {
     queryKey: ["/api/coffee-entries", { databaseId: databaseId || "guest" }],
   });
 
-  const handleAddCoffee = async (frontPhotoUrl: string, backPhotoUrl: string | null, data: {
-    roasterName: string;
-    roasterWebsite?: string;
-    farm?: string;
-    origin?: string;
-    variety?: string;
-    processMethod?: string;
-    roastDate?: string;
-    flavorNotes?: string;
-    weight?: string;
-    price?: string;
-  }) => {
+  const handleAddCoffee = async (
+    frontPhotoUrl: string,
+    backPhotoUrl: string | null,
+    data: CoffeeFormData,
+  ) => {
     try {
       const response = await apiRequest("POST", "/api/coffee-entries", {
         frontPhotoUrl,
@@ -219,23 +230,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleEditCoffee = async (data: {
-    roasterName: string;
-    roasterWebsite?: string;
-    farm?: string;
-    origin?: string;
-    variety?: string;
-    processMethod?: string;
-    roastDate?: string;
-    flavorNotes?: string;
-    rating?: number;
-    tastingNotes?: string;
-    weight?: string;
-    price?: string;
-    purchaseAgain?: boolean;
-    frontPhotoUrl?: string | null;
-    backPhotoUrl?: string | null;
-  }) => {
+  const handleEditCoffee = async (data: CoffeeFormData) => {
     if (!editEntry) return;
 
     try {

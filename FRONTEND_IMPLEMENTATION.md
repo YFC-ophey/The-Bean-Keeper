@@ -1,3 +1,14 @@
+# Deprecated
+
+This document is deprecated and kept for historical reference only.
+
+Use the canonical OAuth guide instead:
+- `NOTION_OAUTH_SETUP.md`
+
+Schema reference:
+- `NOTION_DATABASE_STRUCTURE.md`
+
+<!--
 # Frontend Implementation Guide
 
 ## 🎯 Goal
@@ -543,3 +554,4 @@ npm install @tanstack/react-query      # Already installed
 ---
 
 **With this implementation, users never think about syncing - it just works! ✨**
+-->

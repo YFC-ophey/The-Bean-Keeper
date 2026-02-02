@@ -130,7 +130,7 @@ export default function EditCoffeeForm({ entry, onSubmit, onCancel }: EditCoffee
     }
   };
 
-  const uploadPhoto = async (file: File) => {
+  const uploadPhoto = async (file: File): Promise<string> => {
     const uploadResponse = await apiRequest('POST', '/api/upload-url');
     const { uploadURL } = await uploadResponse.json();
 

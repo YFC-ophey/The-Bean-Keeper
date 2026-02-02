@@ -1,3 +1,14 @@
+# Deprecated
+
+This document is deprecated and kept for historical reference only.
+
+Use the canonical OAuth guide instead:
+- `NOTION_OAUTH_SETUP.md`
+
+Schema reference:
+- `NOTION_DATABASE_STRUCTURE.md`
+
+<!--
 # The Bean Keeper - Groq AI & Notion Integration Setup Guide
 
 ## 🎉 Implementation Complete!
@@ -413,3 +424,4 @@ You'll know everything is working when:
 ---
 
 **Happy coffee tracking! ☕️**
+-->

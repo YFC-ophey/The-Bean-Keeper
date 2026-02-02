@@ -1,3 +1,14 @@
+# Deprecated
+
+This document is deprecated and kept for historical reference only.
+
+Use the canonical OAuth guide instead:
+- `NOTION_OAUTH_SETUP.md`
+
+Schema reference:
+- `NOTION_DATABASE_STRUCTURE.md`
+
+<!--
 # Implementation Summary - The Bean Keeper
 
 ## 🎯 Aligned with Your Goal
@@ -330,3 +341,4 @@ Everything is built and ready to go. Just:
 - **User Flow**: See [USER_FLOW.md](USER_FLOW.md)
 
 **All the code is ready - just plug in the frontend! 🚀**
+-->
