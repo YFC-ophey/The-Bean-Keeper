@@ -1,5 +1,11 @@
 # ☕ The Bean Keeper
 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![Uvicorn](https://img.shields.io/badge/Uvicorn-0.30+-4B8BBE.svg)](https://www.uvicorn.org/)
+[![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC.svg)](https://docs.pytest.org/)
+[![License](https://img.shields.io/badge/license-not%20specified-lightgrey.svg)](#license)
+
 A mobile-first coffee tracking application that uses AI and OCR to automatically extract coffee information from bag labels.
 
 ![The Bean Keeper](client/public/logo.jpeg)
