@@ -4,22 +4,18 @@ import { Coffee, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const { t } = useTranslation(['auth', 'common']);
   const [, setLocation] = useLocation();
+  const { login, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [loginStatus, setLoginStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   useEffect(() => {
-    // Check if already logged in
-    fetch('/api/auth/me', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          setLocation('/'); // Redirect to dashboard
-        }
-      })
-      .catch(() => {/* Not logged in, show login page */});
+    if (!isAuthLoading && isAuthenticated) {
+      setLocation('/'); // Redirect to dashboard
+    }
 
     // Check URL params for OAuth callback status
     const params = new URLSearchParams(window.location.search);
@@ -32,11 +28,10 @@ export default function LoginPage() {
     } else if (loginParam === 'error') {
       setLoginStatus('error');
     }
-  }, [setLocation]);
+  }, [setLocation, isAuthenticated, isAuthLoading]);
 
   const handleLogin = () => {
-    // Redirect to Notion OAuth
-    window.location.href = '/api/auth/notion';
+    login();
   };
 
   // Show success state

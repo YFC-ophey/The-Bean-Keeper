@@ -7,11 +7,20 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
 function getHeaders(includeContentType: boolean = false): HeadersInit {
   const headers: HeadersInit = {};
 
   if (includeContentType) {
     headers["Content-Type"] = "application/json";
+  }
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
   }
 
   return headers;
