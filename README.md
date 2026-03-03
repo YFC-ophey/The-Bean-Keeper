@@ -38,7 +38,8 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 ### Backend
 - Express.js + TypeScript
 - Groq AI (Llama 3.1 8B Instant)
-- Notion SDK (database)
+- Supabase Auth (Notion social login)
+- Notion SDK (canonical data store)
 - Render.com Web Services
 - Claudinary Cloud Storage (photos)
 
@@ -54,7 +55,8 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 ### Prerequisites
 - Node.js 18+
 - Groq API key ([groq.com](https://groq.com))
-- Notion Internal Integration ([notion.so/my-integrations](https://notion.so/my-integrations))
+- Supabase project ([supabase.com](https://supabase.com))
+- Notion OAuth provider enabled in Supabase
 - Google Maps API key (optional)
 
 ### Installation
@@ -84,6 +86,12 @@ Create a `.env` file with:
 ```env
 # Required
 GROQ_API_KEY=your_groq_api_key
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional (internal integration utilities)
 NOTION_API_KEY=your_notion_internal_integration_token
 NOTION_DATABASE_ID=your_notion_database_id
 

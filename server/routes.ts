@@ -7,8 +7,7 @@ import { cloudinaryStorageService } from "./cloudinary-storage";
 import { insertCoffeeEntrySchema, updateCoffeeEntrySchema, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
 import { z } from "zod";
 import { extractCoffeeInfoWithAI } from "./groq";
-import { createCoffeeDatabase } from "./notion";
-import { optionalAuth, requireAuth } from "./middleware/auth";
+import { requireAuth } from "./middleware/auth";
 import { duplicateTemplateDatabaseToUserWorkspace } from "./notion-oauth";
 import { saveDatabaseIdForWorkspace } from "./user-database-mapping";
 import {
@@ -18,6 +17,7 @@ import {
   syncNotionEntriesToMirror,
   upsertCoffeeMirrorEntry,
 } from "./supabase-mirror";
+import { sendOperationalAlert } from "./alerts";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_CONTENT_TYPES = new Set([
@@ -163,16 +163,11 @@ function generatePlaceUrl(entry: Partial<InsertCoffeeEntry | UpdateCoffeeEntry> 
 export async function registerRoutes(app: Express): Promise<Server> {
   const objectStorageService = new ObjectStorageService();
 
-  // Middleware to create request-scoped NotionStorage instance
-  // Guest users (no session): Use owner's database from NOTION_DATABASE_ID with internal integration
-  // Authenticated users: Use their own database with their OAuth access token
-  // Also verifies database is accessible before proceeding (clears stale sessions)
-  // IMPORTANT: Creates a NEW storage instance per request to avoid race conditions
-  app.use(['/api/coffee-entries', '/api/sync'], optionalAuth, async (req, res, next) => {
+  // Middleware to create request-scoped NotionStorage instance.
+  // Protected API paths require Supabase auth and a linked Notion state.
+  app.use(['/api/coffee-entries', '/api/sync'], requireAuth, async (req, res, next) => {
     const notionAuthState = req.notionAuthState;
-    const envDbId = process.env.NOTION_DATABASE_ID?.trim();
 
-    // Log which database is being used (helpful for debugging)
     if (req.authUser && notionAuthState?.databaseId && notionAuthState.accessToken) {
       const userDbId = notionAuthState.databaseId;
       const userAccessToken = notionAuthState.accessToken;
@@ -211,26 +206,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-    } else if (req.session.databaseId && req.session.accessToken) {
-      // Legacy fallback path while session-based auth is still being phased out.
-      res.locals.notionStorage = createNotionStorage(req.session.databaseId, req.session.accessToken);
     } else {
-      if (req.authUser) {
-        return res.status(409).json({
-          error: 'Notion account not linked',
-          message: 'Please complete Notion authorization to access your coffee entries',
-        });
-      }
-
-      if (!envDbId) {
-        return res.status(500).json({
-          error: 'Database not configured',
-          message: 'Server configuration error - database ID missing'
-        });
-      }
-
-      // Create request-scoped storage for guest mode (null token = internal integration)
-      res.locals.notionStorage = createNotionStorage(envDbId, null);
+      return res.status(409).json({
+        error: 'Notion account not linked',
+        message: 'Please complete Notion authorization to access your coffee entries',
+      });
     }
 
     next();
@@ -565,6 +545,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Notion-to-Supabase sync failed:", error);
+      await sendOperationalAlert({
+        event: "notion_to_supabase_sync_failed",
+        severity: "error",
+        message: "Notion-to-Supabase sync endpoint failed",
+        metadata: {
+          userId: req.authUser.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       return res.status(500).json({ error: "Failed to sync Notion entries to Supabase mirror" });
     }
   });
@@ -613,6 +602,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Reconcile failed:", error);
+      await sendOperationalAlert({
+        event: "notion_supabase_reconcile_failed",
+        severity: "error",
+        message: "Notion-to-Supabase reconcile endpoint failed",
+        metadata: {
+          userId: req.authUser.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
       await logSyncEvent({
         userId: req.authUser.id,
         direction: 'reconcile',
@@ -659,25 +657,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   }
-
-  // Notion Database Setup
-
-  // Create Notion database
-  app.post("/api/notion/create-database", async (req, res) => {
-    try {
-      const { parentPageId } = req.body;
-
-      if (!parentPageId) {
-        return res.status(400).json({ error: "parentPageId is required" });
-      }
-
-      const databaseId = await createCoffeeDatabase(parentPageId);
-      res.json({ databaseId, message: "Database created successfully" });
-    } catch (error) {
-      console.error("Error creating Notion database:", error);
-      res.status(500).json({ error: "Failed to create Notion database" });
-    }
-  });
 
   const httpServer = createServer(app);
 
