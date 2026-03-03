@@ -15,6 +15,7 @@ import {
   clearUserNotionAuthState,
   saveUserNotionAuthState,
 } from "./notion-auth-state";
+import { upsertNotionConnection } from "./supabase-mirror";
 
 const OWNER_DATABASE_ID = process.env.NOTION_DATABASE_ID?.trim();
 
@@ -98,6 +99,14 @@ export function registerNotionOAuthRoutes(app: Express) {
         databaseId,
         workspaceName,
         isOwner: false,
+      });
+      await upsertNotionConnection(req.authUser.id, {
+        userId: req.authUser.id,
+        accessToken: providerToken,
+        databaseId,
+        workspaceName,
+        isOwner: false,
+        updatedAt: new Date().toISOString(),
       });
 
       return res.json({
