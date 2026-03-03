@@ -27,19 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
 
-  const checkAuth = useCallback(async (sessionIdFromUrl?: string) => {
+  const checkAuth = useCallback(async () => {
     try {
-      // Get stored session ID from localStorage (for ITP/Safari persistence)
-      const storedSessionId = localStorage.getItem('beankeeper_session_id');
       const storedAuthData = localStorage.getItem('beankeeper_auth_data');
-      const sessionIdToUse = sessionIdFromUrl || storedSessionId;
-
-      console.log('🔍 Checking auth...', {
-        sessionIdFromUrl,
-        storedSessionId: storedSessionId ? 'present' : 'absent',
-        storedAuthData: storedAuthData ? 'present' : 'absent',
-        sessionIdToUse: sessionIdToUse ? 'present' : 'absent'
-      });
 
       // Use fetch directly to avoid throwing on 401
       const response = await fetch('/api/auth/me', {
@@ -69,76 +59,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Clean up URL params after successful auth
           const url = new URL(window.location.href);
-          if (url.searchParams.has('login') || url.searchParams.has('sid')) {
+          if (url.searchParams.has('login')) {
             url.searchParams.delete('login');
-            url.searchParams.delete('sid');
             window.history.replaceState({}, '', url.pathname);
           }
           return;
         }
       }
 
-      // Cookie auth failed - try session restore if we have a session ID
-      // This handles mobile browsers where cookies are blocked due to ITP
-      // Check both URL param AND localStorage for session ID
-      if (sessionIdToUse) {
-        console.log('  ⚠️ Cookie auth failed, trying session restore with:', sessionIdToUse.substring(0, 8) + '...');
-
-        const restoreResponse = await fetch('/api/auth/restore', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ sessionId: sessionIdToUse }),
-        });
-
-        if (restoreResponse.ok) {
-          const restoreData = await restoreResponse.json();
-          console.log('  /api/auth/restore response:', restoreData);
-
-          if (restoreData.authenticated) {
-            console.log('  ✅ Authenticated via session restore');
-            setIsAuthenticated(true);
-            setWorkspaceName(restoreData.workspaceName);
-            setDatabaseId(restoreData.databaseId);
-            setIsOwner(restoreData.isOwner || false);
-
-            // Invalidate coffee entries cache to force fresh fetch for this user's database
-            invalidateCoffeeEntries();
-
-            // Store the session ID in localStorage for future page loads (ITP workaround)
-            if (sessionIdFromUrl) {
-              localStorage.setItem('beankeeper_session_id', sessionIdFromUrl);
-              console.log('  💾 Saved session ID to localStorage');
-            }
-
-            // Store auth data for persistence
-            localStorage.setItem('beankeeper_auth_data', JSON.stringify({
-              databaseId: restoreData.databaseId,
-              workspaceName: restoreData.workspaceName,
-              isOwner: restoreData.isOwner || false,
-            }));
-
-            // Clean up URL params after successful auth
-            const url = new URL(window.location.href);
-            url.searchParams.delete('login');
-            url.searchParams.delete('sid');
-            window.history.replaceState({}, '', url.pathname);
-            return;
-          }
-        } else {
-          console.log('  ❌ Session restore failed:', restoreResponse.status);
-          // If restore failed, clear the stored session ID
-          localStorage.removeItem('beankeeper_session_id');
-        }
-      }
-
-      // Cookie and session restore failed - clear stale localStorage data
+      // Cookie auth failed - clear stale localStorage data
       // SECURITY: Never trust localStorage without server validation
       // Both owner and OAuth users must re-authenticate if session is gone
       if (storedAuthData) {
         console.log('  🔒 Session expired - clearing stale auth data, user must re-authenticate');
         localStorage.removeItem('beankeeper_auth_data');
-        localStorage.removeItem('beankeeper_session_id');
       }
 
       // Not authenticated
@@ -162,15 +96,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for OAuth callback params
     const params = new URLSearchParams(window.location.search);
     const loginStatus = params.get('login');
-    const sessionId = params.get('sid'); // Session ID for mobile fallback
 
-    console.log('🚀 AuthContext useEffect:', { loginStatus, sessionId: sessionId ? 'present' : 'absent' });
+    console.log('🚀 AuthContext useEffect:', { loginStatus });
 
     if (loginStatus === 'success') {
       // Just returned from OAuth - mark as just logged in and check auth
-      // Pass session ID for mobile browsers where cookies may be blocked
       setJustLoggedIn(true);
-      checkAuth(sessionId || undefined);
+      checkAuth();
     } else if (loginStatus === 'no_pages') {
       // User didn't share any pages during OAuth - show helpful message
       console.log('🔴 OAuth failed: User did not share any pages');
@@ -189,7 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clean up URL
       const url = new URL(window.location.href);
       url.searchParams.delete('login');
-      url.searchParams.delete('sid');
       window.history.replaceState({}, '', url.pathname);
     } else {
       // Normal page load - check auth
@@ -207,8 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         credentials: 'include',
       });
-      // Clear session ID from localStorage (ITP workaround)
-      localStorage.removeItem('beankeeper_session_id');
       // Clear owner auth data from localStorage
       localStorage.removeItem('beankeeper_auth_data');
       console.log('🚪 Logged out, cleared session from localStorage');
