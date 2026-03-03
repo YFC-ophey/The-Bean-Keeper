@@ -8,7 +8,7 @@ import { insertCoffeeEntrySchema, updateCoffeeEntrySchema, type InsertCoffeeEntr
 import { z } from "zod";
 import { extractCoffeeInfoWithAI } from "./groq";
 import { createCoffeeDatabase } from "./notion";
-import { requireAuth } from "./middleware/auth";
+import { optionalAuth, requireAuth } from "./middleware/auth";
 import { duplicateTemplateDatabaseToUserWorkspace } from "./notion-oauth";
 import { saveDatabaseIdForWorkspace } from "./user-database-mapping";
 
@@ -161,74 +161,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authenticated users: Use their own database with their OAuth access token
   // Also verifies database is accessible before proceeding (clears stale sessions)
   // IMPORTANT: Creates a NEW storage instance per request to avoid race conditions
-  app.use('/api/coffee-entries', async (req, res, next) => {
-    const sessionDbId = req.session.databaseId;
-    const sessionAccessToken = req.session.accessToken;
+  app.use('/api/coffee-entries', optionalAuth, async (req, res, next) => {
+    const notionAuthState = req.notionAuthState;
     const envDbId = process.env.NOTION_DATABASE_ID?.trim();
 
     // Log which database is being used (helpful for debugging)
-    if (sessionDbId && sessionAccessToken) {
-      console.log(`📝 Checking USER's database: ${sessionDbId.substring(0, 8)}... (with OAuth token)`);
+    if (req.authUser && notionAuthState?.databaseId && notionAuthState.accessToken) {
+      const userDbId = notionAuthState.databaseId;
+      const userAccessToken = notionAuthState.accessToken;
+      console.log(`Checking user's Notion database access`);
 
       // Verify the database is still accessible with user's token
       // This catches stale sessions where the user revoked access or database was deleted
       try {
         const { Client } = await import("@notionhq/client");
-        const userClient = new Client({ auth: sessionAccessToken });
-        await userClient.databases.retrieve({ database_id: sessionDbId });
-        console.log(`✅ Database verified accessible`);
+        const userClient = new Client({ auth: userAccessToken });
+        await userClient.databases.retrieve({ database_id: userDbId });
         // Create request-scoped storage with user's credentials
-        res.locals.notionStorage = createNotionStorage(sessionDbId, sessionAccessToken);
+        res.locals.notionStorage = createNotionStorage(userDbId, userAccessToken);
       } catch (error: any) {
-        console.log(`⚠️ User's database not accessible: ${error.code || error.message}`);
-        console.log(`🔍 Searching for user's existing database...`);
+        console.log(`User database lookup failed: ${error.code || error.message}`);
 
         // Don't immediately fall back to guest mode - try to find the user's database
         try {
           // Use the access token to search for their existing database
-          const foundDatabaseId = await duplicateTemplateDatabaseToUserWorkspace(sessionAccessToken);
+          const foundDatabaseId = await duplicateTemplateDatabaseToUserWorkspace(userAccessToken);
 
           if (foundDatabaseId) {
-            console.log(`✅ Found user's database: ${foundDatabaseId.substring(0, 8)}...`);
-
-            // Update session with correct database ID
-            req.session.databaseId = foundDatabaseId;
-
-            // Save the mapping for future reference (if we have workspace info)
-            if (req.session.userId) {
-              // Note: userId in our session is actually the bot_id/workspace_id
-              saveDatabaseIdForWorkspace(req.session.userId, foundDatabaseId, req.session.workspaceName);
-            }
+            // Save the mapping for future reference
+            saveDatabaseIdForWorkspace(req.authUser.id, foundDatabaseId, notionAuthState.workspaceName);
 
             // Create request-scoped storage with found database
-            res.locals.notionStorage = createNotionStorage(foundDatabaseId, sessionAccessToken);
+            res.locals.notionStorage = createNotionStorage(foundDatabaseId, userAccessToken);
           } else {
             throw new Error('No database found or created');
           }
         } catch (searchError: any) {
-          console.log(`❌ Could not find/create database: ${searchError.message}`);
-          console.log(`🔄 Clearing stale session, falling back to guest mode`);
-
-          // Clear the stale session data
-          req.session.databaseId = undefined;
-          req.session.accessToken = undefined;
-          req.session.workspaceName = undefined;
-
-          // Fall back to guest mode (owner's database)
-          if (envDbId) {
-            console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
-            // Create request-scoped storage for guest mode (null token = internal integration)
-            res.locals.notionStorage = createNotionStorage(envDbId, null);
-          } else {
-            return res.status(500).json({
-              error: 'Database not configured',
-              message: 'Server configuration error - database ID missing'
-            });
-          }
+          console.log(`Could not find/create database for authenticated user: ${searchError.message}`);
+          return res.status(409).json({
+            error: 'Notion database unavailable',
+            message: 'Please reconnect your Notion account',
+          });
         }
       }
+    } else if (req.session.databaseId && req.session.accessToken) {
+      // Legacy fallback path while session-based auth is still being phased out.
+      res.locals.notionStorage = createNotionStorage(req.session.databaseId, req.session.accessToken);
     } else {
-      console.log(`👀 Using OWNER's database (guest mode): ${envDbId?.substring(0, 8)}...`);
+      if (req.authUser) {
+        return res.status(409).json({
+          error: 'Notion account not linked',
+          message: 'Please complete Notion authorization to access your coffee entries',
+        });
+      }
 
       if (!envDbId) {
         return res.status(500).json({
