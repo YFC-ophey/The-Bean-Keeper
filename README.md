@@ -23,8 +23,6 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 
 ## ☕️ Website 👉🏼 [Here](https://the-bean-keeper.onrender.com/)
 
-## 🚀 Demo Video 🔗 [Here](https://console.cloudinary.com/app/c-f677637fce2b8033aabc471a5f5d44/assets/media_library/search/asset/cba114c93799505d0e45a9974ff1e5d8/manage/summary?q=&view_mode=list&context=manage)
-
 ## 🛠️ Tech Stack
 
 ### Frontend
