@@ -21,9 +21,9 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 - 📱 **Mobile-Optimized**: Dual photo upload (camera + file picker), responsive design
 - ☕ **Vintage Aesthetic**: Coffee journal-inspired design with warm brown color palette
 
-## 🚀 Live Demo
+## 🚀 Demo Video 
 
-**Coming soon:** `https://the-bean-keeper.onrender.com`
+(![Link here] (https://res.cloudinary.com/dog6jqdmz/video/upload/v1769561616/bean-keeper-demo-v1_mgiyst.mp4))
 
 ## 🛠️ Tech Stack
 
