@@ -6,6 +6,14 @@ A mobile-first coffee tracking application that integrates multiple AI providers
 
 **Live:** [the-bean-keeper.onrender.com](https://the-bean-keeper.onrender.com)
 
+## Demo Video
+
+<a href="docs/bean-keeper-demo.mp4">
+  <img src="docs/bean-keeper-demo-preview.gif" alt="The Bean Keeper demo video preview" width="320">
+</a>
+
+Watch or download the full **[The Bean Keeper demo video](docs/bean-keeper-demo.mp4)**.
+
 ## Why This Project
 
 This started as a personal tool and became a proving ground for multi-provider AI integration. Each AI provider was selected for what it does best:
