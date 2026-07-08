@@ -14,7 +14,6 @@ interface AuthContextType {
   clearAuthError: () => void;
   login: () => void;
   logout: () => Promise<void>;
-  ownerLogin: (password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,21 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      // Legacy fallback path if Supabase is not configured yet.
       if (!isSupabaseConfigured || !supabase) {
-        const response = await fetch('/api/auth/me', { credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.authenticated) {
-            setIsAuthenticated(true);
-            setWorkspaceName(data.workspaceName);
-            setDatabaseId(data.databaseId);
-            setIsOwner(data.isOwner || false);
-            invalidateCoffeeEntries();
-            return;
-          }
-        }
-
         clearLocalAuth();
         return;
       }
@@ -179,17 +164,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkAuth, clearLocalAuth]);
 
   const login = () => {
-    if (isSupabaseConfigured && supabase) {
-      void supabase.auth.signInWithOAuth({
-        provider: 'notion',
-        options: {
-          redirectTo: `${window.location.origin}/?login=success`,
-        },
-      });
+    if (!isSupabaseConfigured || !supabase) {
+      setAuthError('LOGIN_FAILED');
       return;
     }
 
-    window.location.href = '/api/auth/notion';
+    void supabase.auth.signInWithOAuth({
+      provider: 'notion',
+      options: {
+        redirectTo: `${window.location.origin}/?login=success`,
+      },
+    });
   };
 
   const logout = async () => {
@@ -222,41 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const ownerLogin = async (_password: string): Promise<boolean> => {
-    if (isSupabaseConfigured) {
-      return false;
-    }
-
-    try {
-      const response = await fetch('/api/auth/owner', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ password: _password }),
-      });
-
-      if (!response.ok) {
-        return false;
-      }
-
-      const data = await response.json();
-      if (data.authenticated) {
-        setIsAuthenticated(true);
-        setWorkspaceName(data.workspaceName);
-        setDatabaseId(data.databaseId);
-        setIsOwner(true);
-        setJustLoggedIn(true);
-        invalidateCoffeeEntries();
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Owner login error:', error);
-      return false;
-    }
-  };
-
   const clearJustLoggedIn = useCallback(() => {
     setJustLoggedIn(false);
   }, []);
@@ -278,7 +228,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearAuthError,
       login,
       logout,
-      ownerLogin,
     }}>
       {children}
     </AuthContext.Provider>

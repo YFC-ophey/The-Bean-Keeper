@@ -70,6 +70,18 @@ export async function upsertNotionConnection(userId: string, state: UserNotionAu
   }
 }
 
+export async function deleteNotionConnection(userId: string): Promise<void> {
+  const client = ensureSupabaseClient();
+  if (!client) {
+    return;
+  }
+
+  const { error } = await client.from('notion_connections').delete().eq('user_id', userId);
+  if (error) {
+    throw error;
+  }
+}
+
 export async function upsertCoffeeMirrorEntry(userId: string, entry: CoffeeEntry): Promise<void> {
   const client = ensureSupabaseClient();
   if (!client) {
