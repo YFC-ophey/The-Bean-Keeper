@@ -33,7 +33,6 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotionButton from "@/components/NotionButton";
 import AboutSection from "@/components/AboutSection";
 import { NotionAuthModal } from "@/components/NotionAuthModal";
-import { OwnerLoginSection } from "@/components/OwnerLoginSection";
 import { CoffeeEntry } from "@shared/schema";
 import { invalidateCoffeeEntries, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +58,7 @@ type CoffeeFormData = {
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError, ownerLogin } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -136,10 +135,10 @@ export default function Dashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHeaderVisible]);
 
-  // Include databaseId in query key to separate cache between guest (owner's DB) and authenticated users
-  // This prevents stale guest data from showing after OAuth login
+  // Include databaseId in query key so cache is scoped per authenticated workspace.
   const { data: entries = [], isLoading } = useQuery<CoffeeEntry[]>({
-    queryKey: ["/api/coffee-entries", { databaseId: databaseId || "guest" }],
+    queryKey: ["/api/coffee-entries", { databaseId: databaseId || "auth" }],
+    enabled: !isAuthLoading && isAuthenticated,
   });
 
   const handleAddCoffee = async (
@@ -436,7 +435,7 @@ export default function Dashboard() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.location.href = '/api/auth/notion'}
+                    onClick={login}
                     disabled={isAuthLoading}
                     className="flex items-center gap-1 px-2 py-1.5 min-h-[36px] text-xs bg-white border-[#E3E2E0] hover:bg-[#F7F6F5]"
                     aria-label="Login with Notion"
@@ -458,7 +457,7 @@ export default function Dashboard() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.location.href = '/api/auth/notion'}
+                  onClick={login}
                   disabled={isAuthLoading}
                   className="flex items-center gap-2 bg-white border-[#E3E2E0] hover:bg-[#F7F6F5] text-[#37352F]"
                   aria-label="Login with Notion"
@@ -773,10 +772,6 @@ export default function Dashboard() {
         mode={authModalMode}
       />
 
-      {/* Owner Login Section - Bottom of page for guests only */}
-      {!isAuthenticated && (
-        <OwnerLoginSection ownerLogin={ownerLogin} />
-      )}
     </div>
   );
 }

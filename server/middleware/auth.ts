@@ -40,18 +40,7 @@ async function hydrateAuthFromBearerToken(req: Request): Promise<void> {
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   await hydrateAuthFromBearerToken(req);
 
-  if (!req.authUser && req.session.accessToken && req.session.databaseId) {
-    req.notionAuthState = {
-      userId: req.session.userId || "legacy-session",
-      accessToken: req.session.accessToken,
-      databaseId: req.session.databaseId,
-      workspaceName: req.session.workspaceName,
-      isOwner: req.session.isOwner || false,
-      updatedAt: new Date().toISOString(),
-    };
-  }
-
-  if (!req.authUser && !req.notionAuthState) {
+  if (!req.authUser) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Please sign in to access this resource',
