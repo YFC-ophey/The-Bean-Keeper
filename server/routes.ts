@@ -1,4 +1,4 @@
-import type { Express, Response } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { NotionStorage, createNotionStorage } from "./notion-storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -11,6 +11,18 @@ import { createCoffeeDatabase } from "./notion";
 import { requireAuth } from "./middleware/auth";
 import { duplicateTemplateDatabaseToUserWorkspace } from "./notion-oauth";
 import { saveDatabaseIdForWorkspace } from "./user-database-mapping";
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
+const ALLOWED_IMAGE_CONTENT_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
+const UUID_V4_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Extend Express Response.locals to include our request-scoped storage
 declare module 'express-serve-static-core' {
@@ -27,6 +39,61 @@ function getStorage(res: Response): NotionStorage {
     throw new Error('NotionStorage not initialized for this request');
   }
   return res.locals.notionStorage;
+}
+
+function normalizeContentType(contentTypeHeader: string | string[] | undefined): string {
+  if (!contentTypeHeader) {
+    return "";
+  }
+  const raw = Array.isArray(contentTypeHeader) ? contentTypeHeader[0] : contentTypeHeader;
+  return raw.split(";")[0].trim().toLowerCase();
+}
+
+function isValidUploadFileId(fileId: string): boolean {
+  return UUID_V4_PATTERN.test(fileId);
+}
+
+async function readUploadBuffer(req: Request): Promise<Buffer> {
+  return await new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    let rejected = false;
+
+    req.on("data", (chunk: Buffer) => {
+      if (rejected) {
+        return;
+      }
+
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_UPLOAD_BYTES) {
+        rejected = true;
+        reject(new Error("PAYLOAD_TOO_LARGE"));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    req.on("end", () => {
+      if (!rejected) {
+        resolve(Buffer.concat(chunks));
+      }
+    });
+
+    req.on("error", (err) => {
+      if (!rejected) {
+        rejected = true;
+        reject(err);
+      }
+    });
+
+    req.on("aborted", () => {
+      if (!rejected) {
+        rejected = true;
+        reject(new Error("REQUEST_ABORTED"));
+      }
+    });
+  });
 }
 
 /**
@@ -194,24 +261,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get upload URL for photo - use Cloudinary if configured, otherwise local storage
   app.post("/api/upload-url", requireAuth, async (req, res) => {
     try {
-      console.log("📷 Upload URL request");
-      console.log("  Session databaseId:", req.session.databaseId ? 'SET' : 'NOT SET');
-      console.log("  Session accessToken:", req.session.accessToken ? 'SET' : 'NOT SET');
-      console.log("  Cookie header:", req.headers.cookie ? 'present' : 'missing');
-
       // Prefer Cloudinary if configured
       if (cloudinaryStorageService.isConfigured()) {
         const uploadURL = await cloudinaryStorageService.getUploadURL();
-        console.log("  ✓ Cloudinary URL generated:", uploadURL);
         res.json({ uploadURL });
       } else {
         // Fallback to local storage
         const uploadURL = await localStorageService.getUploadURL();
-        console.log("  ✓ Local URL generated:", uploadURL);
         res.json({ uploadURL });
       }
     } catch (error) {
-      console.error("❌ Error generating upload URL:", error);
+      console.error("Error generating upload URL:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to generate upload URL", details: errorMessage });
     }
@@ -221,18 +281,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/local-upload/:fileId", requireAuth, async (req, res) => {
     try {
       const { fileId } = req.params;
-      const contentType = req.headers['content-type'] || 'image/jpeg';
+      const contentType = normalizeContentType(req.headers['content-type']);
 
-      // Collect the raw body data
-      const chunks: Buffer[] = [];
-      req.on('data', (chunk) => chunks.push(chunk));
-      req.on('end', async () => {
-        const buffer = Buffer.concat(chunks);
-        const fileUrl = await localStorageService.saveFile(fileId, buffer, contentType);
-        res.json({ url: fileUrl });
-      });
+      if (!isValidUploadFileId(fileId)) {
+        return res.status(400).json({ error: "Invalid upload identifier" });
+      }
+      if (!ALLOWED_IMAGE_CONTENT_TYPES.has(contentType)) {
+        return res.status(415).json({ error: "Unsupported media type" });
+      }
+
+      const buffer = await readUploadBuffer(req);
+      const fileUrl = await localStorageService.saveFile(fileId, buffer, contentType);
+      res.json({ url: fileUrl });
     } catch (error) {
       console.error("Error uploading file:", error);
+      if (error instanceof Error && error.message === "PAYLOAD_TOO_LARGE") {
+        return res.status(413).json({ error: "File too large" });
+      }
+      if (error instanceof Error && error.message === "REQUEST_ABORTED") {
+        return res.status(400).json({ error: "Upload aborted" });
+      }
       res.status(500).json({ error: "Failed to upload file" });
     }
   });
@@ -241,29 +309,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/cloudinary-upload/:fileId", requireAuth, async (req, res) => {
     try {
       const { fileId } = req.params;
-      const contentType = req.headers['content-type'] || 'image/jpeg';
-      console.log("📷 Cloudinary upload request:", { fileId, contentType });
-      console.log("  Session databaseId:", req.session.databaseId ? 'SET' : 'NOT SET');
-      console.log("  Session accessToken:", req.session.accessToken ? 'SET' : 'NOT SET');
+      const contentType = normalizeContentType(req.headers['content-type']);
 
-      // Collect the raw body data
-      const chunks: Buffer[] = [];
-      req.on('data', (chunk) => chunks.push(chunk));
-      req.on('end', async () => {
-        try {
-          const buffer = Buffer.concat(chunks);
-          console.log("  Buffer size:", buffer.length);
-          const fileUrl = await cloudinaryStorageService.saveFile(fileId, buffer, contentType);
-          console.log("  ✓ Upload successful:", fileUrl);
-          res.json({ url: fileUrl });
-        } catch (uploadError) {
-          console.error("❌ Error uploading to Cloudinary:", uploadError);
-          const errorMessage = uploadError instanceof Error ? uploadError.message : "Unknown error";
-          res.status(500).json({ error: "Failed to upload file to Cloudinary", details: errorMessage });
-        }
-      });
+      if (!isValidUploadFileId(fileId)) {
+        return res.status(400).json({ error: "Invalid upload identifier" });
+      }
+      if (!ALLOWED_IMAGE_CONTENT_TYPES.has(contentType)) {
+        return res.status(415).json({ error: "Unsupported media type" });
+      }
+
+      const buffer = await readUploadBuffer(req);
+      const fileUrl = await cloudinaryStorageService.saveFile(fileId, buffer, contentType);
+      res.json({ url: fileUrl });
     } catch (error) {
-      console.error("❌ Error in Cloudinary upload endpoint:", error);
+      console.error("Error in Cloudinary upload endpoint:", error);
+      if (error instanceof Error && error.message === "PAYLOAD_TOO_LARGE") {
+        return res.status(413).json({ error: "File too large" });
+      }
+      if (error instanceof Error && error.message === "REQUEST_ABORTED") {
+        return res.status(400).json({ error: "Upload aborted" });
+      }
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: "Failed to upload file", details: errorMessage });
     }
@@ -273,6 +338,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/local-files/:filename", async (req, res) => {
     try {
       const { filename } = req.params;
+
+      if (!localStorageService.isSafeUploadFilename(filename)) {
+        return res.status(400).json({ error: "Invalid filename" });
+      }
+
       const exists = await localStorageService.fileExists(filename);
 
       if (!exists) {
@@ -318,24 +388,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create coffee entry (protected - requires authentication)
   app.post("/api/coffee-entries", requireAuth, async (req, res) => {
     try {
-      console.log("📝 Creating coffee entry...");
-      console.log("  Session databaseId:", req.session.databaseId);
-      console.log("  Session accessToken:", req.session.accessToken ? 'SET' : 'NOT SET');
+      console.log("Creating coffee entry");
 
       // Validate request body
       const validatedData = insertCoffeeEntrySchema.parse(req.body);
-      console.log("  ✓ Request body validated");
-
       // Normalize photo URLs if they're presigned URLs
       const frontPhotoUrl = objectStorageService.normalizeObjectEntityPath(validatedData.frontPhotoUrl);
       const backPhotoUrl = validatedData.backPhotoUrl
         ? objectStorageService.normalizeObjectEntityPath(validatedData.backPhotoUrl)
         : null;
-      console.log("  ✓ Photo URLs normalized:", { frontPhotoUrl, backPhotoUrl });
 
       // Generate Google Maps Place URL
       const placeUrl = generatePlaceUrl(validatedData);
-      console.log("  ✓ Place URL generated");
 
       const storage = getStorage(res);
       const entry = await storage.createCoffeeEntry({
@@ -345,7 +409,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         placeUrl,
       });
 
-      console.log(`✓ Entry created in Notion with ID: ${entry.id}`);
       res.status(201).json(entry);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -450,40 +513,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Diagnostic endpoint to check environment
-  app.get("/api/debug/env", (_req, res) => {
-    const cloudinaryConfigured = cloudinaryStorageService.isConfigured();
-    res.json({
-      nodeEnv: process.env.NODE_ENV,
-      hasGroqKey: !!process.env.GROQ_API_KEY,
-      hasNotionKey: !!process.env.NOTION_API_KEY,
-      hasNotionDb: !!process.env.NOTION_DATABASE_ID,
-      hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_API_KEY,
-      hasPrivateObjectDir: !!process.env.PRIVATE_OBJECT_DIR,
-      hasCloudinary: cloudinaryConfigured,
-      port: process.env.PORT || '5000',
-      storageMode: cloudinaryConfigured ? 'cloudinary (persistent)' : 'local (ephemeral)'
-    });
-  });
-
-  // Test Groq API connectivity
-  app.get("/api/debug/groq", async (_req, res) => {
-    try {
-      const testResult = await extractCoffeeInfoWithAI("Happy Goat Coffee, Ottawa, Canada. Ethiopia Washed. Blueberry notes.");
+  if (process.env.NODE_ENV !== "production") {
+    // Diagnostic endpoint to check environment
+    app.get("/api/debug/env", (_req, res) => {
+      const cloudinaryConfigured = cloudinaryStorageService.isConfigured();
       res.json({
-        success: Object.keys(testResult).length > 0,
-        extracted: testResult,
-        message: Object.keys(testResult).length > 0
-          ? "Groq API is working"
-          : "Groq API returned empty result - check server logs for errors"
+        nodeEnv: process.env.NODE_ENV,
+        hasGroqKey: !!process.env.GROQ_API_KEY,
+        hasNotionKey: !!process.env.NOTION_API_KEY,
+        hasNotionDb: !!process.env.NOTION_DATABASE_ID,
+        hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_API_KEY,
+        hasPrivateObjectDir: !!process.env.PRIVATE_OBJECT_DIR,
+        hasCloudinary: cloudinaryConfigured,
+        port: process.env.PORT || '5000',
+        storageMode: cloudinaryConfigured ? 'cloudinary (persistent)' : 'local (ephemeral)'
       });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
+    });
+
+    // Test Groq API connectivity
+    app.get("/api/debug/groq", async (_req, res) => {
+      try {
+        const testResult = await extractCoffeeInfoWithAI("Happy Goat Coffee, Ottawa, Canada. Ethiopia Washed. Blueberry notes.");
+        res.json({
+          success: Object.keys(testResult).length > 0,
+          extracted: testResult,
+          message: Object.keys(testResult).length > 0
+            ? "Groq API is working"
+            : "Groq API returned empty result - check server logs for errors"
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    });
+  }
 
   // Notion Database Setup
 
