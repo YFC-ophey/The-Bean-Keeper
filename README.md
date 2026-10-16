@@ -1,53 +1,61 @@
-# ☕ The Bean Keeper
+# The Bean Keeper
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
 [![Express](https://img.shields.io/badge/Express-4-333.svg)](https://expressjs.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-A mobile-first coffee tracking application that uses AI and OCR to automatically extract coffee information from bag labels.
+A mobile-first coffee tracking application that integrates multiple AI providers (Groq/Llama, Google Gemini, Tesseract OCR) to automatically extract, structure, and enrich coffee data from bag label photos.
 
 ![The Bean Keeper](client/public/logo.jpeg)
 
-## 🌟 Features
+**Live:** [the-bean-keeper.onrender.com](https://the-bean-keeper.onrender.com)
 
-- 📸 **AI-Powered Extraction**: Upload coffee bag photos → Groq AI (Llama 3.1 8B) automatically extracts roaster, origin, variety, process method, and more
-- 🌍 **Bilingual Interface**: Full support for English and Traditional Chinese (繁體中文)
-- 🔍 **Advanced Filtering**: Filter by roast level, rating, origin with dynamic sort options
-- 📊 **Collection Statistics**: Track your coffee journey with insights and analytics
-- ⭐ **Rating System**: 5-star ratings with tasting notes
-- 🗺️ **Auto-Generated Maps**: Google Maps links for every roaster
-- 📱 **Mobile-Optimized**: Dual photo upload (camera + file picker), responsive design
-- ☕ **Vintage Aesthetic**: Coffee journal-inspired design with warm brown color palette
+## Demo Video
 
-## 🚀 Live Demo
+<a href="docs/bean-keeper-demo.mp4">
+  <img src="docs/bean-keeper-demo-preview.gif" alt="The Bean Keeper demo video preview" width="320">
+</a>
 
-Render service: [the-bean-keeper.onrender.com](https://the-bean-keeper.onrender.com). Check `/api/health` for current availability.
+Watch or download the full **[The Bean Keeper demo video](docs/bean-keeper-demo.mp4)**.
 
-## 🛠️ Tech Stack
+## Why This Project
 
-### Frontend
-- React 18 + TypeScript + Vite
-- TanStack Query (React Query)
-- Wouter (routing)
-- shadcn/ui + Tailwind CSS
-- Tesseract.js (OCR)
-- i18next (internationalization)
+This started as a personal tool and became a proving ground for multi-provider AI integration. Each AI provider was selected for what it does best:
 
-### Backend
-- Express.js + TypeScript
-- Groq AI (Llama 3.1 8B Instant)
-- Supabase Auth (Notion social login)
-- Notion SDK (canonical data store)
-- Render.com Web Services
-- Cloudinary Cloud Storage (photos)
+- **Groq (Llama 3.1 8B)** for structured data extraction: fast inference, JSON mode, low cost per call. Chosen over GPT/Claude for this task because extraction needs speed, not reasoning depth.
+- **Google Gemini Pro** for video generation pipeline: multimodal capabilities for converting screen recordings into polished product demos.
+- **Tesseract.js** for client-side OCR: runs in the browser, zero API cost, handles multilingual text (English + Chinese).
+- **ElevenLabs** for voice synthesis in the video pipeline.
 
-### AI/ML Pipeline
-1. User uploads coffee bag photo
-2. Tesseract.js extracts text (client-side)
-3. Groq AI structures the data (server-side)
-4. Form auto-fills with extracted information
-5. User reviews and saves to Notion
+If AI extraction fails, regex-based extraction catches common patterns. The app can use local photo storage during development; production uploads need persistent storage.
+
+## Features
+
+- **AI-Powered Extraction**: Upload coffee bag photos. AI extracts roaster, origin, variety, process method, roast level, and more.
+- **Bilingual Interface**: Full English and Traditional Chinese support with auto-detection
+- **Supabase Auth with Notion**: Users sign in through Notion and get their own coffee database
+- **Guest Mode**: Browse the owner's collection without logging in (read-only)
+- **Advanced Filtering**: Filter by roast level, rating, origin with dynamic sort
+- **AI Video Pipeline**: Converts screen recordings into product demos (Remotion + Gemini + ElevenLabs) at $0 cost
+- **Mobile-First**: Dual photo upload (camera + file picker), responsive 2-5 column grid
+
+## Tech Stack
+
+### AI / ML Pipeline
+| Layer | Provider | Why This Provider |
+|-------|----------|-------------------|
+| OCR | Tesseract.js (client-side) | Zero API cost, browser-native, multilingual |
+| Data extraction | Groq AI (Llama 3.1 8B) | Fast inference, JSON mode, structured output |
+| Video generation | Gemini Pro (Google) | Multimodal, long context for video scripts |
+| Voice synthesis | ElevenLabs | Natural speech for product demos |
+| Fallback | Regex patterns | Graceful degradation when AI fails |
+
+### Application
+- **Frontend**: React 18, TypeScript, Vite, TanStack Query, shadcn/ui, Tailwind CSS
+- **Backend**: Express.js, TypeScript, Notion SDK, Cloudinary
+- **Auth**: Supabase Auth with Notion provider and Bearer token verification
+- **Deployment**: Render.com with Cloudinary for persistent photo storage
 
 ## 📦 Quick Start
 
