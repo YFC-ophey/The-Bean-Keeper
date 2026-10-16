@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Coffee, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,33 +9,21 @@ import { useAuth } from '@/context/AuthContext';
 export default function LoginPage() {
   const { t } = useTranslation(['auth', 'common']);
   const [, setLocation] = useLocation();
-  const { login, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const [loginStatus, setLoginStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const { login, isAuthenticated, isLoading: isAuthLoading, authError, clearAuthError } = useAuth();
 
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
       setLocation('/'); // Redirect to dashboard
     }
 
-    // Check URL params for OAuth callback status
-    const params = new URLSearchParams(window.location.search);
-    const loginParam = params.get('login');
-
-    if (loginParam === 'success') {
-      setLoginStatus('success');
-      // Redirect to dashboard after short delay
-      setTimeout(() => setLocation('/'), 1000);
-    } else if (loginParam === 'error') {
-      setLoginStatus('error');
-    }
   }, [setLocation, isAuthenticated, isAuthLoading]);
 
   const handleLogin = () => {
+    clearAuthError();
     login();
   };
 
-  // Show success state
-  if (loginStatus === 'success') {
+  if (isAuthLoading || isAuthenticated) {
     return (
       <div className="min-h-screen bg-background coffee-texture flex items-center justify-center p-4">
         <div className="text-center">
@@ -95,7 +83,7 @@ export default function LoginPage() {
           </div>
 
           {/* Error Message */}
-          {loginStatus === 'error' && (
+          {authError && (
             <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
               <p className="text-sm text-red-800 font-serif text-center">
                 {t('auth:login.error')}

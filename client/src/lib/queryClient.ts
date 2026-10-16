@@ -33,9 +33,9 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
+    credentials: "omit",
     headers: getHeaders(!!data),
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
   });
 
   await throwIfResNotOk(res);
@@ -63,7 +63,7 @@ export const getQueryFn: <T>(options: {
       : baseUrl;
 
     const res = await fetch(requestUrl, {
-      credentials: "include",
+      credentials: "omit",
       headers: getHeaders(false),
     });
 

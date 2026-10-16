@@ -33,7 +33,7 @@ create table if not exists public.coffee_entries_mirror (
   roast_level text,
   roast_date text,
   flavor_notes jsonb,
-  rating integer,
+  rating integer check (rating between 1 and 5),
   tasting_notes text,
   weight text,
   price text,
@@ -42,7 +42,7 @@ create table if not exists public.coffee_entries_mirror (
   back_photo_url text,
   source_updated_at timestamptz,
   mirrored_at timestamptz,
-  sync_status text not null default 'in_sync',
+  sync_status text not null default 'in_sync' check (sync_status in ('in_sync', 'pending', 'error')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique(user_id, notion_page_id)
@@ -52,11 +52,16 @@ create table if not exists public.sync_events (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
   notion_page_id text,
-  direction text not null,
-  result text not null,
+  direction text not null check (direction in ('notion_to_supabase', 'supabase_to_notion', 'reconcile')),
+  result text not null check (result in ('success', 'error')),
   details text,
   created_at timestamptz not null default now()
 );
+
+create index if not exists coffee_entries_mirror_user_id_idx
+  on public.coffee_entries_mirror (user_id);
+create index if not exists sync_events_user_created_at_idx
+  on public.sync_events (user_id, created_at desc);
 
 alter table public.profiles enable row level security;
 alter table public.notion_connections enable row level security;

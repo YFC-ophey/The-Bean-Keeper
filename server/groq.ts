@@ -101,8 +101,8 @@ Important: Return only clean text without OCR artifacts like special characters,
       // Normalize spacing around commas for multi-country origins
       result.origin = parsed.origin
         .split(',')
-        .map(o => o.trim())
-        .filter(o => o.length > 0)
+        .map((o: string) => o.trim())
+        .filter((o: string) => o.length > 0)
         .join(', ');
     }
     if (parsed.variety && typeof parsed.variety === 'string') {

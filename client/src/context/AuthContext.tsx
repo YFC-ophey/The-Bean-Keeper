@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { invalidateCoffeeEntries, setAuthToken } from '@/lib/queryClient';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { trackEvent } from '@/lib/analytics';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -10,6 +11,7 @@ interface AuthContextType {
   justLoggedIn: boolean;
   authError: string | null;
   isOwner: boolean;
+  notionLinked: boolean;
   clearJustLoggedIn: () => void;
   clearAuthError: () => void;
   login: () => void;
@@ -26,11 +28,11 @@ type SupabaseSessionWithProviderToken = {
 async function linkNotionProviderToken(accessToken: string, providerToken: string) {
   const response = await fetch('/api/auth/notion/link-provider-token', {
     method: 'POST',
+    credentials: 'omit',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    credentials: 'include',
     body: JSON.stringify({ providerToken }),
   });
 
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [justLoggedIn, setJustLoggedIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [notionLinked, setNotionLinked] = useState(false);
 
   const clearLocalAuth = useCallback(() => {
     setAuthToken(null);
@@ -56,10 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWorkspaceName(null);
     setDatabaseId(null);
     setIsOwner(false);
-    localStorage.removeItem('beankeeper_auth_data');
+    setNotionLinked(false);
   }, []);
 
-  const checkAuth = useCallback(async () => {
+  const checkAuth = useCallback(async (refreshProviderToken = false) => {
     try {
       if (!isSupabaseConfigured || !supabase) {
         clearLocalAuth();
@@ -76,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(session.access_token);
 
       const meResponse = await fetch('/api/auth/me', {
-        credentials: 'include',
+        credentials: 'omit',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -89,39 +92,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const meData = await meResponse.json();
 
-      if (meData.authenticated && meData.notionLinked) {
+      // A new OAuth callback may carry a rotated Notion token. Refresh the
+      // existing connection only then; ordinary page loads use the saved link.
+      if (meData.authenticated && session.provider_token && (!meData.notionLinked || refreshProviderToken)) {
+        const linkResult = await linkNotionProviderToken(session.access_token, session.provider_token);
         setIsAuthenticated(true);
-        setWorkspaceName(meData.workspaceName || null);
-        setDatabaseId(meData.databaseId || null);
-        setIsOwner(meData.isOwner || false);
-
-        localStorage.setItem(
-          'beankeeper_auth_data',
-          JSON.stringify({
-            databaseId: meData.databaseId,
-            workspaceName: meData.workspaceName,
-            isOwner: meData.isOwner || false,
-          }),
-        );
-
+        setNotionLinked(true);
+        setWorkspaceName(linkResult.workspaceName || null);
+        setDatabaseId(linkResult.databaseId || null);
+        setIsOwner(false);
         invalidateCoffeeEntries();
         return;
       }
 
-      if (meData.authenticated && !meData.notionLinked && session.provider_token) {
-        const linkResult = await linkNotionProviderToken(session.access_token, session.provider_token);
+      if (meData.authenticated && meData.notionLinked) {
         setIsAuthenticated(true);
-        setWorkspaceName(linkResult.workspaceName || null);
-        setDatabaseId(linkResult.databaseId || null);
-        setIsOwner(false);
-        localStorage.setItem(
-          'beankeeper_auth_data',
-          JSON.stringify({
-            databaseId: linkResult.databaseId,
-            workspaceName: linkResult.workspaceName,
-            isOwner: false,
-          }),
-        );
+        setNotionLinked(true);
+        setWorkspaceName(meData.workspaceName || null);
+        setDatabaseId(meData.databaseId || null);
+        setIsOwner(meData.isOwner || false);
+
         invalidateCoffeeEntries();
         return;
       }
@@ -143,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (loginStatus === 'success') {
       setJustLoggedIn(true);
-      checkAuth();
+      checkAuth(true);
     } else if (loginStatus === 'no_pages') {
       setAuthError('NO_PAGES_SHARED');
       clearLocalAuth();
@@ -163,17 +153,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [checkAuth, clearLocalAuth]);
 
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') {
+        setAuthToken(session?.access_token ?? null);
+      } else if (event === 'SIGNED_OUT') {
+        clearLocalAuth();
+        invalidateCoffeeEntries();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [clearLocalAuth]);
+
   const login = () => {
     if (!isSupabaseConfigured || !supabase) {
       setAuthError('LOGIN_FAILED');
       return;
     }
 
+    trackEvent('notion_login_start');
     void supabase.auth.signInWithOAuth({
       provider: 'notion',
       options: {
         redirectTo: `${window.location.origin}/?login=success`,
       },
+    }).then(({ error }) => {
+      if (error) {
+        console.error('Notion login failed:', error);
+        setAuthError('LOGIN_FAILED');
+      }
+    }).catch((error) => {
+      console.error('Notion login failed:', error);
+      setAuthError('LOGIN_FAILED');
     });
   };
 
@@ -186,24 +200,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'omit',
         headers: accessToken
           ? {
               Authorization: `Bearer ${accessToken}`,
             }
           : undefined,
       });
-
-      if (isSupabaseConfigured && supabase) {
-        await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Server logout failed:', error);
+    } finally {
+      try {
+        if (supabase) await supabase.auth.signOut();
+      } catch (error) {
+        console.error('Supabase logout failed:', error);
       }
-
       clearLocalAuth();
       invalidateCoffeeEntries();
       window.location.href = '/';
-    } catch (error) {
-      console.error('Logout failed:', error);
-      clearLocalAuth();
     }
   };
 
@@ -224,6 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       justLoggedIn,
       authError,
       isOwner,
+      notionLinked,
       clearJustLoggedIn,
       clearAuthError,
       login,

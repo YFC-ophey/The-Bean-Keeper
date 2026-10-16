@@ -58,14 +58,11 @@ export class NotionStorage {
   }
 
   async getAllCoffeeEntries(): Promise<CoffeeEntry[]> {
-    try {
-      const databaseId = this.ensureDatabaseId();
-      const client = this.getClient();
-      return await queryNotionCoffeeDatabase(databaseId, client);
-    } catch (error) {
-      console.error("Error getting all coffee entries:", error);
-      return [];
-    }
+    // A failed source read must not look like an empty collection: reconciliation
+    // uses this list to decide which mirror rows to delete.
+    const databaseId = this.ensureDatabaseId();
+    const client = this.getClient();
+    return await queryNotionCoffeeDatabase(databaseId, client);
   }
 
   async createCoffeeEntry(entry: InsertCoffeeEntry): Promise<CoffeeEntry> {

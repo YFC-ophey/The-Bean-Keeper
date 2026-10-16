@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/Dashboard";
 import LoginPage from "@/pages/LoginPage";
 import NotFound from "@/pages/not-found";
+import { AnalyticsProvider } from "@/context/AnalyticsContext";
 
 function Router() {
   return (
@@ -20,10 +21,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AnalyticsProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </AnalyticsProvider>
     </QueryClientProvider>
   );
 }

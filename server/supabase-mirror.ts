@@ -18,7 +18,12 @@ function ensureSupabaseClient() {
   return getSupabaseAdminClient();
 }
 
+function logMirrorFailure(operation: string, userId: string, error: unknown): void {
+  console.error(`Supabase mirror ${operation} failed for user ${userId}:`, error);
+}
+
 function coffeeEntryToMirrorPayload(userId: string, entry: CoffeeEntry) {
+  const mirroredAt = new Date().toISOString();
   return {
     user_id: userId,
     notion_page_id: entry.id,
@@ -41,8 +46,9 @@ function coffeeEntryToMirrorPayload(userId: string, entry: CoffeeEntry) {
     purchase_again: entry.purchaseAgain,
     front_photo_url: entry.frontPhotoUrl,
     back_photo_url: entry.backPhotoUrl,
-    source_updated_at: new Date().toISOString(),
-    mirrored_at: new Date().toISOString(),
+    created_at: entry.createdAt.toISOString(),
+    updated_at: mirroredAt,
+    mirrored_at: mirroredAt,
     sync_status: 'in_sync',
   };
 }
@@ -50,7 +56,7 @@ function coffeeEntryToMirrorPayload(userId: string, entry: CoffeeEntry) {
 export async function upsertNotionConnection(userId: string, state: UserNotionAuthState): Promise<void> {
   const client = ensureSupabaseClient();
   if (!client) {
-    return;
+    throw new Error('Supabase is not configured; cannot persist Notion connection');
   }
 
   const { error } = await client.from('notion_connections').upsert(
@@ -73,7 +79,7 @@ export async function upsertNotionConnection(userId: string, state: UserNotionAu
 export async function deleteNotionConnection(userId: string): Promise<void> {
   const client = ensureSupabaseClient();
   if (!client) {
-    return;
+    throw new Error('Supabase is not configured; cannot delete Notion connection');
   }
 
   const { error } = await client.from('notion_connections').delete().eq('user_id', userId);
@@ -82,56 +88,72 @@ export async function deleteNotionConnection(userId: string): Promise<void> {
   }
 }
 
-export async function upsertCoffeeMirrorEntry(userId: string, entry: CoffeeEntry): Promise<void> {
+export async function upsertCoffeeMirrorEntry(userId: string, entry: CoffeeEntry): Promise<boolean> {
   const client = ensureSupabaseClient();
   if (!client) {
-    return;
+    logMirrorFailure('upsert entry', userId, 'Supabase is not configured');
+    return false;
   }
 
-  const payload = coffeeEntryToMirrorPayload(userId, entry);
-
-  const { error } = await client.from('coffee_entries_mirror').upsert(payload, {
-    onConflict: 'user_id,notion_page_id',
-  });
-
-  if (error) {
-    throw error;
+  try {
+    const payload = coffeeEntryToMirrorPayload(userId, entry);
+    const { error } = await client.from('coffee_entries_mirror').upsert(payload, {
+      onConflict: 'user_id,notion_page_id',
+    });
+    if (error) {
+      throw error;
+    }
+    return true;
+  } catch (error) {
+    logMirrorFailure('upsert entry', userId, error);
+    return false;
   }
 }
 
-export async function deleteCoffeeMirrorEntry(userId: string, notionPageId: string): Promise<void> {
+export async function deleteCoffeeMirrorEntry(userId: string, notionPageId: string): Promise<boolean> {
   const client = ensureSupabaseClient();
   if (!client) {
-    return;
+    logMirrorFailure('delete entry', userId, 'Supabase is not configured');
+    return false;
   }
 
-  const { error } = await client
-    .from('coffee_entries_mirror')
-    .delete()
-    .eq('user_id', userId)
-    .eq('notion_page_id', notionPageId);
-
-  if (error) {
-    throw error;
+  try {
+    const { error } = await client
+      .from('coffee_entries_mirror')
+      .delete()
+      .eq('user_id', userId)
+      .eq('notion_page_id', notionPageId);
+    if (error) {
+      throw error;
+    }
+    return true;
+  } catch (error) {
+    logMirrorFailure('delete entry', userId, error);
+    return false;
   }
 }
 
 export async function listCoffeeMirrorEntries(userId: string): Promise<Record<string, any>[]> {
   const client = ensureSupabaseClient();
   if (!client) {
-    return [];
+    throw new Error('Supabase is not configured; cannot read mirror entries');
   }
 
-  const { data, error } = await client
-    .from('coffee_entries_mirror')
-    .select('*')
-    .eq('user_id', userId);
-
-  if (error) {
-    throw error;
+  const rows: Record<string, any>[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client
+      .from('coffee_entries_mirror')
+      .select('*')
+      .eq('user_id', userId)
+      .order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
   }
 
-  return data || [];
+  return rows;
 }
 
 export async function logSyncEvent(args: {
@@ -140,50 +162,55 @@ export async function logSyncEvent(args: {
   direction: SyncEventDirection;
   result: SyncEventResult;
   details?: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const client = ensureSupabaseClient();
   if (!client) {
-    return;
+    logMirrorFailure('log sync event', args.userId, 'Supabase is not configured');
+    return false;
   }
 
-  const { error } = await client.from('sync_events').insert({
-    user_id: args.userId,
-    notion_page_id: args.notionPageId || null,
-    direction: args.direction,
-    result: args.result,
-    details: args.details || null,
-    created_at: new Date().toISOString(),
-  });
-
-  if (error) {
-    throw error;
+  try {
+    const { error } = await client.from('sync_events').insert({
+      user_id: args.userId,
+      notion_page_id: args.notionPageId || null,
+      direction: args.direction,
+      result: args.result,
+      details: args.details || null,
+      created_at: new Date().toISOString(),
+    });
+    if (error) {
+      throw error;
+    }
+    return true;
+  } catch (error) {
+    logMirrorFailure('log sync event', args.userId, error);
+    return false;
   }
 }
 
 export async function syncNotionEntriesToMirror(userId: string, entries: CoffeeEntry[]): Promise<MirrorSyncResult> {
+  if (!ensureSupabaseClient()) {
+    return { synced: 0, errors: ['Supabase is not configured'] };
+  }
   const errors: string[] = [];
   let synced = 0;
 
   for (const entry of entries) {
-    try {
-      await upsertCoffeeMirrorEntry(userId, entry);
-      await logSyncEvent({
+    const mirrored = await upsertCoffeeMirrorEntry(userId, entry);
+    const logged = await logSyncEvent({
         userId,
         notionPageId: entry.id,
         direction: 'notion_to_supabase',
-        result: 'success',
-      });
+        result: mirrored ? 'success' : 'error',
+        details: mirrored ? undefined : 'Mirror upsert failed; see server log',
+    });
+    if (mirrored) {
       synced++;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      errors.push(`Failed to mirror ${entry.id}: ${message}`);
-      await logSyncEvent({
-        userId,
-        notionPageId: entry.id,
-        direction: 'notion_to_supabase',
-        result: 'error',
-        details: message,
-      });
+    } else {
+      errors.push(`Failed to mirror ${entry.id}`);
+    }
+    if (!logged) {
+      errors.push(`Failed to log sync event for ${entry.id}`);
     }
   }
 

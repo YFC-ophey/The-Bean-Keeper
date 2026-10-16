@@ -1,9 +1,8 @@
 # ☕ The Bean Keeper
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
-[![Uvicorn](https://img.shields.io/badge/Uvicorn-0.30+-4B8BBE.svg)](https://www.uvicorn.org/)
-[![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC.svg)](https://docs.pytest.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
+[![Express](https://img.shields.io/badge/Express-4-333.svg)](https://expressjs.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 A mobile-first coffee tracking application that uses AI and OCR to automatically extract coffee information from bag labels.
@@ -23,7 +22,7 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 
 ## 🚀 Live Demo
 
-**Coming soon:** `https://the-bean-keeper.onrender.com`
+Render service: [the-bean-keeper.onrender.com](https://the-bean-keeper.onrender.com). Check `/api/health` for current availability.
 
 ## 🛠️ Tech Stack
 
@@ -41,7 +40,7 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 - Supabase Auth (Notion social login)
 - Notion SDK (canonical data store)
 - Render.com Web Services
-- Claudinary Cloud Storage (photos)
+- Cloudinary Cloud Storage (photos)
 
 ### AI/ML Pipeline
 1. User uploads coffee bag photo
@@ -63,8 +62,8 @@ A mobile-first coffee tracking application that uses AI and OCR to automatically
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/the-bean-keeper.git
-cd the-bean-keeper
+git clone https://github.com/YFC-ophey/The-Bean-Keeper.git
+cd The-Bean-Keeper
 
 # Install dependencies
 npm install
@@ -77,7 +76,9 @@ cp .env.example .env
 npm run dev
 ```
 
-Visit `http://localhost:5000`
+Visit `http://localhost:5001`
+
+Before signing in, follow [SUPABASE_SETUP.md](SUPABASE_SETUP.md) to configure the Notion provider and apply the Supabase migrations.
 
 ## 🔑 Environment Variables
 
@@ -97,12 +98,14 @@ NOTION_DATABASE_ID=your_notion_database_id
 
 # Optional
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
-PORT=5000
+PORT=5001
 ```
 
 See [`.env.example`](.env.example) for details.
 
 ## 🗄️ Database Setup
+
+Apply the Supabase schema and configure Notion sign-in using [SUPABASE_SETUP.md](SUPABASE_SETUP.md). Notion remains the source of truth for coffee entries; Supabase persists user connections and mirrors entries for recovery and analytics.
 
 ### Option 1: Create Notion Database Automatically
 
@@ -125,15 +128,8 @@ Full deployment guide: [`DEPLOYMENT.md`](DEPLOYMENT.md)
 Quick start: [`DEPLOY_QUICK_START.md`](DEPLOY_QUICK_START.md)
 
 ```bash
-# 1. Push to GitHub
-git add .
-git commit -m "Ready for deployment"
-git push
-
-# 2. Create web service on Render
-# 3. Connect GitHub repository
-# 4. Add environment variables
-# 5. Deploy!
+# Apply the migrations and configure Supabase/Notion before enabling this branch in Render.
+# Then set the Render environment variables and deploy the verified GitHub commit.
 ```
 
 Auto-deploys on every `git push` to main branch.

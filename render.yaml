@@ -6,7 +6,7 @@ services:
     region: oregon # Choose: oregon, frankfurt, singapore (closest to you)
     plan: free
     branch: main
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
 
     # Health check endpoint
@@ -20,18 +20,30 @@ services:
       - key: PORT
         value: 10000
 
-      # Add these via Render dashboard (keep them secret!)
+      # Set these in Render before the build. VITE_ values are embedded in the client bundle.
       - key: GROQ_API_KEY
         sync: false
 
+      - key: SUPABASE_URL
+        sync: false
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      - key: VITE_SUPABASE_URL
+        sync: false
+
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+
+      # Optional guest collection and Notion database utilities.
       - key: NOTION_API_KEY
         sync: false
 
       - key: NOTION_DATABASE_ID
         sync: false
 
-      # Owner bypass login (optional - set to enable owner password login)
-      - key: OWNER_PASSWORD
+      - key: NOTION_TEMPLATE_DATABASE_ID
         sync: false
 
       - key: VITE_GOOGLE_MAPS_API_KEY

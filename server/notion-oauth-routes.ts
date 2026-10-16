@@ -30,21 +30,28 @@ export function registerNotionOAuthRoutes(app: Express) {
       }
 
       const notionUser = await getNotionUser(providerToken);
-      const databaseId = await duplicateTemplateDatabaseToUserWorkspace(providerToken);
+      const databaseId = await duplicateTemplateDatabaseToUserWorkspace(
+        providerToken,
+        undefined,
+        req.notionAuthState?.databaseId,
+      );
 
       const workspaceName =
-        ("name" in notionUser && typeof notionUser.name === "string" ? notionUser.name : undefined) ||
+        ("bot" in notionUser && "workspace_name" in notionUser.bot &&
+          typeof notionUser.bot.workspace_name === "string" ? notionUser.bot.workspace_name : undefined) ||
         "Notion Workspace";
 
-      const state = saveUserNotionAuthState({
+      const state = {
         userId: req.authUser.id,
         accessToken: providerToken,
         databaseId,
         workspaceName,
         isOwner: false,
-      });
+        updatedAt: new Date().toISOString(),
+      };
 
       await upsertNotionConnection(req.authUser.id, state);
+      saveUserNotionAuthState(state);
 
       return res.json({
         success: true,
@@ -94,8 +101,8 @@ export function registerNotionOAuthRoutes(app: Express) {
         return res.status(401).json({ error: "Supabase auth required" });
       }
 
-      clearUserNotionAuthState(req.authUser.id);
       await deleteNotionConnection(req.authUser.id);
+      clearUserNotionAuthState(req.authUser.id);
 
       return res.json({ success: true });
     } catch (error) {
@@ -113,13 +120,6 @@ export function registerNotionOAuthRoutes(app: Express) {
       clearUserNotionAuthState(req.authUser.id);
     }
 
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Session destroy error:", err);
-        return res.status(500).json({ error: "Logout failed" });
-      }
-      res.clearCookie("connect.sid");
-      return res.json({ success: true });
-    });
+    return res.json({ success: true });
   });
 }

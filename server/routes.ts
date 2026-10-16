@@ -7,14 +7,15 @@ import { cloudinaryStorageService } from "./cloudinary-storage";
 import { insertCoffeeEntrySchema, updateCoffeeEntrySchema, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
 import { z } from "zod";
 import { extractCoffeeInfoWithAI } from "./groq";
-import { requireAuth } from "./middleware/auth";
+import { optionalAuth, requireAuth } from "./middleware/auth";
 import { duplicateTemplateDatabaseToUserWorkspace } from "./notion-oauth";
-import { saveDatabaseIdForWorkspace } from "./user-database-mapping";
+import { saveUserNotionAuthState } from "./notion-auth-state";
 import {
   deleteCoffeeMirrorEntry,
   listCoffeeMirrorEntries,
   logSyncEvent,
   syncNotionEntriesToMirror,
+  upsertNotionConnection,
   upsertCoffeeMirrorEntry,
 } from "./supabase-mirror";
 import { sendOperationalAlert } from "./alerts";
@@ -48,6 +49,11 @@ function getStorage(res: Response): NotionStorage {
   return res.locals.notionStorage;
 }
 
+async function getScopedCoffeeEntry(storage: NotionStorage, id: string) {
+  const entries = await storage.getAllCoffeeEntries();
+  return entries.find((entry) => entry.id === id);
+}
+
 function normalizeContentType(contentTypeHeader: string | string[] | undefined): string {
   if (!contentTypeHeader) {
     return "";
@@ -58,6 +64,25 @@ function normalizeContentType(contentTypeHeader: string | string[] | undefined):
 
 function isValidUploadFileId(fileId: string): boolean {
   return UUID_V4_PATTERN.test(fileId);
+}
+
+function scheduleMirrorWrite(
+  userId: string,
+  notionPageId: string,
+  action: () => Promise<unknown>,
+): void {
+  void (async () => {
+    const mirrored = await action();
+    await logSyncEvent({
+      userId,
+      notionPageId,
+      direction: 'notion_to_supabase',
+      result: mirrored === false ? 'error' : 'success',
+      details: mirrored === false ? 'Mirror write failed' : undefined,
+    });
+  })().catch((error) => {
+    console.error('Mirror sync failed:', error);
+  });
 }
 
 async function readUploadBuffer(req: Request): Promise<Buffer> {
@@ -163,9 +188,14 @@ function generatePlaceUrl(entry: Partial<InsertCoffeeEntry | UpdateCoffeeEntry> 
 export async function registerRoutes(app: Express): Promise<Server> {
   const objectStorageService = new ObjectStorageService();
 
-  // Middleware to create request-scoped NotionStorage instance.
-  // Protected API paths require Supabase auth and a linked Notion state.
-  app.use(['/api/coffee-entries', '/api/sync'], requireAuth, async (req, res, next) => {
+  // Collection reads are public; writes and sync require a valid Supabase JWT.
+  app.use('/api/coffee-entries', (req, res, next) =>
+    req.method === 'GET' ? optionalAuth(req, res, next) : requireAuth(req, res, next),
+  );
+  app.use('/api/sync', requireAuth);
+
+  // Create request-scoped NotionStorage only after authorization has been resolved.
+  app.use(['/api/coffee-entries', '/api/sync'], async (req, res, next) => {
     const notionAuthState = req.notionAuthState;
 
     if (req.authUser && notionAuthState?.databaseId && notionAuthState.accessToken) {
@@ -187,11 +217,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Don't immediately fall back to guest mode - try to find the user's database
         try {
           // Use the access token to search for their existing database
-          const foundDatabaseId = await duplicateTemplateDatabaseToUserWorkspace(userAccessToken);
+          const foundDatabaseId = await duplicateTemplateDatabaseToUserWorkspace(
+            userAccessToken,
+            undefined,
+            userDbId,
+          );
 
           if (foundDatabaseId) {
-            // Save the mapping for future reference
-            saveDatabaseIdForWorkspace(req.authUser.id, foundDatabaseId, notionAuthState.workspaceName);
+            // Persist recovery so a restart does not lose the same user's database.
+            const recoveredState = {
+              ...notionAuthState,
+              databaseId: foundDatabaseId,
+              updatedAt: new Date().toISOString(),
+            };
+            await upsertNotionConnection(req.authUser.id, recoveredState);
+            req.notionAuthState = saveUserNotionAuthState(recoveredState);
 
             // Create request-scoped storage with found database
             res.locals.notionStorage = createNotionStorage(foundDatabaseId, userAccessToken);
@@ -206,6 +246,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
+    } else if (!req.authUser && req.method === 'GET' && req.baseUrl === '/api/coffee-entries') {
+      const ownerDatabaseId = process.env.NOTION_DATABASE_ID?.trim();
+      if (!ownerDatabaseId) {
+        return res.status(503).json({ error: 'Public collection is not configured' });
+      }
+      res.locals.notionStorage = createNotionStorage(ownerDatabaseId);
     } else {
       return res.status(409).json({
         error: 'Notion account not linked',
@@ -346,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/coffee-entries/:id", async (req, res) => {
     try {
       const storage = getStorage(res);
-      const entry = await storage.getCoffeeEntry(req.params.id);
+      const entry = await getScopedCoffeeEntry(storage, req.params.id);
       if (!entry) {
         return res.status(404).json({ error: "Coffee entry not found" });
       }
@@ -382,17 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (req.authUser?.id) {
-        try {
-          await upsertCoffeeMirrorEntry(req.authUser.id, entry);
-          await logSyncEvent({
-            userId: req.authUser.id,
-            notionPageId: entry.id,
-            direction: 'notion_to_supabase',
-            result: 'success',
-          });
-        } catch (mirrorError) {
-          console.error("Mirror sync failed after create:", mirrorError);
-        }
+        scheduleMirrorWrite(req.authUser.id, entry.id, () => upsertCoffeeMirrorEntry(req.authUser!.id, entry));
       }
 
       res.status(201).json(entry);
@@ -424,15 +460,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let updatedData = { ...validatedData };
       const storage = getStorage(res);
+      const currentEntry = await getScopedCoffeeEntry(storage, req.params.id);
+      if (!currentEntry) {
+        return res.status(404).json({ error: "Coffee entry not found" });
+      }
 
       // Regenerate placeUrl if location-related fields changed
       if (locationFieldsChanged) {
-        // Fetch current entry to merge with updates
-        const currentEntry = await storage.getCoffeeEntry(req.params.id);
-        if (!currentEntry) {
-          return res.status(404).json({ error: "Coffee entry not found" });
-        }
-
         // Merge current entry with updates
         const mergedData = { ...currentEntry, ...validatedData };
 
@@ -446,17 +480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (req.authUser?.id) {
-        try {
-          await upsertCoffeeMirrorEntry(req.authUser.id, entry);
-          await logSyncEvent({
-            userId: req.authUser.id,
-            notionPageId: entry.id,
-            direction: 'notion_to_supabase',
-            result: 'success',
-          });
-        } catch (mirrorError) {
-          console.error("Mirror sync failed after update:", mirrorError);
-        }
+        scheduleMirrorWrite(req.authUser.id, entry.id, () => upsertCoffeeMirrorEntry(req.authUser!.id, entry));
       }
 
       console.log(`✓ Entry ${entry.id} updated in Notion`);
@@ -474,23 +498,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/coffee-entries/:id", requireAuth, async (req, res) => {
     try {
       const storage = getStorage(res);
+      if (!await getScopedCoffeeEntry(storage, req.params.id)) {
+        return res.status(404).json({ error: "Coffee entry not found" });
+      }
       const deleted = await storage.deleteCoffeeEntry(req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Coffee entry not found" });
       }
 
       if (req.authUser?.id) {
-        try {
-          await deleteCoffeeMirrorEntry(req.authUser.id, req.params.id);
-          await logSyncEvent({
-            userId: req.authUser.id,
-            notionPageId: req.params.id,
-            direction: 'notion_to_supabase',
-            result: 'success',
-          });
-        } catch (mirrorError) {
-          console.error("Mirror sync failed after delete:", mirrorError);
-        }
+        scheduleMirrorWrite(req.authUser.id, req.params.id, () =>
+          deleteCoffeeMirrorEntry(req.authUser!.id, req.params.id),
+        );
       }
 
       console.log(`✓ Entry ${req.params.id} deleted from Notion`);
@@ -572,10 +591,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let repaired = 0;
       let deletedFromMirror = 0;
+      const errors: string[] = [];
 
       for (const notionEntry of notionEntries) {
-        await upsertCoffeeMirrorEntry(req.authUser.id, notionEntry);
-        repaired++;
+        if (await upsertCoffeeMirrorEntry(req.authUser.id, notionEntry)) {
+          repaired++;
+        } else {
+          errors.push(`Failed to mirror ${notionEntry.id}`);
+        }
       }
 
       for (const mirrorEntry of mirrorEntries) {
@@ -584,21 +607,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
 
-        await deleteCoffeeMirrorEntry(req.authUser.id, notionPageId);
-        deletedFromMirror++;
+        if (await deleteCoffeeMirrorEntry(req.authUser.id, notionPageId)) {
+          deletedFromMirror++;
+        } else {
+          errors.push(`Failed to remove ${notionPageId} from mirror`);
+        }
       }
 
-      await logSyncEvent({
+      const logged = await logSyncEvent({
         userId: req.authUser.id,
         direction: 'reconcile',
-        result: 'success',
-        details: `repaired=${repaired},deleted=${deletedFromMirror}`,
+        result: errors.length ? 'error' : 'success',
+        details: `repaired=${repaired},deleted=${deletedFromMirror},errors=${errors.length}`,
       });
+      if (!logged) errors.push('Failed to log reconcile event');
 
       return res.json({
-        success: true,
+        success: errors.length === 0,
         repaired,
         deletedFromMirror,
+        errors,
       });
     } catch (error) {
       console.error("Reconcile failed:", error);
