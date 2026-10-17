@@ -139,10 +139,14 @@ export default function Dashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHeaderVisible]);
 
-  // Include databaseId in query key so cache is scoped per authenticated workspace.
+  // Keep public guest entries separate from each authenticated workspace.
   const { data: entries = [], isLoading } = useQuery<CoffeeEntry[]>({
-    queryKey: ["/api/coffee-entries", { databaseId: databaseId || "auth" }],
-    enabled: !isAuthLoading && isAuthenticated,
+    queryKey: ["/api/coffee-entries", {
+      scope: isAuthenticated ? "workspace" : "guest",
+      databaseId: isAuthenticated ? databaseId : null,
+    }],
+    enabled: !isAuthLoading,
+    staleTime: 0,
   });
 
   const handleAddCoffee = async (

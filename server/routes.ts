@@ -214,6 +214,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error: any) {
         console.log(`User database lookup failed: ${error.code || error.message}`);
 
+        if (notionAuthState.isOwner) {
+          return res.status(503).json({
+            error: 'Owner collection unavailable',
+            message: 'The server could not access the configured owner Notion database',
+          });
+        }
+
         // Don't immediately fall back to guest mode - try to find the user's database
         try {
           // Use the access token to search for their existing database

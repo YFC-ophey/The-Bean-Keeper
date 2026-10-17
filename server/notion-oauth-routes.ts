@@ -24,6 +24,17 @@ export function registerNotionOAuthRoutes(app: Express) {
         return res.status(401).json({ error: "Supabase auth required" });
       }
 
+      // The verified owner uses the server's existing Notion integration. Never
+      // save an OAuth provider token (or the server token) as an owner link.
+      if (req.notionAuthState?.isOwner) {
+        return res.json({
+          success: true,
+          workspaceName: req.notionAuthState.workspaceName,
+          databaseId: req.notionAuthState.databaseId,
+          isOwner: true,
+        });
+      }
+
       const providerToken = req.body?.providerToken;
       if (!providerToken || typeof providerToken !== "string") {
         return res.status(400).json({ error: "Provider token is required" });

@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setNotionLinked(true);
         setWorkspaceName(linkResult.workspaceName || null);
         setDatabaseId(linkResult.databaseId || null);
-        setIsOwner(false);
+        setIsOwner(Boolean(linkResult.isOwner));
         invalidateCoffeeEntries();
         return;
       }

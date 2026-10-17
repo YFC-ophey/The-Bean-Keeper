@@ -7,6 +7,37 @@ interface AuthenticatedUser {
   email?: string;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+class OwnerNotionConfigurationError extends Error {
+  constructor() {
+    super('Owner Notion configuration incomplete');
+  }
+}
+
+function isConfiguredOwnerUser(userId: string): boolean {
+  const ownerId = process.env.OWNER_SUPABASE_USER_ID?.trim();
+  return !!ownerId && UUID_PATTERN.test(ownerId) && userId.toLowerCase() === ownerId.toLowerCase();
+}
+
+/** Owner access is bound to one verified Supabase identity and server-held Notion credentials. */
+export function getOwnerNotionAuthState(userId: string): UserNotionAuthState | null {
+  const accessToken = process.env.NOTION_API_KEY?.trim();
+  const databaseId = process.env.NOTION_DATABASE_ID?.trim();
+  if (!isConfiguredOwnerUser(userId) || !accessToken || !databaseId) {
+    return null;
+  }
+
+  return {
+    userId,
+    accessToken,
+    databaseId,
+    workspaceName: 'Owner collection',
+    isOwner: true,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 declare module 'express-serve-static-core' {
   interface Request {
     authUser?: AuthenticatedUser;
@@ -31,6 +62,15 @@ async function hydrateAuthFromBearerToken(req: Request): Promise<boolean> {
   }
 
   req.authUser = { id: user.id, email: user.email };
+  const ownerState = getOwnerNotionAuthState(user.id);
+  if (ownerState) {
+    req.notionAuthState = ownerState;
+    return true;
+  }
+  if (isConfiguredOwnerUser(user.id)) {
+    throw new OwnerNotionConfigurationError();
+  }
+
   let notionState = getUserNotionAuthState(user.id);
   if (!notionState) {
     const persisted = await loadNotionConnectionFromSupabase(user.id);
@@ -40,11 +80,11 @@ async function hydrateAuthFromBearerToken(req: Request): Promise<boolean> {
         accessToken: persisted.accessToken,
         databaseId: persisted.databaseId,
         workspaceName: persisted.workspaceName,
-        isOwner: persisted.isOwner,
+        isOwner: false,
       });
     }
   }
-  req.notionAuthState = notionState ?? undefined;
+  req.notionAuthState = notionState ? { ...notionState, isOwner: false } : undefined;
   return true;
 }
 
@@ -62,6 +102,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
     next();
   } catch (error) {
+    if (error instanceof OwnerNotionConfigurationError) {
+      return res.status(503).json({ error: error.message });
+    }
     console.error('Authentication backend error:', error);
     return res.status(503).json({ error: 'Authentication temporarily unavailable' });
   }
@@ -78,6 +121,9 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
     }
     next();
   } catch (error) {
+    if (error instanceof OwnerNotionConfigurationError) {
+      return res.status(503).json({ error: error.message });
+    }
     console.error('Authentication backend error:', error);
     return res.status(503).json({ error: 'Authentication temporarily unavailable' });
   }

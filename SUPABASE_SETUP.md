@@ -37,8 +37,11 @@ Copy [`.env.example`](.env.example) to `.env` locally. Configure:
 | `VITE_SUPABASE_URL` | Frontend Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Frontend public anon key |
 | `GROQ_API_KEY` | AI extraction |
+| `OWNER_SUPABASE_USER_ID` | Verified Supabase Auth user UUID allowed to edit the existing owner collection |
 
-`NOTION_API_KEY` and `NOTION_DATABASE_ID` are optional for the guest collection and internal Notion utilities. `NOTION_TEMPLATE_DATABASE_ID` is optional for the Notion database creation flow. The Notion OAuth client ID and secret belong in Supabase provider settings; they are not app environment variables.
+`NOTION_API_KEY` and `NOTION_DATABASE_ID` remain on the server for the existing owner collection and public guest reads. The owner mapping requires both variables plus `OWNER_SUPABASE_USER_ID`. The backend compares that UUID only with a verified Supabase access token; an email address, request body, or OAuth provider token cannot grant owner access. The owner Notion key is never saved as a user connection in Supabase. `NOTION_TEMPLATE_DATABASE_ID` is optional for the Notion database creation flow. The Notion OAuth client ID and secret belong in Supabase provider settings; they are not app environment variables.
+
+For an existing owner collection, enroll the intended owner through a configured local or preview build before deploying this branch. Configure the frontend Supabase URL and anon key and an allowed return URL, but intentionally leave the preview backend's `SUPABASE_SERVICE_ROLE_KEY` unset for this first OAuth sign-in. Supabase will create the Auth user; the preview app may report that linking failed because its backend cannot verify the session, and it cannot run the ordinary provider-token link route or create another database. The current live app uses direct Notion OAuth; its login does not create a Supabase Auth user. In **Supabase → Authentication → Users**, verify the new account and copy its exact user UUID into Render's `OWNER_SUPABASE_USER_ID`. Confirm `NOTION_API_KEY` and `NOTION_DATABASE_ID` still point to the existing collection before configuring the backend service role key and deploying this branch. A verified owner with an incomplete Notion configuration receives a 503 instead of entering the ordinary linking flow.
 
 For Render, set all four Supabase variables in the service environment **before building**. Vite embeds `VITE_` variables into the client bundle during `npm run build`; changing them requires a rebuild. The service role key must never have a `VITE_` prefix.
 
