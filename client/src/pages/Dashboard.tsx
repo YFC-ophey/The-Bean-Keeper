@@ -48,6 +48,7 @@ type CoffeeFormData = {
   origin?: string;
   variety?: string;
   processMethod?: string;
+  roastLevel?: string;
   roastDate?: string;
   flavorNotes?: string;
   rating?: number;
@@ -164,6 +165,7 @@ export default function Dashboard() {
         origin: data.origin || null,
         variety: data.variety || null,
         processMethod: data.processMethod || null,
+        roastLevel: data.roastLevel || null,
         roastDate: data.roastDate || null,
         flavorNotes: data.flavorNotes
           ? data.flavorNotes.split(",").map(f => f.trim()).filter(f => f.length > 0)
@@ -241,6 +243,7 @@ export default function Dashboard() {
         origin: data.origin || null,
         variety: data.variety || null,
         processMethod: data.processMethod || null,
+        roastLevel: data.roastLevel || null,
         roastDate: data.roastDate || null,
         flavorNotes: data.flavorNotes
           ? data.flavorNotes.split(",").map(f => f.trim()).filter(f => f.length > 0)

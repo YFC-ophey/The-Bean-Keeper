@@ -129,6 +129,7 @@ export class NotionStorage {
         ...(updates.origin !== undefined && { origin: updates.origin }),
         ...(updates.variety !== undefined && { variety: updates.variety }),
         ...(updates.processMethod !== undefined && { processMethod: updates.processMethod }),
+        ...(updates.roastLevel !== undefined && { roastLevel: updates.roastLevel }),
         ...(updates.roastDate !== undefined && { roastDate: updates.roastDate }),
         ...(updates.flavorNotes !== undefined && { flavorNotes: updates.flavorNotes }),
         ...(updates.rating !== undefined && { rating: updates.rating }),

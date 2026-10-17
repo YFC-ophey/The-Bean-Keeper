@@ -419,6 +419,9 @@ export async function updateNotionCoffeePage(
     } as CoffeeEntry;
 
     const properties = coffeeEntryToNotionProperties(tempEntry);
+    if (updates.roastLevel === null) {
+      properties["Roast Level"] = { select: null };
+    }
     if (Object.prototype.hasOwnProperty.call(updates, "frontPhotoUrl") && updates.frontPhotoUrl === null) {
       properties["Front Photo"] = { url: null };
     }
