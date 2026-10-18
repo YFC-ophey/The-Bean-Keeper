@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, LogIn, Coffee } from "lucide-react";
+import { Plus, Search, LogIn, LogOut, Coffee } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
@@ -62,7 +62,7 @@ type CoffeeFormData = {
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, logout, justLoggedIn, clearJustLoggedIn, authError, clearAuthError } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -78,8 +78,22 @@ export default function Dashboard() {
   const [activeRatingFilter, setActiveRatingFilter] = useState<number | null>(null);
   const [activeOriginFilter, setActiveOriginFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>("newest");
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const logoutInFlight = useRef(false);
   const { toast } = useToast();
   const analyticsSettings = useAnalyticsSettings();
+
+  const handleLogout = async () => {
+    if (logoutInFlight.current) return;
+    logoutInFlight.current = true;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      logoutInFlight.current = false;
+      setIsLoggingOut(false);
+    }
+  };
 
   // Auto-open Add Coffee form after successful OAuth login
   useEffect(() => {
@@ -476,6 +490,21 @@ export default function Dashboard() {
                   </Button>
                 )}
                 <NotionButton />
+                {isAuthenticated && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    aria-label={t('common:buttons.logout')}
+                    aria-busy={isLoggingOut}
+                    title={t('common:buttons.logout')}
+                    data-testid="button-logout-mobile"
+                    className="min-h-[36px] min-w-[36px] px-2 bg-white border-[#E3E2E0] hover:bg-[#F7F6F5]"
+                  >
+                    <LogOut className="w-4 h-4" aria-hidden="true" />
+                  </Button>
+                )}
                 <LanguageSwitcher />
               </div>
             </div>
@@ -504,6 +533,20 @@ export default function Dashboard() {
                 </span>
               )}
               <NotionButton />
+              {isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  aria-busy={isLoggingOut}
+                  data-testid="button-logout"
+                  className="flex items-center gap-2 bg-white border-[#E3E2E0] hover:bg-[#F7F6F5] text-[#37352F]"
+                >
+                  <LogOut className="w-4 h-4" aria-hidden="true" />
+                  <span className="text-sm">{t('common:buttons.logout')}</span>
+                </Button>
+              )}
               <LanguageSwitcher />
             </div>
 
