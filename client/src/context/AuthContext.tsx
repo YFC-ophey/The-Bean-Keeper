@@ -131,25 +131,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams(window.location.search);
     const loginStatus = params.get('login');
 
+    const clearLoginStatus = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('login');
+      url.searchParams.delete('code');
+      url.searchParams.delete('error');
+      url.searchParams.delete('error_code');
+      url.searchParams.delete('error_description');
+      // Supabase normally removes its token fragment on success. Clear it here
+      // as well so an unsuccessful callback cannot leave credentials in the URL.
+      if (url.hash.includes('access_token=') || url.hash.includes('refresh_token=')) {
+        url.hash = '';
+      }
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    };
+
     if (loginStatus === 'success') {
       setJustLoggedIn(true);
-      checkAuth(true);
+      // Supabase exchanges the OAuth code while getSession initializes. Do not
+      // remove the callback URL until it has had a chance to read that code.
+      void checkAuth(true).finally(clearLoginStatus);
     } else if (loginStatus === 'no_pages') {
       setAuthError('NO_PAGES_SHARED');
       clearLocalAuth();
       setIsLoading(false);
+      clearLoginStatus();
     } else if (loginStatus === 'error') {
       setAuthError('LOGIN_FAILED');
       clearLocalAuth();
       setIsLoading(false);
+      clearLoginStatus();
     } else {
-      checkAuth();
-    }
-
-    if (loginStatus) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('login');
-      window.history.replaceState({}, '', url.pathname);
+      if (loginStatus) {
+        void checkAuth().finally(clearLoginStatus);
+      } else {
+        void checkAuth();
+      }
     }
   }, [checkAuth, clearLocalAuth]);
 
