@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Camera, Upload, Loader2, CheckCircle2, ScanText, ChevronDown, Coffee } from "lucide-react";
 import Tesseract from "tesseract.js";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, uploadFile } from "@/lib/queryClient";
+import { applyScanValues, clearAutoFilledValues } from "@/lib/coffeeScan";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import DuplicateConfirmationModal from "@/components/DuplicateConfirmationModal";
 import { CoffeeEntry } from "@shared/schema";
@@ -47,7 +48,7 @@ interface AddCoffeeFormProps {
     flavorNotes?: string;
     weight?: string;
     price?: string;
-  }) => void;
+  }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -85,6 +86,34 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   });
 
   const [currency, setCurrency] = useState<string>("USD");
+  const autoFilledFields = Object.entries(extractedData)
+    .filter(([key, value]) => value && formData[key as keyof typeof formData] === value)
+    .map(([key]) => key);
+
+  const formDataRef = useRef(formData);
+  const autoFilledRef = useRef<Partial<typeof formData>>({});
+  const scanVersionRef = useRef(0);
+  const performOCRRef = useRef<() => Promise<void>>(async () => {});
+
+  useLayoutEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
+
+  const clearAutoFilledData = () => {
+    const cleared = clearAutoFilledValues(formDataRef.current, autoFilledRef.current);
+    formDataRef.current = cleared;
+    autoFilledRef.current = {};
+    setFormData(cleared);
+    setExtractedData({});
+  };
+
+  const applyExtractedData = (data: ExtractedData) => {
+    const result = applyScanValues(formDataRef.current, data);
+    formDataRef.current = result.form;
+    autoFilledRef.current = result.autoFilled;
+    setFormData(result.form);
+    setExtractedData(result.autoFilled);
+  };
 
   const isOCRRunningRef = useRef(false);
   const pendingOCRRef = useRef(false);
@@ -105,6 +134,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const onDropFront = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
+      scanVersionRef.current += 1;
+      clearAutoFilledData();
       setFrontPhotoFile(file);
       const preview = URL.createObjectURL(file);
       setFrontPhotoPreview(preview);
@@ -114,6 +145,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const onDropBack = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
+      scanVersionRef.current += 1;
+      clearAutoFilledData();
       setBackPhotoFile(file);
       const preview = URL.createObjectURL(file);
       setBackPhotoPreview(preview);
@@ -136,6 +169,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const handleFrontFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      scanVersionRef.current += 1;
+      clearAutoFilledData();
       setFrontPhotoFile(file);
       const preview = URL.createObjectURL(file);
       setFrontPhotoPreview(preview);
@@ -145,6 +180,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const handleBackFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      scanVersionRef.current += 1;
+      clearAutoFilledData();
       setBackPhotoFile(file);
       const preview = URL.createObjectURL(file);
       setBackPhotoPreview(preview);
@@ -155,6 +192,10 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   useEffect(() => {
     // Skip if no files are uploaded
     if (!frontPhotoFile && !backPhotoFile) {
+      pendingOCRRef.current = false;
+      setIsScanning(false);
+      setScanStage(null);
+      setProgress(0);
       return;
     }
 
@@ -173,6 +214,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       return;
     }
 
+    const scanVersion = ++scanVersionRef.current;
+    clearAutoFilledData();
     isOCRRunningRef.current = true;
     setIsScanning(true);
     setScanStage('ocr');
@@ -182,30 +225,34 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
       // Run OCR on front photo
       if (frontPhotoFile) {
-        setProgress(10);
+        if (scanVersion === scanVersionRef.current) setProgress(10);
         const frontResult = await Tesseract.recognize(frontPhotoFile, 'eng', {
           logger: (m) => console.log('Front:', m),
         });
         combinedText += frontResult.data.text + "\n\n";
-        setProgress(30);
+        if (scanVersion === scanVersionRef.current) setProgress(30);
       }
 
       // Run OCR on back photo
       if (backPhotoFile) {
-        setProgress(40);
+        if (scanVersion === scanVersionRef.current) setProgress(40);
         const backResult = await Tesseract.recognize(backPhotoFile, 'eng', {
           logger: (m) => console.log('Back:', m),
         });
         combinedText += backResult.data.text;
-        setProgress(60);
+        if (scanVersion === scanVersionRef.current) setProgress(60);
       }
 
       if (!combinedText.trim()) {
-        setIsScanning(false);
-        setScanStage(null);
-        setProgress(0);
+        if (scanVersion === scanVersionRef.current) {
+          setIsScanning(false);
+          setScanStage(null);
+          setProgress(0);
+        }
         return;
       }
+
+      if (scanVersion !== scanVersionRef.current) return;
 
       // Clean OCR text to remove artifacts and special characters
       const cleanText = (rawText: string): string => {
@@ -406,11 +453,13 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       console.log('Basic extracted data:', extracted);
 
       // Use AI to optimize extraction (better than regex patterns)
-      setScanStage('ai');
-      setProgress(70);
+      if (scanVersion === scanVersionRef.current) {
+        setScanStage('ai');
+        setProgress(70);
+      }
       try {
         const aiResponse = await apiRequest('POST', '/api/extract-coffee-info', { text });
-        setProgress(90);
+        if (scanVersion === scanVersionRef.current) setProgress(90);
 
         if (aiResponse.ok) {
           const aiExtracted = await aiResponse.json();
@@ -457,46 +506,37 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
             }
           }
           
-          setExtractedData(mergedData);
-          setFormData((prev) => ({
-            ...prev,
-            ...mergedData,
-          }));
-          setProgress(100);
+          if (scanVersion === scanVersionRef.current) applyExtractedData(mergedData);
+          if (scanVersion === scanVersionRef.current) setProgress(100);
         } else {
-          setExtractedData(extracted);
-          setFormData((prev) => ({
-            ...prev,
-            ...extracted,
-          }));
-          setProgress(100);
+          if (scanVersion === scanVersionRef.current) applyExtractedData(extracted);
+          if (scanVersion === scanVersionRef.current) setProgress(100);
         }
       } catch (aiError) {
         console.error('AI extraction error, using basic extraction:', aiError);
-        setExtractedData(extracted);
-        setFormData((prev) => ({
-          ...prev,
-          ...extracted,
-        }));
-        setProgress(100);
+        if (scanVersion === scanVersionRef.current) applyExtractedData(extracted);
+        if (scanVersion === scanVersionRef.current) setProgress(100);
       }
     } catch (error) {
       console.error('OCR Error:', error);
     } finally {
       setTimeout(() => {
-        setIsScanning(false);
-        setScanStage(null);
-        setProgress(0);
+        if (scanVersion === scanVersionRef.current) {
+          setIsScanning(false);
+          setScanStage(null);
+          setProgress(0);
+        }
       }, 500);
       isOCRRunningRef.current = false;
 
       // If files changed during OCR, rerun
       if (pendingOCRRef.current) {
         pendingOCRRef.current = false;
-        performOCR();
+        performOCRRef.current();
       }
     }
   };
+  performOCRRef.current = performOCR;
 
   // Check for duplicate entries
   const checkForDuplicates = () => {
@@ -549,15 +589,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       const frontUploadResponse = await apiRequest('POST', '/api/upload-url');
       const { uploadURL: frontUploadURL } = await frontUploadResponse.json();
 
-      const frontUploadResult = await fetch(frontUploadURL, {
-        method: 'PUT',
-        body: frontPhotoFile,
-        headers: {
-          'Content-Type': frontPhotoFile.type,
-        },
-      });
-
-      const { url: frontPhotoUrl } = await frontUploadResult.json();
+      const frontPhotoUrl = await uploadFile(frontUploadURL, frontPhotoFile);
 
       let backPhotoUrl = null;
 
@@ -566,16 +598,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         const backUploadResponse = await apiRequest('POST', '/api/upload-url');
         const { uploadURL: backUploadURL } = await backUploadResponse.json();
 
-        const backUploadResult = await fetch(backUploadURL, {
-          method: 'PUT',
-          body: backPhotoFile,
-          headers: {
-            'Content-Type': backPhotoFile.type,
-          },
-        });
-
-        const { url: backPhotoUrlResponse } = await backUploadResult.json();
-        backPhotoUrl = backPhotoUrlResponse;
+        backPhotoUrl = await uploadFile(backUploadURL, backPhotoFile);
       }
 
       // Check for duplicates before saving
@@ -698,6 +721,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    scanVersionRef.current += 1;
+                    clearAutoFilledData();
                     setFrontPhotoPreview("");
                     setFrontPhotoFile(null);
                   }}
@@ -797,6 +822,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    scanVersionRef.current += 1;
+                    clearAutoFilledData();
                     setBackPhotoPreview("");
                     setBackPhotoFile(null);
                   }}
@@ -837,16 +864,16 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       )}
 
       {/* Auto-fill badge */}
-      {!isScanning && Object.keys(extractedData).length > 0 && (
+      {!isScanning && autoFilledFields.length > 0 && (
         <div className="flex flex-wrap gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
           <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-green-900 dark:text-green-100">
-              {Object.keys(extractedData).length} {Object.keys(extractedData).length === 1 ? t('forms:addCoffee.autoFill.field') : t('forms:addCoffee.autoFill.fields')} {t('forms:addCoffee.autoFill.fieldsAutoFilled')}
+              {autoFilledFields.length} {autoFilledFields.length === 1 ? t('forms:addCoffee.autoFill.field') : t('forms:addCoffee.autoFill.fields')} {t('forms:addCoffee.autoFill.fieldsAutoFilled')}
             </p>
             <p className="text-xs text-green-700 dark:text-green-200 mt-1">
-              {Object.keys(extractedData).slice(0, 3).join(', ')}
-              {Object.keys(extractedData).length > 3 && ` +${Object.keys(extractedData).length - 3} more`}
+              {autoFilledFields.slice(0, 3).join(', ')}
+              {autoFilledFields.length > 3 && ` +${autoFilledFields.length - 3} more`}
             </p>
           </div>
           <Button
@@ -899,9 +926,9 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         <CollapsibleTrigger className="w-full flex items-center justify-between p-3 hover:bg-muted/50 dark:hover:bg-muted/10 rounded-lg transition-colors group">
           <span className="text-sm font-medium flex items-center gap-2">
             {t('forms:addCoffee.sections.additionalDetails')}
-            {Object.keys(extractedData).filter(key => !['roasterName', 'origin'].includes(key)).length > 0 && (
+            {autoFilledFields.filter(key => !['roasterName', 'origin'].includes(key)).length > 0 && (
               <Badge variant="secondary" className="text-xs">
-                {Object.keys(extractedData).filter(key => !['roasterName', 'origin'].includes(key)).length} {t('forms:addCoffee.sections.filled')}
+                {autoFilledFields.filter(key => !['roasterName', 'origin'].includes(key)).length} {t('forms:addCoffee.sections.filled')}
               </Badge>
             )}
           </span>
