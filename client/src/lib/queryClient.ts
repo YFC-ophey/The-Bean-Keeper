@@ -42,6 +42,31 @@ export async function apiRequest(
   return res;
 }
 
+export async function uploadFile(url: string, file: File): Promise<string> {
+  const uploadPath = /^\/api\/(?:cloudinary-upload|local-upload)\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uploadPath.test(url)) {
+    throw new Error("Unexpected photo upload URL");
+  }
+
+  const res = await fetch(url, {
+    method: "PUT",
+    credentials: "omit",
+    redirect: "error",
+    headers: {
+      ...getHeaders(false),
+      "Content-Type": file.type,
+    },
+    body: file,
+  });
+
+  await throwIfResNotOk(res);
+  const result = await res.json();
+  if (typeof result?.url !== "string" || !result.url.trim()) {
+    throw new Error("Upload did not return a photo URL");
+  }
+  return result.url;
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

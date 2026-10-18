@@ -211,6 +211,7 @@ export default function Dashboard() {
         description: "Failed to add coffee entry. Please try again.",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
