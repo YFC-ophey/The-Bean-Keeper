@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ import NotionButton from "@/components/NotionButton";
 import AboutSection from "@/components/AboutSection";
 import { NotionAuthModal } from "@/components/NotionAuthModal";
 import { CoffeeEntry } from "@shared/schema";
-import { invalidateCoffeeEntries, apiRequest } from "@/lib/queryClient";
+import { invalidateCoffeeEntries, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { trackEvent } from "@/lib/analytics";
@@ -231,6 +231,33 @@ export default function Dashboard() {
       });
     }
   };
+
+  const handleToggleFavorite = useCallback(async (entry: CoffeeEntry) => {
+    if (!isAuthenticated) return;
+
+    let updatedEntry: CoffeeEntry;
+    try {
+      const response = await apiRequest("PATCH", `/api/coffee-entries/${entry.id}`, {
+        purchaseAgain: !entry.purchaseAgain,
+      });
+      updatedEntry = await response.json() as CoffeeEntry;
+    } catch (error) {
+      console.error("Error saving favorite:", error);
+      toast({
+        title: "Could not save favorite",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+
+    // Apply the confirmed server response, then refresh the collection.
+    queryClient.setQueryData<CoffeeEntry[]>(
+      ["/api/coffee-entries", { scope: "workspace", databaseId }],
+      current => current?.map(item => item.id === updatedEntry.id ? updatedEntry : item),
+    );
+    await invalidateCoffeeEntries();
+  }, [databaseId, isAuthenticated, toast]);
 
   const handleEditCoffee = async (data: CoffeeFormData) => {
     if (!editEntry) return;
@@ -602,6 +629,7 @@ export default function Dashboard() {
                           isHighestRated={isHighestRated}
                           isRecent={isRecent}
                           isGuest={!isAuthenticated}
+                          onToggleFavorite={handleToggleFavorite}
                         />
                       </div>
                     );
