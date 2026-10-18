@@ -133,6 +133,71 @@ export function createUserNotionClient(accessToken: string): Client {
   });
 }
 
+async function isCoffeeDatabase(notion: Client, databaseId: string): Promise<boolean> {
+  if (isOwnerDatabaseId(databaseId)) return false;
+  try {
+    const database = await notion.databases.retrieve({ database_id: databaseId }) as any;
+    const title = Array.isArray(database.title)
+      ? database.title.map((part: any) => part.plain_text ?? part.text?.content ?? '').join('')
+      : '';
+    const matchesSchema = (properties: Record<string, any> | undefined) =>
+      properties?.Roaster?.type === 'rich_text' &&
+      properties?.['Front Photo']?.type === 'url' &&
+      (properties?.['App ID']?.type === 'rich_text' || /bean keeper/i.test(title));
+    const sources = database.data_sources as Array<{ id: string }> | undefined;
+    if (sources?.length) {
+      for (const source of sources) {
+        const dataSource = await notion.dataSources.retrieve({ data_source_id: source.id }) as any;
+        if (matchesSchema(dataSource.properties)) {
+          return true;
+        }
+      }
+    }
+    // Older Notion API responses included the schema directly on the database.
+    return matchesSchema(database.properties);
+  } catch (error: any) {
+    if (error?.status === 403 || error?.status === 404) return false;
+    throw error;
+  }
+}
+
+async function findExistingCoffeeDatabase(notion: Client, accessToken: string): Promise<string | null> {
+  let cursor: string | undefined;
+  const seenDatabaseIds = new Set<string>();
+  do {
+    const result = await notion.search({
+      filter: { property: 'object', value: 'data_source' },
+      page_size: 100,
+      start_cursor: cursor,
+    });
+    for (const item of result.results) {
+      if (item.object !== 'data_source') continue;
+      const databaseId = 'parent' in item && 'database_id' in item.parent
+        ? item.parent.database_id : null;
+      if (databaseId && !seenDatabaseIds.has(databaseId)) {
+        seenDatabaseIds.add(databaseId);
+        if (await isCoffeeDatabase(notion, databaseId)) return databaseId;
+      }
+    }
+    cursor = result.has_more ? result.next_cursor ?? undefined : undefined;
+  } while (cursor);
+
+  // Legacy integrations may still expose databases rather than data sources in search.
+  const legacyNotion = new Client({ auth: accessToken, notionVersion: '2022-06-28' });
+  cursor = undefined;
+  do {
+    const result = await legacyNotion.search({ page_size: 100, start_cursor: cursor });
+    for (const item of result.results as any[]) {
+      if (item.object === 'database' && !seenDatabaseIds.has(item.id)) {
+        seenDatabaseIds.add(item.id);
+        if (await isCoffeeDatabase(notion, item.id)) return item.id;
+      }
+    }
+    cursor = result.has_more ? result.next_cursor ?? undefined : undefined;
+  } while (cursor);
+  return null;
+}
+
 /**
  * Get or create the user's Coffee Collection database
  * First checks if user already has a database, reuses it if found
@@ -140,77 +205,21 @@ export function createUserNotionClient(accessToken: string): Client {
  */
 export async function duplicateTemplateDatabaseToUserWorkspace(
   accessToken: string,
-  parentPageId?: string
+  parentPageId?: string,
+  preferredDatabaseId?: string,
 ): Promise<string> {
   const notion = createUserNotionClient(accessToken);
-
-  // FIRST: Check if user already has a Bean Keeper database
-  // Search with exact title and larger page_size for reliability
-  // Database is named "The Bean Keeper - Coffee Collection"
-  console.log("🔍 Searching for existing Bean Keeper database...");
-
-  const existingDb = await notion.search({
-    query: "The Bean Keeper - Coffee Collection",
-    page_size: 100,
-  });
-
-  console.log(`📊 Search returned ${existingDb.results.length} results`);
-
-  // Look for a database that matches our schema (must have "Roaster" property, not just "Name")
-  // All Notion databases have "Name", so we need to check for our specific properties
-  for (const result of existingDb.results) {
-    // Cast to any to avoid TypeScript's strict object type checking
-    const resultObj = result as any;
-    if (resultObj.object === "database") {
-      const db = resultObj;
-      const hasRoaster = !!db.properties?.["Roaster"];
-      const hasFrontPhoto = !!db.properties?.["Front Photo"];
-
-      console.log(`  Checking database ${db.id.substring(0, 8)}...`);
-      console.log(`    Roaster: ${hasRoaster}, Front Photo: ${hasFrontPhoto}`);
-
-      // Check if this is our Coffee Collection database by looking for key properties
-      // Must have "Roaster" AND "Front Photo" to be considered our database
-      if (hasRoaster && hasFrontPhoto) {
-        if (isOwnerDatabaseId(db.id)) {
-          console.log("⚠️ Skipping owner database for OAuth user:", db.id);
-          continue;
-        }
-        console.log("✅ Found existing Bean Keeper database:", db.id);
-        console.log("  Properties found:", Object.keys(db.properties).join(", "));
-        return db.id;
-      }
-    }
+  if (preferredDatabaseId && await isCoffeeDatabase(notion, preferredDatabaseId)) {
+    return preferredDatabaseId;
   }
+  const existingDatabaseId = await findExistingCoffeeDatabase(notion, accessToken);
+  if (existingDatabaseId) return existingDatabaseId;
 
-  // Fallback: Try a broader search in case title doesn't match exactly
-  console.log("🔍 No exact match found, trying broader search...");
-  const broadSearch = await notion.search({
-    query: "Bean Keeper",
-    page_size: 100,
-  });
-
-  console.log(`📊 Broad search returned ${broadSearch.results.length} results`);
-
-  for (const result of broadSearch.results) {
-    const resultObj = result as any;
-    if (resultObj.object === "database") {
-      const db = resultObj;
-      const hasRoaster = !!db.properties?.["Roaster"];
-      const hasFrontPhoto = !!db.properties?.["Front Photo"];
-
-      if (hasRoaster && hasFrontPhoto) {
-        if (isOwnerDatabaseId(db.id)) {
-          console.log("⚠️ Skipping owner database for OAuth user (broad search):", db.id);
-          continue;
-        }
-        console.log("✅ Found Bean Keeper database (broad search):", db.id);
-        return db.id;
-      }
-    }
+  // A previously linked database may have been unshared temporarily. Never
+  // replace its durable mapping with a fresh empty database in that case.
+  if (preferredDatabaseId) {
+    throw new Error('Previously linked Notion database is unavailable; restore its access before continuing');
   }
-
-  console.log("❌ No existing database found, creating new one...");
 
   // If no parent page specified, we need to find or create one
   if (!parentPageId) {
@@ -290,7 +299,7 @@ export async function getNotionUser(accessToken: string) {
   const notion = createUserNotionClient(accessToken);
 
   try {
-    const response = await notion.users.me();
+    const response = await notion.users.me({});
     return response;
   } catch (error) {
     console.error("Error getting Notion user:", error);
@@ -329,7 +338,7 @@ export async function testNotionConnection(accessToken: string): Promise<{
     const notion = createUserNotionClient(accessToken);
 
     // Get user info
-    const user = await notion.users.me();
+    const user = await notion.users.me({});
 
     // Search for pages to verify access
     const search = await notion.search({

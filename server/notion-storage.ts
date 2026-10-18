@@ -58,14 +58,11 @@ export class NotionStorage {
   }
 
   async getAllCoffeeEntries(): Promise<CoffeeEntry[]> {
-    try {
-      const databaseId = this.ensureDatabaseId();
-      const client = this.getClient();
-      return await queryNotionCoffeeDatabase(databaseId, client);
-    } catch (error) {
-      console.error("Error getting all coffee entries:", error);
-      return [];
-    }
+    // A failed source read must not look like an empty collection: reconciliation
+    // uses this list to decide which mirror rows to delete.
+    const databaseId = this.ensureDatabaseId();
+    const client = this.getClient();
+    return await queryNotionCoffeeDatabase(databaseId, client);
   }
 
   async createCoffeeEntry(entry: InsertCoffeeEntry): Promise<CoffeeEntry> {
@@ -132,6 +129,7 @@ export class NotionStorage {
         ...(updates.origin !== undefined && { origin: updates.origin }),
         ...(updates.variety !== undefined && { variety: updates.variety }),
         ...(updates.processMethod !== undefined && { processMethod: updates.processMethod }),
+        ...(updates.roastLevel !== undefined && { roastLevel: updates.roastLevel }),
         ...(updates.roastDate !== undefined && { roastDate: updates.roastDate }),
         ...(updates.flavorNotes !== undefined && { flavorNotes: updates.flavorNotes }),
         ...(updates.rating !== undefined && { rating: updates.rating }),

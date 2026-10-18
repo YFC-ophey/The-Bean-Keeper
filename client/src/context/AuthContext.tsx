@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { invalidateCoffeeEntries } from '@/lib/queryClient';
+import { invalidateCoffeeEntries, setAuthToken } from '@/lib/queryClient';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { trackEvent } from '@/lib/analytics';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -9,14 +11,37 @@ interface AuthContextType {
   justLoggedIn: boolean;
   authError: string | null;
   isOwner: boolean;
+  notionLinked: boolean;
   clearJustLoggedIn: () => void;
   clearAuthError: () => void;
   login: () => void;
   logout: () => Promise<void>;
-  ownerLogin: (password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+type SupabaseSessionWithProviderToken = {
+  access_token: string;
+  provider_token?: string;
+};
+
+async function linkNotionProviderToken(accessToken: string, providerToken: string) {
+  const response = await fetch('/api/auth/notion/link-provider-token', {
+    method: 'POST',
+    credentials: 'omit',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ providerToken }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to link Notion provider token (${response.status})`);
+  }
+
+  return await response.json();
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,177 +51,173 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [justLoggedIn, setJustLoggedIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [notionLinked, setNotionLinked] = useState(false);
 
-  const checkAuth = useCallback(async () => {
+  const clearLocalAuth = useCallback(() => {
+    setAuthToken(null);
+    setIsAuthenticated(false);
+    setWorkspaceName(null);
+    setDatabaseId(null);
+    setIsOwner(false);
+    setNotionLinked(false);
+  }, []);
+
+  const checkAuth = useCallback(async (refreshProviderToken = false) => {
     try {
-      const storedAuthData = localStorage.getItem('beankeeper_auth_data');
+      if (!isSupabaseConfigured || !supabase) {
+        clearLocalAuth();
+        return;
+      }
 
-      // Use fetch directly to avoid throwing on 401
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include',
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        clearLocalAuth();
+        return;
+      }
+
+      const session = sessionData.session as unknown as SupabaseSessionWithProviderToken;
+      setAuthToken(session.access_token);
+
+      const meResponse = await fetch('/api/auth/me', {
+        credentials: 'omit',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('  /api/auth/me response:', data);
-
-        if (data.authenticated) {
-          console.log('  ✅ Authenticated via cookie');
-          setIsAuthenticated(true);
-          setWorkspaceName(data.workspaceName);
-          setDatabaseId(data.databaseId);
-          setIsOwner(data.isOwner || false);
-
-          // Invalidate coffee entries cache to force fresh fetch for this user's database
-          invalidateCoffeeEntries();
-
-          // Store auth data in localStorage for persistence across sessions
-          localStorage.setItem('beankeeper_auth_data', JSON.stringify({
-            databaseId: data.databaseId,
-            workspaceName: data.workspaceName,
-            isOwner: data.isOwner || false,
-          }));
-
-          // Clean up URL params after successful auth
-          const url = new URL(window.location.href);
-          if (url.searchParams.has('login')) {
-            url.searchParams.delete('login');
-            window.history.replaceState({}, '', url.pathname);
-          }
-          return;
-        }
+      if (!meResponse.ok) {
+        clearLocalAuth();
+        return;
       }
 
-      // Cookie auth failed - clear stale localStorage data
-      // SECURITY: Never trust localStorage without server validation
-      // Both owner and OAuth users must re-authenticate if session is gone
-      if (storedAuthData) {
-        console.log('  🔒 Session expired - clearing stale auth data, user must re-authenticate');
-        localStorage.removeItem('beankeeper_auth_data');
+      const meData = await meResponse.json();
+
+      // A new OAuth callback may carry a rotated Notion token. Refresh the
+      // existing connection only then; ordinary page loads use the saved link.
+      if (meData.authenticated && session.provider_token && (!meData.notionLinked || refreshProviderToken)) {
+        const linkResult = await linkNotionProviderToken(session.access_token, session.provider_token);
+        setIsAuthenticated(true);
+        setNotionLinked(true);
+        setWorkspaceName(linkResult.workspaceName || null);
+        setDatabaseId(linkResult.databaseId || null);
+        setIsOwner(Boolean(linkResult.isOwner));
+        invalidateCoffeeEntries();
+        return;
       }
 
-      // Not authenticated
-      console.log('  ❌ Not authenticated');
-      setIsAuthenticated(false);
-      setWorkspaceName(null);
-      setDatabaseId(null);
-      setIsOwner(false);
+      if (meData.authenticated && meData.notionLinked) {
+        setIsAuthenticated(true);
+        setNotionLinked(true);
+        setWorkspaceName(meData.workspaceName || null);
+        setDatabaseId(meData.databaseId || null);
+        setIsOwner(meData.isOwner || false);
+
+        invalidateCoffeeEntries();
+        return;
+      }
+
+      // Signed in at Supabase but missing provider token to complete Notion linking.
+      setAuthError('LOGIN_FAILED');
+      clearLocalAuth();
     } catch (error) {
       console.error('Auth check failed:', error);
-      setIsAuthenticated(false);
-      setWorkspaceName(null);
-      setDatabaseId(null);
-      setIsOwner(false);
+      clearLocalAuth();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [clearLocalAuth]);
 
   useEffect(() => {
-    // Check for OAuth callback params
     const params = new URLSearchParams(window.location.search);
     const loginStatus = params.get('login');
 
-    console.log('🚀 AuthContext useEffect:', { loginStatus });
-
     if (loginStatus === 'success') {
-      // Just returned from OAuth - mark as just logged in and check auth
       setJustLoggedIn(true);
-      checkAuth();
+      checkAuth(true);
     } else if (loginStatus === 'no_pages') {
-      // User didn't share any pages during OAuth - show helpful message
-      console.log('🔴 OAuth failed: User did not share any pages');
-      setIsAuthenticated(false);
-      setIsLoading(false);
       setAuthError('NO_PAGES_SHARED');
-      // Clean up URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete('login');
-      window.history.replaceState({}, '', url.pathname);
-    } else if (loginStatus === 'error') {
-      // OAuth failed
-      setIsAuthenticated(false);
+      clearLocalAuth();
       setIsLoading(false);
+    } else if (loginStatus === 'error') {
       setAuthError('LOGIN_FAILED');
-      // Clean up URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete('login');
-      window.history.replaceState({}, '', url.pathname);
+      clearLocalAuth();
+      setIsLoading(false);
     } else {
-      // Normal page load - check auth
       checkAuth();
     }
-  }, [checkAuth]);
+
+    if (loginStatus) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('login');
+      window.history.replaceState({}, '', url.pathname);
+    }
+  }, [checkAuth, clearLocalAuth]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') {
+        setAuthToken(session?.access_token ?? null);
+      } else if (event === 'SIGNED_OUT') {
+        clearLocalAuth();
+        invalidateCoffeeEntries();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [clearLocalAuth]);
 
   const login = () => {
-    window.location.href = '/api/auth/notion';
+    if (!isSupabaseConfigured || !supabase) {
+      setAuthError('LOGIN_FAILED');
+      return;
+    }
+
+    trackEvent('notion_login_start');
+    void supabase.auth.signInWithOAuth({
+      provider: 'notion',
+      options: {
+        redirectTo: `${window.location.origin}/?login=success`,
+      },
+    }).then(({ error }) => {
+      if (error) {
+        console.error('Notion login failed:', error);
+        setAuthError('LOGIN_FAILED');
+      }
+    }).catch((error) => {
+      console.error('Notion login failed:', error);
+      setAuthError('LOGIN_FAILED');
+    });
   };
 
   const logout = async () => {
     try {
+      const currentSession = isSupabaseConfigured && supabase
+        ? await supabase.auth.getSession()
+        : null;
+      const accessToken = currentSession?.data.session?.access_token;
+
       await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'omit',
+        headers: accessToken
+          ? {
+              Authorization: `Bearer ${accessToken}`,
+            }
+          : undefined,
       });
-      // Clear owner auth data from localStorage
-      localStorage.removeItem('beankeeper_auth_data');
-      console.log('🚪 Logged out, cleared session from localStorage');
-
-      // Invalidate coffee entries cache to force fresh fetch of owner's collection (guest mode)
+    } catch (error) {
+      console.error('Server logout failed:', error);
+    } finally {
+      try {
+        if (supabase) await supabase.auth.signOut();
+      } catch (error) {
+        console.error('Supabase logout failed:', error);
+      }
+      clearLocalAuth();
       invalidateCoffeeEntries();
-
-      setIsAuthenticated(false);
-      setWorkspaceName(null);
-      setDatabaseId(null);
-      setIsOwner(false);
       window.location.href = '/';
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-
-  const ownerLogin = async (password: string): Promise<boolean> => {
-    try {
-      console.log('🔑 Attempting owner login...');
-      const response = await fetch('/api/auth/owner', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ password }),
-      });
-
-      if (!response.ok) {
-        console.log('❌ Owner login failed:', response.status);
-        return false;
-      }
-
-      const data = await response.json();
-      console.log('✅ Owner login successful:', data);
-
-      if (data.authenticated) {
-        setIsAuthenticated(true);
-        setWorkspaceName(data.workspaceName);
-        setDatabaseId(data.databaseId);
-        setIsOwner(true);
-        setJustLoggedIn(true);
-
-        // Invalidate coffee entries cache to force fresh fetch for owner's database
-        invalidateCoffeeEntries();
-
-        // Store auth data in localStorage for persistence
-        localStorage.setItem('beankeeper_auth_data', JSON.stringify({
-          databaseId: data.databaseId,
-          workspaceName: data.workspaceName,
-          isOwner: true,
-        }));
-
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Owner login error:', error);
-      return false;
     }
   };
 
@@ -217,11 +238,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       justLoggedIn,
       authError,
       isOwner,
+      notionLinked,
       clearJustLoggedIn,
       clearAuthError,
       login,
       logout,
-      ownerLogin
     }}>
       {children}
     </AuthContext.Provider>

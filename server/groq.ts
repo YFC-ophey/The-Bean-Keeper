@@ -20,14 +20,12 @@ export interface ExtractedCoffeeInfo {
 }
 
 /**
- * Uses Groq's Llama 3.1 8B model to intelligently extract structured coffee information from raw OCR text
- * This is much more accurate than regex patterns for parsing coffee bag labels
- * Groq provides ultra-fast inference using their LPU architecture
+ * Uses a Groq-hosted text model to extract structured coffee information from raw OCR text.
  */
 export async function extractCoffeeInfoWithAI(ocrText: string): Promise<ExtractedCoffeeInfo> {
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant", // Fast model with JSON mode support
+      model: "openai/gpt-oss-20b",
       messages: [
         {
           role: "system",
@@ -68,7 +66,8 @@ Important: Return only clean text without OCR artifacts like special characters,
         }
       ],
       response_format: { type: "json_object" }, // Enforce JSON response
-      max_tokens: 1000, // Note: Groq uses max_tokens instead of max_completion_tokens
+      max_completion_tokens: 2048,
+      reasoning_effort: "low",
       temperature: 0, // Deterministic output for consistent extraction
     });
 
@@ -101,8 +100,8 @@ Important: Return only clean text without OCR artifacts like special characters,
       // Normalize spacing around commas for multi-country origins
       result.origin = parsed.origin
         .split(',')
-        .map(o => o.trim())
-        .filter(o => o.length > 0)
+        .map((o: string) => o.trim())
+        .filter((o: string) => o.length > 0)
         .join(', ');
     }
     if (parsed.variety && typeof parsed.variety === 'string') {
