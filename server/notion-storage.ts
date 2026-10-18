@@ -96,10 +96,11 @@ export class NotionStorage {
 
       // Create in Notion (using entry.id as Notion page ID)
       const client = this.getClient();
-      const notionPageId = await createNotionCoffeePage(databaseId, fullEntry, client);
+      const write = await createNotionCoffeePage(databaseId, fullEntry, client);
 
       // Update entry with Notion page ID
-      fullEntry.id = notionPageId;
+      fullEntry.id = write.pageId;
+      if (write.roastLevelOmitted) fullEntry.roastLevel = null;
 
       return fullEntry;
     } catch (error) {
@@ -141,7 +142,8 @@ export class NotionStorage {
 
       // Update in Notion
       const client = this.getClient();
-      await updateNotionCoffeePage(id, updatedEntry, client);
+      const write = await updateNotionCoffeePage(id, updatedEntry, client);
+      if (write.roastLevelOmitted) updatedEntry.roastLevel = null;
 
       return updatedEntry;
     } catch (error) {

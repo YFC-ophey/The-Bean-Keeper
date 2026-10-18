@@ -12,15 +12,24 @@ interface CoffeeCardProps {
   isHighestRated?: boolean;
   isRecent?: boolean;
   isGuest?: boolean;
+  onToggleFavorite?: (entry: CoffeeEntry) => Promise<void>;
 }
 
-function CoffeeCard({ entry, onClick, isHighestRated, isRecent, isGuest = false }: CoffeeCardProps) {
-  const [isFavorite, setIsFavorite] = useState(entry.purchaseAgain || false);
+function CoffeeCard({ entry, onClick, isHighestRated, isRecent, isGuest = false, onToggleFavorite }: CoffeeCardProps) {
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
+  const isFavorite = entry.purchaseAgain;
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFavorite(!isFavorite);
-    // TODO: Persist favorite status to backend
+    if (isSavingFavorite || !onToggleFavorite) return;
+    setIsSavingFavorite(true);
+    try {
+      await onToggleFavorite(entry);
+    } catch {
+      // The dashboard reports the failure; the heart still reflects server data.
+    } finally {
+      setIsSavingFavorite(false);
+    }
   };
 
   return (
@@ -105,7 +114,10 @@ function CoffeeCard({ entry, onClick, isHighestRated, isRecent, isGuest = false 
         {!isGuest && (
           <button
             onClick={handleFavoriteClick}
-            className="absolute top-3 left-1/2 -translate-x-1/2 p-2.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
+            disabled={isSavingFavorite}
+            aria-busy={isSavingFavorite}
+            aria-pressed={isFavorite}
+            className="absolute top-3 left-1/2 -translate-x-1/2 p-2.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95 disabled:cursor-wait disabled:opacity-100"
             aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
           >
             <Heart
@@ -161,7 +173,8 @@ function CoffeeCard({ entry, onClick, isHighestRated, isRecent, isGuest = false 
 export default memo(CoffeeCard, (prevProps, nextProps) => {
   // Custom comparison - only re-render if these change
   return (
-    prevProps.entry.id === nextProps.entry.id &&
+    prevProps.entry === nextProps.entry &&
+    prevProps.onToggleFavorite === nextProps.onToggleFavorite &&
     prevProps.isHighestRated === nextProps.isHighestRated &&
     prevProps.isRecent === nextProps.isRecent &&
     prevProps.isGuest === nextProps.isGuest

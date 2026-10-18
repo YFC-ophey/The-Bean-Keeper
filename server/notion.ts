@@ -27,6 +27,40 @@ export function createNotionClient(accessToken?: string): Client {
 // Type for Notion property values
 type NotionPropertyValue = any;
 
+// Roast Level was added after some owner databases were created. Retry only
+// when Notion explicitly rejects that optional property as absent.
+const optionalCoffeeProperty = "Roast Level";
+
+async function writeWithLegacyOptionalProperties<T>(
+  properties: Record<string, NotionPropertyValue>,
+  write: (properties: Record<string, NotionPropertyValue>) => Promise<T>,
+): Promise<{ value: T; roastLevelOmitted: boolean }> {
+  const remaining = { ...properties };
+  let roastLevelOmitted = false;
+  while (true) {
+    try {
+      return { value: await write(remaining), roastLevelOmitted };
+    } catch (error) {
+      const code = (error as { code?: unknown })?.code;
+      const message = (error as { message?: unknown })?.message;
+      const missingProperty = typeof message === "string"
+        ? /^(.+?) is not a property that exists\.?$/.exec(message)?.[1]
+        : undefined;
+      if (
+        code !== "validation_error" ||
+        !missingProperty ||
+        missingProperty !== optionalCoffeeProperty ||
+        !Object.prototype.hasOwnProperty.call(remaining, missingProperty)
+      ) {
+        throw error;
+      }
+      console.warn(`Notion database lacks optional coffee property "${missingProperty}"; omitting it from this write`);
+      delete remaining[missingProperty];
+      roastLevelOmitted = true;
+    }
+  }
+}
+
 /**
  * Creates a Notion database for coffee tracking with the appropriate schema
  * This should be called once during setup
@@ -378,17 +412,20 @@ export async function createNotionCoffeePage(
   databaseId: string,
   entry: CoffeeEntry,
   client?: Client
-): Promise<string> {
+): Promise<{ pageId: string; roastLevelOmitted: boolean }> {
   try {
     const notionClient = client || notion;
-    const response = await notionClient.pages.create({
-      parent: {
-        database_id: databaseId,
-      },
-      properties: coffeeEntryToNotionProperties(entry),
-    });
+    const response = await writeWithLegacyOptionalProperties(
+      coffeeEntryToNotionProperties(entry),
+      (properties) => notionClient.pages.create({
+        parent: {
+          database_id: databaseId,
+        },
+        properties,
+      }),
+    );
 
-    return response.id;
+    return { pageId: response.value.id, roastLevelOmitted: response.roastLevelOmitted };
   } catch (error) {
     console.error("Error creating Notion page:", error);
     throw error;
@@ -405,7 +442,7 @@ export async function updateNotionCoffeePage(
   pageId: string,
   updates: Partial<CoffeeEntry>,
   client?: Client
-): Promise<void> {
+): Promise<{ roastLevelOmitted: boolean }> {
   try {
     const notionClient = client || notion;
     // Create a temporary full entry for conversion (merge with empty defaults)
@@ -429,10 +466,13 @@ export async function updateNotionCoffeePage(
       properties["Back Photo"] = { url: null };
     }
 
-    await notionClient.pages.update({
-      page_id: pageId,
-      properties,
-    });
+    const result = await writeWithLegacyOptionalProperties(properties, (compatibleProperties) =>
+      notionClient.pages.update({
+        page_id: pageId,
+        properties: compatibleProperties,
+      }),
+    );
+    return { roastLevelOmitted: result.roastLevelOmitted };
   } catch (error) {
     console.error("Error updating Notion page:", error);
     throw error;
