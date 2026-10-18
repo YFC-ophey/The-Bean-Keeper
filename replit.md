@@ -1,172 +1,19 @@
-# The Bean Keeper
+# The Bean Keeper workspace notes
 
-## Overview
+This repository is a React, Vite, and Express coffee journal. Coffee entries are stored as Notion pages. Supabase Auth handles Notion sign-in and Supabase tables hold the user's Notion connection, a coffee-entry mirror, and sync events. Groq structures OCR text from uploaded coffee bag photos.
 
-A mobile-first coffee tracking application that allows users to photograph coffee bags, extract information via OCR, and maintain a personal journal of their coffee experiences. The app combines photo-centric design with structured data organization, featuring automatic data extraction from coffee bag photos, roaster website links, Google Maps integration, and rating/tasting note capabilities.
+## Development
 
-## User Preferences
+Run `npm install`, copy `.env.example` to `.env`, configure Supabase and Notion using [SUPABASE_SETUP.md](SUPABASE_SETUP.md), then run `npm run dev`. The default local port is 5001. `npm run check` validates TypeScript and `npm run build` creates the client and server bundles.
 
-Preferred communication style: Simple, everyday language.
+## Key paths
 
-## Recent Changes
+- `client/src/` — React UI, localization, OCR, and Supabase browser client.
+- `server/index.ts` and `server/routes.ts` — Express entry and API routes.
+- `server/notion.ts` — canonical Notion page operations.
+- `server/supabase.ts` and `server/supabase-mirror.ts` — Supabase admin client and mirror.
+- `server/groq.ts` — AI extraction.
+- `shared/schema.ts` — coffee entry types and validation.
+- `migrations/` — Supabase schema and profile trigger.
 
-**November 13, 2025:**
-- **Fixed OCR text cleaning to remove special character artifacts while preserving structure**
-  - Enhanced cleanText() function removes mixed-case gibberish patterns (e.g., "Kenye« | il aE" → "Kenya")
-  - Preserves newlines for line-based extraction while sanitizing OCR noise
-  - Applied to both raw OCR text and AI-returned field values
-- **Enhanced roast date extraction accuracy**
-  - Improved AI prompt with multiple date format examples
-  - Better recognition of various date patterns from coffee bag labels
-- **Added intelligent fallback for roaster name extraction**
-  - Extracts roaster name from website URL when OCR scan fails
-  - Prevents duplicate "Coffee" suffix when using website fallback
-- **Implemented weight, price, and "Purchase Again" fields**
-  - Added weight (text) and price (text) fields to track purchase details
-  - AddCoffeeForm includes weight and price input fields with appropriate placeholders
-  - Added purchaseAgain (boolean, default: false) field with heart toggle UI
-  - RatingModal includes "Purchase Again?" switch with visual heart icon feedback
-  - EditCoffeeForm preserves all field values including purchaseAgain state
-  - CoffeeDetail displays weight and price in Coffee Details section
-  - CoffeeDetail shows "Would purchase again" badge with heart icon when true (positive-only messaging)
-  - Schema migration: purchaseAgain is non-nullable boolean defaulting to false
-  - RatingModal uses useEffect to hydrate from existing entry values when re-rating
-  - Full data flow: Create → Rate → Edit → Display maintains field persistence
-
-**November 12, 2025:**
-- Added support for uploading 2 photos (front and back of coffee bag) for comprehensive information extraction
-- Combined OCR text from both photos sent to ChatGPT for improved extraction accuracy
-- Added AI-powered OCR optimization using OpenAI GPT-5 (via Replit AI Integrations)
-- Migrated from in-memory to PostgreSQL database storage for data persistence
-- Enhanced extraction accuracy for roaster names, origins, varieties, and flavor notes
-- Implemented graceful database fallback for development environments
-- Renamed application from "Coffee Journal" to "The Bean Keeper"
-- Added manual "Rescan Text" button for re-triggering OCR when needed
-- Display both photos side-by-side in detail view when back photo is available
-- Added delete functionality with confirmation dialog for removing coffee entries
-- **Replaced "Roaster Location" field with "Roaster Website" field throughout UI**
-  - AddCoffeeForm and EditCoffeeForm now capture website URLs instead of location text
-  - CoffeeDetail displays website as clickable external link with clean formatting
-  - Google Maps integration now searches by roaster name or website (previously used location)
-  - OpenAI extraction prioritizes website URL extraction over location parsing
-
-## System Architecture
-
-### Frontend Architecture
-
-**Technology Stack:**
-- React with TypeScript for component-based UI
-- Vite as build tool and development server
-- Wouter for client-side routing
-- TanStack Query (React Query) for server state management
-- Tailwind CSS with shadcn/ui components for styling
-
-**Design Philosophy:**
-- Mobile-first approach with camera/photo upload as primary interaction
-- Hybrid design combining Material Design foundation with Instagram-inspired photo presentation
-- Photo-centric interface with clean data display optimized for scannable timeline/grid views
-- Typography using Inter font family with specific weight and size conventions
-
-**Key Frontend Components:**
-- `AddCoffeeForm`: Photo upload interface supporting front and back photos with combined OCR scanning using Tesseract.js for automatic field extraction including roaster website, weight, and price
-- `CoffeeCard`: Instagram-style card displaying front photo with overlay information
-- `CoffeeDetail`: Modal view showing comprehensive coffee entry details with side-by-side photo display when both photos available; displays roaster website as clickable external link, weight/price in Coffee Details section, and "Purchase Again" badge with heart icon
-- `RatingModal`: Star rating interface with tasting notes and "Purchase Again?" toggle with heart icon feedback
-- `EditCoffeeForm`: Edit existing coffee entries with full field preservation including purchaseAgain state
-- `FilterBar`: Search and filter interface for browsing entries
-- `StarRating`: Reusable star rating component with interactive and readonly modes
-
-**State Management:**
-- React Query for API data fetching, caching, and synchronization
-- Local component state for UI interactions
-- Query invalidation patterns for optimistic updates
-
-### Backend Architecture
-
-**Technology Stack:**
-- Express.js server with TypeScript
-- Drizzle ORM for database operations
-- PostgreSQL database (via Neon serverless)
-- Google Cloud Storage for photo storage (via Replit Object Storage)
-
-**API Structure:**
-- RESTful endpoints for CRUD operations on coffee entries
-- Separate object storage service for photo upload/retrieval
-- Session-based request logging with response truncation
-- Raw body preservation for webhook/signature verification compatibility
-
-**Data Storage:**
-- Coffee entries stored in PostgreSQL with schema defined in `shared/schema.ts`
-- Photo files stored in Google Cloud Storage buckets
-- Automatic fallback to in-memory storage when DATABASE_URL is not available
-- DbStorage uses Drizzle ORM with Neon serverless PostgreSQL driver
-
-**Database Schema:**
-The `coffee_entries` table includes:
-- Core fields: id (UUID), frontPhotoUrl (required), backPhotoUrl (optional), roasterName, createdAt
-- Roaster info: roasterWebsite (displayed in UI), roasterLocation (deprecated in UI), roasterAddress
-- Coffee details: farm, origin, variety, processMethod, roastDate, weight (text), price (text)
-- User input: flavorNotes (array), rating (integer), tastingNotes (text), purchaseAgain (boolean, default: false)
-
-**Storage Abstraction:**
-- `IStorage` interface defines standard data operations
-- `DbStorage` implements persistent storage using Drizzle ORM with PostgreSQL
-- `MemStorage` provides in-memory fallback when database is unavailable
-- Automatic storage selection based on DATABASE_URL availability
-
-### External Dependencies
-
-**Third-Party Services:**
-- **Google Cloud Storage**: Photo/object storage via Replit sidecar authentication
-  - Custom credential flow using external_account type
-  - Endpoint: `http://127.0.0.1:1106` (Replit sidecar)
-  - Project ID managed through environment configuration
-
-- **Neon Serverless PostgreSQL**: Database hosting
-  - Connection string via `DATABASE_URL` environment variable
-  - Serverless driver compatible with edge environments
-
-**OCR Processing:**
-- **Tesseract.js**: Client-side OCR for extracting raw text from coffee bag photos
-  - Runs in browser to extract text from both front and back photos
-  - Combines text from both images before sending to AI
-  - Raw combined text is sent to AI for intelligent parsing
-- **OpenAI GPT-5**: AI-powered text extraction via Replit AI Integrations
-  - Intelligently extracts structured coffee information from combined OCR text
-  - Better at parsing stylized fonts and context than regex patterns
-  - Provides roaster name, website, farm, origin, variety, process, roast date, flavor notes
-  - Prioritizes website URL extraction over location parsing
-  - Graceful fallback to regex extraction if AI service fails
-  - Analyzing both bag sides significantly improves extraction accuracy
-
-**UI Component Library:**
-- **shadcn/ui**: Comprehensive component library built on Radix UI primitives
-  - Configured with "new-york" style variant
-  - Customized Tailwind theme with neutral base color
-  - Components aliased via `@/components` path
-
-**Mapping Integration:**
-- Google Maps search integration for finding roasters
-  - Uses roaster name or website URL for search query
-  - External link opens Google Maps in new tab
-  - Placeholder map visualization in `CoffeeDetail` component
-
-**Build & Development Tools:**
-- **Vite**: Development server and build system with HMR
-- **Drizzle Kit**: Database schema migrations and management
-- **esbuild**: Production server bundling
-- **Replit-specific plugins**: Runtime error overlay, cartographer, dev banner (development only)
-
-**Form & Validation:**
-- **React Hook Form**: Form state management
-- **Zod**: Schema validation and type inference
-- Drizzle Zod integration for database schema validation
-
-**Date Handling:**
-- **date-fns**: Date formatting and manipulation throughout UI
-
-**Additional Libraries:**
-- **react-dropzone**: File upload with drag-and-drop support
-- **lucide-react**: Icon system
-- **class-variance-authority (cva)**: Component variant management
-- **clsx/tailwind-merge**: Utility class composition
+Render deployment settings are in `render.yaml`; see [DEPLOYMENT.md](DEPLOYMENT.md). Configure `VITE_` variables before the build and keep the service role key on the server.

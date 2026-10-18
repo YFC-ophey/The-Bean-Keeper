@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, LogIn } from "lucide-react";
+import { Plus, Search, LogIn, Coffee } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
@@ -33,11 +33,13 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import NotionButton from "@/components/NotionButton";
 import AboutSection from "@/components/AboutSection";
 import { NotionAuthModal } from "@/components/NotionAuthModal";
-import { OwnerLoginSection } from "@/components/OwnerLoginSection";
 import { CoffeeEntry } from "@shared/schema";
 import { invalidateCoffeeEntries, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { trackEvent } from "@/lib/analytics";
+import { buyMeACoffeeUrl } from "@/lib/donation";
+import { useAnalyticsSettings } from "@/context/AnalyticsContext";
 
 type CoffeeFormData = {
   roasterName: string;
@@ -46,6 +48,7 @@ type CoffeeFormData = {
   origin?: string;
   variety?: string;
   processMethod?: string;
+  roastLevel?: string;
   roastDate?: string;
   flavorNotes?: string;
   rating?: number;
@@ -59,7 +62,7 @@ type CoffeeFormData = {
 
 export default function Dashboard() {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError, ownerLogin } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, workspaceName, databaseId, login, justLoggedIn, clearJustLoggedIn, authError, clearAuthError } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -76,6 +79,7 @@ export default function Dashboard() {
   const [activeOriginFilter, setActiveOriginFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>("newest");
   const { toast } = useToast();
+  const analyticsSettings = useAnalyticsSettings();
 
   // Auto-open Add Coffee form after successful OAuth login
   useEffect(() => {
@@ -136,10 +140,14 @@ export default function Dashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHeaderVisible]);
 
-  // Include databaseId in query key to separate cache between guest (owner's DB) and authenticated users
-  // This prevents stale guest data from showing after OAuth login
+  // Keep public guest entries separate from each authenticated workspace.
   const { data: entries = [], isLoading } = useQuery<CoffeeEntry[]>({
-    queryKey: ["/api/coffee-entries", { databaseId: databaseId || "guest" }],
+    queryKey: ["/api/coffee-entries", {
+      scope: isAuthenticated ? "workspace" : "guest",
+      databaseId: isAuthenticated ? databaseId : null,
+    }],
+    enabled: !isAuthLoading,
+    staleTime: 0,
   });
 
   const handleAddCoffee = async (
@@ -157,6 +165,7 @@ export default function Dashboard() {
         origin: data.origin || null,
         variety: data.variety || null,
         processMethod: data.processMethod || null,
+        roastLevel: data.roastLevel || null,
         roastDate: data.roastDate || null,
         flavorNotes: data.flavorNotes
           ? data.flavorNotes.split(",").map(f => f.trim()).filter(f => f.length > 0)
@@ -170,6 +179,7 @@ export default function Dashboard() {
       });
 
       const newEntry = await response.json() as CoffeeEntry;
+      trackEvent('coffee_added');
       await invalidateCoffeeEntries();
       
       setPendingEntry(newEntry);
@@ -177,15 +187,7 @@ export default function Dashboard() {
       setShowRatingModal(true);
 
       toast({
-        title: (
-          <div className="flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z" fill="currentColor"/>
-              <path fillRule="evenodd" clipRule="evenodd" d="M61.35 0.227l-55.333 4.087C1.553 4.7 0 7.617 0 11.113v60.66c0 2.724 0.967 5.053 3.3 8.167l13.007 16.913c2.137 2.723 4.08 3.307 8.16 3.113l64.257 -3.89c5.433 -0.387 6.99 -2.917 6.99 -7.193V20.64c0 -2.21 -0.873 -2.847 -3.443 -4.733L74.167 3.143c-4.273 -3.107 -6.02 -3.5 -12.817 -2.917zM25.92 19.523c-5.247 0.353 -6.437 0.433 -9.417 -1.99L8.927 11.507c-0.77 -0.78 -0.383 -1.753 1.557 -1.947l53.193 -3.887c4.467 -0.39 6.793 1.167 8.54 2.527l9.123 6.61c0.39 0.197 1.36 1.36 0.193 1.36l-54.933 3.307 -0.68 0.047zM19.803 88.3V30.367c0 -2.53 0.777 -3.697 3.103 -3.893L86 22.78c2.14 -0.193 3.107 1.167 3.107 3.693v57.547c0 2.53 -0.39 4.67 -3.883 4.863l-60.377 3.5c-3.493 0.193 -5.043 -0.97 -5.043 -4.083zm59.6 -54.827c0.387 1.75 0 3.5 -1.75 3.7l-2.91 0.577v42.773c-2.527 1.36 -4.853 2.137 -6.797 2.137 -3.107 0 -3.883 -0.973 -6.21 -3.887l-19.03 -29.94v28.967l6.02 1.363s0 3.5 -4.857 3.5l-13.39 0.777c-0.39 -0.78 0 -2.723 1.357 -3.11l3.497 -0.97v-38.3L30.48 40.667c-0.39 -1.75 0.58 -4.277 3.3 -4.473l14.367 -0.967 19.8 30.327v-26.83l-5.047 -0.58c-0.39 -2.143 1.163 -3.7 3.103 -3.89l13.4 -0.78z" fill="#fff"/>
-            </svg>
-            <span>Coffee added to Notion!</span>
-          </div>
-        ),
+        title: "Coffee added to Notion!",
         description: "Now rate your coffee experience.",
       });
     } catch (error) {
@@ -241,6 +243,7 @@ export default function Dashboard() {
         origin: data.origin || null,
         variety: data.variety || null,
         processMethod: data.processMethod || null,
+        roastLevel: data.roastLevel || null,
         roastDate: data.roastDate || null,
         flavorNotes: data.flavorNotes
           ? data.flavorNotes.split(",").map(f => f.trim()).filter(f => f.length > 0)
@@ -382,6 +385,7 @@ export default function Dashboard() {
   // Handle Add Coffee button click - show auth modal for guests
   const handleAddCoffeeClick = () => {
     if (isAuthLoading) return;
+    trackEvent('add_coffee_click');
 
     if (!isAuthenticated) {
       // Show pre-auth instructions modal for guests
@@ -436,7 +440,7 @@ export default function Dashboard() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.location.href = '/api/auth/notion'}
+                    onClick={login}
                     disabled={isAuthLoading}
                     className="flex items-center gap-1 px-2 py-1.5 min-h-[36px] text-xs bg-white border-[#E3E2E0] hover:bg-[#F7F6F5]"
                     aria-label="Login with Notion"
@@ -458,7 +462,7 @@ export default function Dashboard() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.location.href = '/api/auth/notion'}
+                  onClick={login}
                   disabled={isAuthLoading}
                   className="flex items-center gap-2 bg-white border-[#E3E2E0] hover:bg-[#F7F6F5] text-[#37352F]"
                   aria-label="Login with Notion"
@@ -624,20 +628,18 @@ export default function Dashboard() {
               <div className="h-px w-16 bg-gradient-to-l from-transparent to-border" />
             </div>
 
-            {/* Buy Me a Coffee Button */}
-            <a
-              href="https://buymeacoffee.com/opheliachen"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 mb-6 rounded-full bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] hover:from-[#5D4230] hover:to-[#7A5F3D] text-[#F5EFE7] font-medium text-sm transition-all hover:scale-105 hover:shadow-lg active:scale-95 border border-[#D4A574]/30"
-            >
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/10187/10187444.png"
-                alt="Coffee cup"
-                className="w-5 h-5 brightness-0 invert"
-              />
-              {t('dashboard:footer.support')}
-            </a>
+            {buyMeACoffeeUrl && (
+              <a
+                href={buyMeACoffeeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent('support_click')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 mb-6 rounded-full bg-gradient-to-r from-[#6F4E37] to-[#8B6F47] hover:from-[#5D4230] hover:to-[#7A5F3D] text-[#F5EFE7] font-medium text-sm transition-all hover:scale-105 hover:shadow-lg active:scale-95 border border-[#D4A574]/30"
+              >
+                <Coffee aria-hidden="true" className="h-5 w-5" />
+                {t('dashboard:footer.support')}
+              </a>
+            )}
 
             <p className="text-muted-foreground font-serif text-sm mb-2">
               {t('dashboard:footer.tagline')}
@@ -645,6 +647,11 @@ export default function Dashboard() {
             <p className="text-muted-foreground/60 font-serif text-xs">
               {t('dashboard:footer.copyright')}
             </p>
+            {analyticsSettings.available && (
+              <button type="button" onClick={analyticsSettings.openSettings} className="mt-3 text-xs text-muted-foreground underline underline-offset-2">
+                {t('common:analytics.settings')}
+              </button>
+            )}
             
           </div>
         </div>
@@ -773,10 +780,6 @@ export default function Dashboard() {
         mode={authModalMode}
       />
 
-      {/* Owner Login Section - Bottom of page for guests only */}
-      {!isAuthenticated && (
-        <OwnerLoginSection ownerLogin={ownerLogin} />
-      )}
     </div>
   );
 }

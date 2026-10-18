@@ -1,13 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { sessionMiddleware } from "./session";
 import { registerNotionOAuthRoutes } from "./notion-oauth-routes";
 
 const app = express();
 
-// Trust proxy - required for secure cookies behind Render's reverse proxy
-// Without this, secure cookies won't work because Express sees HTTP, not HTTPS
+// Honor Render's reverse proxy when deriving the client IP and protocol.
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
@@ -23,9 +21,6 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
-
-// Session middleware - MUST be before routes
-app.use(sessionMiddleware);
 
 // Register OAuth routes
 registerNotionOAuthRoutes(app);

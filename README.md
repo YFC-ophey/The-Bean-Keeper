@@ -1,5 +1,10 @@
 # The Bean Keeper
 
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
+[![Express](https://img.shields.io/badge/Express-4-333.svg)](https://expressjs.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+
 A mobile-first coffee tracking application that integrates multiple AI providers (Groq/Llama, Google Gemini, Tesseract OCR) to automatically extract, structure, and enrich coffee data from bag label photos.
 
 ![The Bean Keeper](client/public/logo.jpeg)
@@ -23,13 +28,13 @@ This started as a personal tool and became a proving ground for multi-provider A
 - **Tesseract.js** for client-side OCR: runs in the browser, zero API cost, handles multilingual text (English + Chinese).
 - **ElevenLabs** for voice synthesis in the video pipeline.
 
-The architecture uses fallback logic between providers. If AI extraction fails, regex-based extraction catches common patterns. If cloud storage fails, local filesystem takes over. Every external dependency has a graceful degradation path.
+If AI extraction fails, regex-based extraction catches common patterns. The app can use local photo storage during development; production uploads need persistent storage.
 
 ## Features
 
 - **AI-Powered Extraction**: Upload coffee bag photos. AI extracts roaster, origin, variety, process method, roast level, and more.
 - **Bilingual Interface**: Full English and Traditional Chinese support with auto-detection
-- **Notion OAuth**: Multi-user auth where each user gets their own isolated Notion database
+- **Supabase Auth with Notion**: Users sign in through Notion and get their own coffee database
 - **Guest Mode**: Browse the owner's collection without logging in (read-only)
 - **Advanced Filtering**: Filter by roast level, rating, origin with dynamic sort
 - **AI Video Pipeline**: Converts screen recordings into product demos (Remotion + Gemini + ElevenLabs) at $0 cost
@@ -49,7 +54,7 @@ The architecture uses fallback logic between providers. If AI extraction fails, 
 ### Application
 - **Frontend**: React 18, TypeScript, Vite, TanStack Query, shadcn/ui, Tailwind CSS
 - **Backend**: Express.js, TypeScript, Notion SDK, Cloudinary
-- **Auth**: Notion OAuth 2.0 with session management
+- **Auth**: Supabase Auth with Notion provider and Bearer token verification
 - **Deployment**: Render.com with Cloudinary for persistent photo storage
 
 ## 📦 Quick Start
@@ -57,7 +62,8 @@ The architecture uses fallback logic between providers. If AI extraction fails, 
 ### Prerequisites
 - Node.js 18+
 - Groq API key ([groq.com](https://groq.com))
-- Notion Internal Integration ([notion.so/my-integrations](https://notion.so/my-integrations))
+- Supabase project ([supabase.com](https://supabase.com))
+- Notion OAuth provider enabled in Supabase
 - Google Maps API key (optional)
 
 ### Installation
@@ -65,7 +71,7 @@ The architecture uses fallback logic between providers. If AI extraction fails, 
 ```bash
 # Clone the repository
 git clone https://github.com/YFC-ophey/The-Bean-Keeper.git
-cd the-bean-keeper
+cd The-Bean-Keeper
 
 # Install dependencies
 npm install
@@ -78,7 +84,9 @@ cp .env.example .env
 npm run dev
 ```
 
-Visit `http://localhost:5000`
+Visit `http://localhost:5001`
+
+Before signing in, follow [SUPABASE_SETUP.md](SUPABASE_SETUP.md) to configure the Notion provider and apply the Supabase migrations.
 
 ## 🔑 Environment Variables
 
@@ -87,17 +95,25 @@ Create a `.env` file with:
 ```env
 # Required
 GROQ_API_KEY=your_groq_api_key
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional (internal integration utilities)
 NOTION_API_KEY=your_notion_internal_integration_token
 NOTION_DATABASE_ID=your_notion_database_id
 
 # Optional
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
-PORT=5000
+PORT=5001
 ```
 
 See [`.env.example`](.env.example) for details.
 
 ## 🗄️ Database Setup
+
+Apply the Supabase schema and configure Notion sign-in using [SUPABASE_SETUP.md](SUPABASE_SETUP.md). Notion remains the source of truth for coffee entries; Supabase persists user connections and mirrors entries for recovery and analytics.
 
 ### Option 1: Create Notion Database Automatically
 
@@ -120,15 +136,8 @@ Full deployment guide: [`DEPLOYMENT.md`](DEPLOYMENT.md)
 Quick start: [`DEPLOY_QUICK_START.md`](DEPLOY_QUICK_START.md)
 
 ```bash
-# 1. Push to GitHub
-git add .
-git commit -m "Ready for deployment"
-git push
-
-# 2. Create web service on Render
-# 3. Connect GitHub repository
-# 4. Add environment variables
-# 5. Deploy!
+# Apply the migrations and configure Supabase/Notion before enabling this branch in Render.
+# Then set the Render environment variables and deploy the verified GitHub commit.
 ```
 
 Auto-deploys on every `git push` to main branch.

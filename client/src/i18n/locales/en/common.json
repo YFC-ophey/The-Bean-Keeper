@@ -31,5 +31,12 @@
   "beanito": {
     "welcome": "Hi Friends, I'm Beanito! Like my coffee collection? Let me show you how it's done. 80 seconds, and you'll wonder how you ever tracked coffee without me!",
     "watchHere": "Watch Demo"
+  },
+  "analytics": {
+    "title": "Optional analytics",
+    "description": "May we use Google Analytics to count page visits and basic actions? We do not send your account or coffee details. You can change this choice in the footer.",
+    "allow": "Allow analytics",
+    "decline": "No thanks",
+    "settings": "Analytics settings"
   }
 }

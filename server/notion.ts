@@ -341,6 +341,33 @@ function notionPropertiesToCoffeeEntry(properties: any): Partial<CoffeeEntry> {
   return entry;
 }
 
+function toCoffeeEntry(pageId: string, properties: any, createdTime?: string): CoffeeEntry {
+  const entry = notionPropertiesToCoffeeEntry(properties);
+  return {
+    id: pageId,
+    roasterName: entry.roasterName ?? '',
+    frontPhotoUrl: entry.frontPhotoUrl ?? '',
+    backPhotoUrl: entry.backPhotoUrl ?? null,
+    roasterLocation: entry.roasterLocation ?? null,
+    roasterAddress: entry.roasterAddress ?? null,
+    roasterWebsite: entry.roasterWebsite ?? null,
+    placeUrl: entry.placeUrl ?? null,
+    farm: entry.farm ?? null,
+    origin: entry.origin ?? null,
+    variety: entry.variety ?? null,
+    processMethod: entry.processMethod ?? null,
+    roastLevel: entry.roastLevel ?? null,
+    roastDate: entry.roastDate ?? null,
+    flavorNotes: entry.flavorNotes ?? null,
+    rating: entry.rating ?? null,
+    tastingNotes: entry.tastingNotes ?? null,
+    weight: entry.weight ?? null,
+    price: entry.price ?? null,
+    purchaseAgain: entry.purchaseAgain ?? false,
+    createdAt: createdTime ? new Date(createdTime) : new Date(),
+  };
+}
+
 /**
  * Creates a new coffee page in Notion database
  * @param databaseId - The database to create the page in
@@ -392,6 +419,9 @@ export async function updateNotionCoffeePage(
     } as CoffeeEntry;
 
     const properties = coffeeEntryToNotionProperties(tempEntry);
+    if (updates.roastLevel === null) {
+      properties["Roast Level"] = { select: null };
+    }
     if (Object.prototype.hasOwnProperty.call(updates, "frontPhotoUrl") && updates.frontPhotoUrl === null) {
       properties["Front Photo"] = { url: null };
     }
@@ -417,13 +447,13 @@ export async function updateNotionCoffeePage(
 export async function getNotionCoffeePage(
   pageId: string,
   client?: Client
-): Promise<Partial<CoffeeEntry> | null> {
+): Promise<CoffeeEntry | null> {
   try {
     const notionClient = client || notion;
     const response = await notionClient.pages.retrieve({ page_id: pageId });
 
     if ("properties" in response) {
-      return notionPropertiesToCoffeeEntry(response.properties);
+      return toCoffeeEntry(response.id, response.properties, response.created_time);
     }
 
     return null;
@@ -470,33 +500,7 @@ export async function queryNotionCoffeeDatabase(
 
       for (const page of response.results) {
         if ("properties" in page) {
-          const partialEntry = notionPropertiesToCoffeeEntry(page.properties);
-
-          // Convert to full CoffeeEntry with defaults
-          const fullEntry: CoffeeEntry = {
-            id: page.id, // Use Notion page ID as entry ID
-            roasterName: partialEntry.roasterName || "",
-            frontPhotoUrl: partialEntry.frontPhotoUrl || "",
-            backPhotoUrl: partialEntry.backPhotoUrl || null,
-            origin: partialEntry.origin || null,
-            variety: partialEntry.variety || null,
-            processMethod: partialEntry.processMethod || null,
-            roastLevel: partialEntry.roastLevel || null,
-            roastDate: partialEntry.roastDate || null,
-            flavorNotes: partialEntry.flavorNotes || null,
-            farm: partialEntry.farm || null,
-            roasterLocation: partialEntry.roasterLocation || null,
-            roasterAddress: partialEntry.roasterAddress || null,
-            roasterWebsite: partialEntry.roasterWebsite || null,
-            rating: partialEntry.rating || null,
-            tastingNotes: partialEntry.tastingNotes || null,
-            weight: partialEntry.weight || null,
-            price: partialEntry.price || null,
-            purchaseAgain: partialEntry.purchaseAgain || false,
-            createdAt: page.created_time ? new Date(page.created_time) : new Date(),
-          };
-
-          results.push(fullEntry);
+          results.push(toCoffeeEntry(page.id, page.properties, page.created_time));
         }
       }
 
