@@ -8,6 +8,12 @@ Set `GROQ_API_KEY` in `.env` locally and in Render for production. The browser u
 
 Run `npx tsx test-groq.ts` for a direct local extraction check. The API endpoint requires an authenticated user.
 
+## Optional Gemini photo scan trial
+
+Create a Gemini API key in Google AI Studio and set `GEMINI_API_KEY` in the server's local `.env` or Render environment. Keep this key out of Git and out of `VITE_` variables. With the key configured, Add Coffee shows a **Try Gemini scan** button after a front photo is selected. It sends the selected front and optional back photos to Google's `gemini-3.5-flash-lite` model only when clicked. The form displays suggestions next to current values; the user can apply them, and manually edited values are preserved. The existing Tesseract and Groq scan still runs automatically.
+
+The endpoint requires Supabase authentication, accepts JPEG, PNG, WebP, HEIC, and HEIF, and limits each photo to 10 MB and both photos together to 12 MB for Gemini's inline image request. Google says free-tier API data may be used to improve its products. The trial is hidden when `GEMINI_API_KEY` is absent. The implementation tests mock the provider response; verify a real coffee bag with a configured key before judging accuracy.
+
 ## Notion storage
 
 Supabase signs the user in through Notion. After sign-in, the app links the Notion provider token with `POST /api/auth/notion/link-provider-token`. The server finds or creates that user's coffee database. Coffee entries are saved as Notion pages; Notion page IDs are the application entry IDs.

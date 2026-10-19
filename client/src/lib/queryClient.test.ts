@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { setAuthToken, uploadFile } from "./queryClient";
+import { scanPhotosWithGemini, setAuthToken, uploadFile } from "./queryClient";
 
 const originalFetch = globalThis.fetch;
 const uploadPath = "/api/cloudinary-upload/123e4567-e89b-42d3-a456-426614174000";
@@ -54,4 +54,21 @@ test("photo upload refuses external or unexpected URLs before sending a token", 
   ]) {
     await assert.rejects(uploadFile(url, file), /Unexpected photo upload URL/);
   }
+});
+
+test("Gemini trial sends both photos with bearer auth and no exposed API key", async () => {
+  const front = new File(["front"], "front.jpg", { type: "image/jpeg" });
+  const back = new File(["back"], "back.png", { type: "image/png" });
+  setAuthToken("test-token");
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, "/api/scan-coffee-photos");
+    assert.equal(options?.method, "POST");
+    assert.equal(new Headers(options?.headers).get("Authorization"), "Bearer test-token");
+    assert.equal(new Headers(options?.headers).get("Content-Type"), null);
+    assert.deepEqual((options?.body as FormData).getAll("front"), [front]);
+    assert.deepEqual((options?.body as FormData).getAll("back"), [back]);
+    return Response.json({ roasterName: "Bean House" });
+  };
+  const result = await scanPhotosWithGemini(front, back);
+  assert.deepEqual(await result.json(), { roasterName: "Bean House" });
 });
