@@ -49,3 +49,26 @@ test("Gemini quota errors produce an actionable status without provider details"
     (error) => error instanceof GeminiScanError && error.status === 429 && !error.message.includes("secret"),
   );
 });
+
+test("Gemini reports an upstream timeout while waiting for a response", async () => {
+  const stalledFetch: typeof fetch = async (_input, init) => new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+  });
+  await assert.rejects(
+    extractCoffeeInfoFromPhotos(front, undefined, "test-key", stalledFetch, 10),
+    (error) => error instanceof GeminiScanError && error.status === 504 && error.message.includes("too long"),
+  );
+});
+
+test("Gemini reports an upstream timeout while reading a response", async () => {
+  const stalledBody: typeof fetch = async (_input, init) => ({
+    ok: true,
+    json: () => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+    }),
+  }) as Response;
+  await assert.rejects(
+    extractCoffeeInfoFromPhotos(front, undefined, "test-key", stalledBody, 10),
+    (error) => error instanceof GeminiScanError && error.status === 504 && error.message.includes("too long"),
+  );
+});

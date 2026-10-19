@@ -2,6 +2,7 @@ import type { ExtractedCoffeeInfo } from "./groq";
 
 export const GEMINI_SCAN_MODEL = "gemini-3.5-flash-lite";
 export const MAX_GEMINI_IMAGE_BYTES = 12 * 1024 * 1024;
+export const GEMINI_SCAN_TIMEOUT_MS = 120_000;
 
 export interface ScanImage {
   buffer: Buffer;
@@ -34,6 +35,7 @@ export async function extractCoffeeInfoFromPhotos(
   back: ScanImage | undefined,
   apiKey: string,
   fetcher: typeof fetch = fetch,
+  timeoutMs = GEMINI_SCAN_TIMEOUT_MS,
 ): Promise<ExtractedCoffeeInfo> {
   const images = [front, back].filter((image): image is ScanImage => Boolean(image));
   if (images.reduce((total, image) => total + image.buffer.length, 0) > MAX_GEMINI_IMAGE_BYTES) {
@@ -53,6 +55,7 @@ Return roasterName, roasterWebsite, farm, origin, variety, processMethod, roastL
     } })),
   ];
 
+  const timeout = AbortSignal.timeout(timeoutMs);
   let response: Response;
   try {
     response = await fetcher(
@@ -68,10 +71,13 @@ Return roasterName, roasterWebsite, farm, origin, variety, processMethod, roastL
             temperature: 0,
           },
         }),
-        signal: AbortSignal.timeout(45_000),
+        signal: timeout,
       },
     );
   } catch {
+    if (timeout.aborted) {
+      throw new GeminiScanError("Gemini took too long to scan these photos. Please try again.", 504);
+    }
     throw new GeminiScanError("Gemini is unavailable. Please try again later.", 502);
   }
 
@@ -92,6 +98,9 @@ Return roasterName, roasterWebsite, farm, origin, variety, processMethod, roastL
     parsed = JSON.parse(content) as Record<string, unknown>;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid response");
   } catch {
+    if (timeout.aborted) {
+      throw new GeminiScanError("Gemini took too long to scan these photos. Please try again.", 504);
+    }
     throw new GeminiScanError("Gemini returned an unreadable result. Please try again.", 502);
   }
 
