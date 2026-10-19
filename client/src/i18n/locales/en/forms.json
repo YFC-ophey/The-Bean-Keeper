@@ -34,6 +34,16 @@
       "fields": "fields",
       "rescan": "Rescan"
     },
+    "gemini": {
+      "title": "Gemini 3.5 Flash-Lite trial",
+      "privacy": "Photos go to Google's Gemini API only when you tap Try. Google may use free-tier data to improve its products.",
+      "try": "Try Gemini scan",
+      "scanning": "Scanning with Gemini...",
+      "review": "Review Gemini suggestions before applying",
+      "current": "Current",
+      "apply": "Apply Gemini suggestions",
+      "noFields": "Gemini could not read any coffee details from these photos."
+    },
     "sections": {
       "essentialInfo": "Essential Info",
       "additionalDetails": "Additional Details",

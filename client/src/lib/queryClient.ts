@@ -67,6 +67,20 @@ export async function uploadFile(url: string, file: File): Promise<string> {
   return result.url;
 }
 
+export async function scanPhotosWithGemini(front: File, back?: File | null): Promise<Response> {
+  const photos = new FormData();
+  photos.append("front", front);
+  if (back) photos.append("back", back);
+  const res = await fetch("/api/scan-coffee-photos", {
+    method: "POST",
+    credentials: "omit",
+    headers: getHeaders(false),
+    body: photos,
+  });
+  await throwIfResNotOk(res);
+  return res;
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

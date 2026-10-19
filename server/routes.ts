@@ -7,6 +7,8 @@ import { cloudinaryStorageService } from "./cloudinary-storage";
 import { insertCoffeeEntrySchema, updateCoffeeEntrySchema, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
 import { z } from "zod";
 import { extractCoffeeInfoWithAI } from "./groq";
+import { extractCoffeeInfoFromPhotos, GeminiScanError } from "./gemini";
+import multer from "multer";
 import { optionalAuth, requireAuth } from "./middleware/auth";
 import { duplicateTemplateDatabaseToUserWorkspace } from "./notion-oauth";
 import { saveUserNotionAuthState } from "./notion-auth-state";
@@ -29,6 +31,16 @@ const ALLOWED_IMAGE_CONTENT_TYPES = new Set([
   "image/heic",
   "image/heif",
 ]);
+const geminiPhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 2 },
+  fileFilter: (_req, file, callback) => {
+    if (!ALLOWED_IMAGE_CONTENT_TYPES.has(file.mimetype.toLowerCase())) {
+      return callback(new Error("Unsupported photo format"));
+    }
+    callback(null, true);
+  },
+}).fields([{ name: "front", maxCount: 1 }, { name: "back", maxCount: 1 }]);
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -542,6 +554,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error extracting coffee info with AI:", error);
       res.status(500).json({ error: "Failed to extract coffee information" });
     }
+  });
+
+  app.get("/api/scan-options", requireAuth, (_req, res) => {
+    res.json({ geminiAvailable: Boolean(process.env.GEMINI_API_KEY) });
+  });
+
+  app.post("/api/scan-coffee-photos", requireAuth, (req, res) => {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({ error: "Gemini scan is not configured" });
+    }
+    geminiPhotoUpload(req, res, async (uploadError) => {
+      if (uploadError) {
+        return res.status(400).json({ error: "Use JPEG, PNG, WebP, HEIC, or HEIF photos under 10 MB each." });
+      }
+      const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+      const front = files?.front?.[0];
+      const back = files?.back?.[0];
+      if (!front || (files?.back && !back)) {
+        return res.status(400).json({ error: "A supported front photo is required." });
+      }
+      try {
+        const extracted = await extractCoffeeInfoFromPhotos(front, back, process.env.GEMINI_API_KEY!);
+        res.json(extracted);
+      } catch (error) {
+        if (error instanceof GeminiScanError) {
+          return res.status(error.status).json({ error: error.message });
+        }
+        console.error("Gemini scan failed:", error);
+        res.status(500).json({ error: "Gemini scan failed." });
+      }
+    });
   });
 
   // Health check endpoint for Render

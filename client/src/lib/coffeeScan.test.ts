@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applyScanValues, clearAutoFilledValues } from "./coffeeScan";
+import { applyReviewedScanValues, applyScanValues, clearAutoFilledValues } from "./coffeeScan";
 
 test("photo replacement clears unchanged scanned values and preserves manual edits", () => {
   const initial = { roasterName: "", origin: "", farm: "Manual Farm" };
@@ -40,4 +40,22 @@ test("photo replacement clears unchanged scanned values and preserves manual edi
     farm: "Manual Farm",
   });
   assert.deepEqual(second.autoFilled, { roasterName: "Second Roaster" });
+});
+
+test("reviewed Gemini suggestions replace scan values but preserve user edits", () => {
+  const reviewed = applyReviewedScanValues(
+    { roasterName: "OCR Roaster", origin: "Kenya", farm: "" },
+    { roasterName: "OCR Roaster", origin: "Ethiopia" },
+    { roasterName: "Gemini Roaster", origin: "Colombia", farm: "Gemini Farm" },
+  );
+  assert.deepEqual(reviewed.form, {
+    roasterName: "Gemini Roaster",
+    origin: "Kenya",
+    farm: "Gemini Farm",
+  });
+  assert.deepEqual(reviewed.autoFilled, {
+    roasterName: "Gemini Roaster",
+    origin: "Ethiopia",
+    farm: "Gemini Farm",
+  });
 });

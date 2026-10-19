@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Camera, Upload, Loader2, CheckCircle2, ScanText, ChevronDown, Coffee } from "lucide-react";
 import Tesseract from "tesseract.js";
-import { apiRequest, uploadFile } from "@/lib/queryClient";
-import { applyScanValues, clearAutoFilledValues } from "@/lib/coffeeScan";
+import { apiRequest, scanPhotosWithGemini, uploadFile } from "@/lib/queryClient";
+import { applyReviewedScanValues, applyScanValues, clearAutoFilledValues } from "@/lib/coffeeScan";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import DuplicateConfirmationModal from "@/components/DuplicateConfirmationModal";
 import { CoffeeEntry } from "@shared/schema";
@@ -34,6 +34,11 @@ interface ExtractedData {
   farm?: string;
   roasterWebsite?: string;
 }
+
+const GEMINI_FIELDS = [
+  'roasterName', 'roasterWebsite', 'farm', 'origin', 'variety',
+  'processMethod', 'roastLevel', 'roastDate', 'flavorNotes',
+] as const;
 
 interface AddCoffeeFormProps {
   onSubmit: (frontPhotoUrl: string, backPhotoUrl: string | null, data: {
@@ -65,6 +70,9 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const [scanStage, setScanStage] = useState<'ocr' | 'ai' | 'upload' | null>(null);
   const [progress, setProgress] = useState(0);
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
+  const [geminiPreview, setGeminiPreview] = useState<ExtractedData | null>(null);
+  const [geminiError, setGeminiError] = useState("");
+  const [isGeminiScanning, setIsGeminiScanning] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateEntry, setDuplicateEntry] = useState<CoffeeEntry | null>(null);
   const [pendingSave, setPendingSave] = useState<{
@@ -105,6 +113,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     autoFilledRef.current = {};
     setFormData(cleared);
     setExtractedData({});
+    setGeminiPreview(null);
+    setGeminiError("");
   };
 
   const applyExtractedData = (data: ExtractedData) => {
@@ -130,6 +140,51 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       return response.json();
     },
   });
+
+  const { data: scanOptions } = useQuery<{ geminiAvailable: boolean }>({
+    queryKey: ["/api/scan-options"],
+    queryFn: async () => (await apiRequest("GET", "/api/scan-options")).json(),
+  });
+
+  const tryGemini = async () => {
+    if (!frontPhotoFile || isGeminiScanning) return;
+    const scanVersion = scanVersionRef.current;
+    setIsGeminiScanning(true);
+    setGeminiError("");
+    setGeminiPreview(null);
+    try {
+      const response = await scanPhotosWithGemini(frontPhotoFile, backPhotoFile);
+      const found = await response.json() as Record<string, unknown>;
+      if (scanVersion !== scanVersionRef.current) return;
+      const preview: ExtractedData = {};
+      for (const field of GEMINI_FIELDS) {
+        const value = found[field];
+        if (field === 'flavorNotes' && Array.isArray(value)) {
+          preview.flavorNotes = value.filter((note): note is string => typeof note === 'string')
+            .join(', ');
+        } else if (typeof value === 'string' && value.trim()) {
+          preview[field] = value.trim();
+        }
+      }
+      setGeminiPreview(preview);
+    } catch (error) {
+      if (scanVersion === scanVersionRef.current) {
+        setGeminiError(error instanceof Error ? error.message : 'Gemini scan failed');
+      }
+    } finally {
+      setIsGeminiScanning(false);
+    }
+  };
+
+  const applyGeminiPreview = () => {
+    if (!geminiPreview) return;
+    const result = applyReviewedScanValues(formDataRef.current, autoFilledRef.current, geminiPreview);
+    formDataRef.current = result.form;
+    autoFilledRef.current = result.autoFilled;
+    setFormData(result.form);
+    setExtractedData(result.autoFilled);
+    setGeminiPreview(null);
+  };
 
   const onDropFront = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -891,6 +946,52 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         </div>
       )}
 
+      {scanOptions?.geminiAvailable && frontPhotoFile && (
+        <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/20">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium">{t('forms:addCoffee.gemini.title')}</p>
+              <p className="text-xs text-muted-foreground">{t('forms:addCoffee.gemini.privacy')}</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={tryGemini}
+              disabled={isGeminiScanning || isScanning || isSaving}
+              data-testid="button-try-gemini"
+            >
+              {isGeminiScanning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isGeminiScanning ? t('forms:addCoffee.gemini.scanning') : t('forms:addCoffee.gemini.try')}
+            </Button>
+          </div>
+          {geminiError && <p role="alert" className="text-sm text-destructive">{geminiError}</p>}
+          {geminiPreview && (
+            <div className="space-y-2" data-testid="gemini-preview">
+              <p className="text-sm font-medium">{t('forms:addCoffee.gemini.review')}</p>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                {GEMINI_FIELDS.filter((field) => geminiPreview[field]).map((field) => (
+                  <div key={field} className="rounded border p-2 break-words">
+                    <span className="font-medium">{t(`forms:addCoffee.labels.${field}`)}: </span>
+                    <span>{geminiPreview[field]}</span>
+                    {formData[field] && formData[field] !== geminiPreview[field] && (
+                      <p className="text-muted-foreground mt-1">
+                        {t('forms:addCoffee.gemini.current')}: {formData[field]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {GEMINI_FIELDS.some((field) => geminiPreview[field]) ? (
+                <Button type="button" size="sm" onClick={applyGeminiPreview} data-testid="button-apply-gemini">
+                  {t('forms:addCoffee.gemini.apply')}
+                </Button>
+              ) : <p className="text-sm text-muted-foreground">{t('forms:addCoffee.gemini.noFields')}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Essential Fields Group */}
       <div className="space-y-4 p-4 bg-muted/30 dark:bg-muted/10 rounded-lg border border-border/50">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
@@ -1090,7 +1191,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
         <Button
           type="submit"
-          disabled={!frontPhotoFile || !formData.roasterName || isSaving || isScanning}
+          disabled={!frontPhotoFile || !formData.roasterName || isSaving || isScanning || isGeminiScanning}
           className={`flex-1 relative overflow-hidden transition-all duration-300 ${
             saveSuccess
               ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-600 hover:to-green-700'

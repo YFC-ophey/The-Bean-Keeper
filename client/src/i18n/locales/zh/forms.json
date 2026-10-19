@@ -34,6 +34,16 @@
       "fields": "欄位",
       "rescan": "重新掃描"
     },
+    "gemini": {
+      "title": "Gemini 3.5 Flash-Lite 試用",
+      "privacy": "點選試用後，照片才會傳送至 Google Gemini API。Google 可能使用免費方案資料改進產品。",
+      "try": "試用 Gemini 掃描",
+      "scanning": "Gemini 掃描中...",
+      "review": "套用前請檢查 Gemini 的建議",
+      "current": "目前內容",
+      "apply": "套用 Gemini 建議",
+      "noFields": "Gemini 無法從這些照片讀取咖啡資訊。"
+    },
     "sections": {
       "essentialInfo": "基本資訊",
       "additionalDetails": "附加詳情",

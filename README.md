@@ -105,9 +105,12 @@ NOTION_API_KEY=your_notion_internal_integration_token
 NOTION_DATABASE_ID=your_notion_database_id
 
 # Optional
+GEMINI_API_KEY=your_google_ai_studio_api_key
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
 PORT=5001
 ```
+
+`GEMINI_API_KEY` enables the optional Gemini 3.5 Flash-Lite photo scan trial in Add Coffee. Keep it on the server; never use a `VITE_` prefix for this key. The existing Tesseract and Groq scan remains available. See [GROQ_NOTION_SETUP.md](GROQ_NOTION_SETUP.md) for the trial behavior.
 
 See [`.env.example`](.env.example) for details.
 

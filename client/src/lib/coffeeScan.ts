@@ -22,3 +22,20 @@ export function applyScanValues<T extends Record<string, string>>(
   }
   return { form: next, autoFilled };
 }
+
+export function applyReviewedScanValues<T extends Record<string, string>>(
+  form: T,
+  previousAutoFilled: Partial<T>,
+  reviewed: Partial<T>,
+): { form: T; autoFilled: Partial<T> } {
+  const next = { ...form };
+  const autoFilled = { ...previousAutoFilled };
+  for (const [key, value] of Object.entries(reviewed)) {
+    if (!(key in next) || typeof value !== "string" || !value.trim()) continue;
+    const field = key as keyof T;
+    if (next[field] && next[field] !== previousAutoFilled[field]) continue;
+    next[field] = value.trim() as T[keyof T];
+    autoFilled[field] = value.trim() as T[keyof T];
+  }
+  return { form: next, autoFilled };
+}
