@@ -27,8 +27,8 @@
     },
     "gemini": {
       "title": "Scan coffee bag with Gemini",
-      "privacy": "Photos go to Google's Gemini API only when you select Scan with Gemini. Google may use free-tier data to improve its products.",
-      "scan": "Scan with Gemini",
+      "privacy": "When scanning is available, selecting a front photo automatically sends it and any selected back photo to Google's Gemini API. Changing a photo sends them again. Google may use free-tier data to improve its products.",
+      "retry": "Retry Gemini scan",
       "scanning": "Scanning with Gemini...",
       "failed": "Gemini scan failed. Please try again or enter the details manually.",
       "unavailable": "Gemini scanning is currently unavailable. You can enter the details manually.",

@@ -27,8 +27,8 @@
     },
     "gemini": {
       "title": "使用 Gemini 掃描咖啡袋",
-      "privacy": "只有點選「使用 Gemini 掃描」時，照片才會傳送至 Google Gemini API。Google 可能使用免費方案資料改進產品。",
-      "scan": "使用 Gemini 掃描",
+      "privacy": "若可使用掃描功能，選擇正面照片後，系統會自動將正面及已選擇的背面照片傳送至 Google Gemini API。更換照片會再次傳送。Google 可能使用免費方案資料改進產品。",
+      "retry": "重試 Gemini 掃描",
       "scanning": "Gemini 掃描中...",
       "failed": "Gemini 掃描失敗。請重試或手動輸入資料。",
       "unavailable": "Gemini 掃描目前無法使用，您仍可手動輸入資料。",

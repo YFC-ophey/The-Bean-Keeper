@@ -5,7 +5,7 @@
 [![Express](https://img.shields.io/badge/Express-4-333.svg)](https://expressjs.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-A mobile-first coffee tracking application with an optional Gemini 3.5 Flash-Lite scan for coffee bag photos. Users choose when to send a photo for scanning, review the suggested details, and save their coffee entry in Notion.
+A mobile-first coffee tracking application with Gemini 3.5 Flash-Lite scanning for coffee bag photos. Selecting a front photo starts a scan automatically; users review the suggested details before applying them and saving their coffee entry in Notion.
 
 ![The Bean Keeper](client/public/logo.jpeg)
 
@@ -23,14 +23,14 @@ Watch or download the full **[The Bean Keeper demo video](docs/bean-keeper-demo.
 
 This started as a personal tool for recording coffees. Its photo scan uses one model:
 
-- **Gemini 3.5 Flash-Lite** reads selected bag photos and suggests structured coffee details after the user clicks **Scan with Gemini**.
-- **Manual entry** remains available if the scan is unavailable or a suggestion is inaccurate.
+- **Gemini 3.5 Flash-Lite** reads selected bag photos and suggests structured coffee details automatically when a front photo is selected.
+- **Manual details entry** remains available if the scan is unavailable or a suggestion is inaccurate. Saving still requires a front photo.
 
-The app can use local photo storage during development; production uploads need persistent storage. The scan sends photos to Google only after an explicit click. Google's free-tier API data may be used to improve its products.
+The app can use local photo storage during development; production uploads need persistent storage. Selecting a front photo sends it, along with any selected back photo, to Google for scanning. The form explains this before photo selection. Google's free-tier API data may be used to improve its products.
 
 ## Features
 
-- **Optional AI Photo Scan**: Select coffee bag photos, click **Scan with Gemini**, and review suggested roaster, origin, variety, process method, roast level, and other details.
+- **AI Photo Scan**: Select a front coffee bag photo to start scanning automatically, then review suggested roaster, origin, variety, process method, roast level, and other details.
 - **Bilingual Interface**: Full English and Traditional Chinese support with auto-detection
 - **Supabase Auth with Notion**: Users sign in through Notion and get their own coffee database
 - **Guest Mode**: Browse the owner's collection without logging in (read-only)
@@ -44,7 +44,7 @@ The app can use local photo storage during development; production uploads need 
 | Layer | Provider | Why This Provider |
 |-------|----------|-------------------|
 | Photo scan | Gemini 3.5 Flash-Lite | Reads the selected photos and suggests structured coffee fields |
-| Alternative | Manual form entry | Coffee entries can be saved without an AI scan |
+| Alternative | Manual details entry | Coffee details can be entered without an AI scan; a front photo is still required to save |
 
 ### Application
 - **Frontend**: React 18, TypeScript, Vite, TanStack Query, shadcn/ui, Tailwind CSS
@@ -104,7 +104,7 @@ VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
 PORT=5001
 ```
 
-`GEMINI_API_KEY` enables **Scan with Gemini** in Add Coffee. Keep it on the server; never use a `VITE_` prefix for this key. Scanning starts only when a signed-in user clicks the button after selecting a front photo. Review the suggestions before applying or saving them. Manual entry works without the key. See [GEMINI_NOTION_SETUP.md](GEMINI_NOTION_SETUP.md) for scan behavior and limits.
+`GEMINI_API_KEY` enables automatic photo scanning in Add Coffee. Keep it on the server; never use a `VITE_` prefix for this key. For signed-in users, selecting a front photo starts a scan, and changing a selected photo can start a new scan. Review the suggestions before applying or saving them. Coffee details can be entered manually without the key or a successful scan, but the form still requires a front photo to save. See [GEMINI_NOTION_SETUP.md](GEMINI_NOTION_SETUP.md) for scan behavior and limits.
 
 See [`.env.example`](.env.example) for details.
 
@@ -164,7 +164,7 @@ npx tsx test-notion-setup.ts
 Mobile-first grid layout with Instagram-style coffee cards
 
 ### AI Extraction
-Select a front photo → click **Scan with Gemini** → review and apply suggestions → save
+Select a front photo → Gemini scans automatically → review and apply suggestions → save
 
 ### Bilingual Support
 Toggle between English and Traditional Chinese
@@ -199,7 +199,7 @@ The-Bean-Keeper/
 ## 🎨 Key Features Detail
 
 ### AI-Powered Extraction
-- **Image understanding**: Gemini 3.5 Flash-Lite reads the selected front and optional back photo when the user clicks **Scan with Gemini**.
+- **Image understanding**: Gemini 3.5 Flash-Lite reads the selected front and optional back photo when the front photo is selected. Changing a photo can trigger a fresh scan.
 - **Review first**: The form shows suggested fields before the user applies them.
 - **Manual entry**: Users can enter or correct coffee details even when a scan fails.
 
