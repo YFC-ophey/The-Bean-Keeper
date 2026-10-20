@@ -56,7 +56,7 @@ test("photo upload refuses external or unexpected URLs before sending a token", 
   }
 });
 
-test("Gemini trial sends both photos with bearer auth and no exposed API key", async () => {
+test("Gemini sends both photos with bearer auth and no exposed API key", async () => {
   const front = new File(["front"], "front.jpg", { type: "image/jpeg" });
   const back = new File(["back"], "back.png", { type: "image/png" });
   setAuthToken("test-token");

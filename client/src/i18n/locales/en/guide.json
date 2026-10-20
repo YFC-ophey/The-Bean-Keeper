@@ -7,17 +7,17 @@
     "1": {
       "title": "Capture Your Coffee",
       "description": "Take photos of your coffee bag - front and back. Our camera makes it easy!",
-      "details": "Tap the camera icon or choose from your device. Good lighting helps our AI read the details better."
+      "details": "Tap the camera icon or choose from your device. A clear front photo helps Gemini read the bag if you choose to scan it."
     },
     "2": {
-      "title": "AI Extracts the Magic",
-      "description": "Watch as AI instantly reads roaster info, origin, variety, flavor notes, and more.",
-      "details": "Let AI read text from your photos and fills in all the details automatically!"
+      "title": "Scan with Gemini",
+      "description": "Choose Scan with Gemini to get suggestions for roaster, origin, variety, flavor notes, and more.",
+      "details": "Review the suggestions and apply the ones you want. You can also enter details manually."
     },
     "3": {
-      "title": "Location Magically Appears",
-      "description": "Watch the roaster's location appear instantly on an interactive Google Map—see exactly where your coffee comes from!",
-      "details": "Everything auto-fills including an embedded map view. Add your rating, tasting notes, and make it yours with personal touches."
+      "title": "Review Your Coffee Details",
+      "description": "Check the details against the bag and edit anything Gemini missed.",
+      "details": "Your changes stay in the form. Save when the coffee details look right."
     },
     "4": {
       "title": "Build Your Collection",

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useCallback, useLayoutEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Camera, Upload, Loader2, CheckCircle2, ScanText, ChevronDown, Coffee } from "lucide-react";
-import Tesseract from "tesseract.js";
+import { Camera, Upload, Loader2, CheckCircle2, ChevronDown, Coffee } from "lucide-react";
 import { apiRequest, scanPhotosWithGemini, uploadFile } from "@/lib/queryClient";
-import { applyReviewedScanValues, applyScanValues, clearAutoFilledValues } from "@/lib/coffeeScan";
+import { applyReviewedScanValues, clearAutoFilledValues } from "@/lib/coffeeScan";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import DuplicateConfirmationModal from "@/components/DuplicateConfirmationModal";
 import { CoffeeEntry } from "@shared/schema";
@@ -64,11 +63,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const [frontPhotoPreview, setFrontPhotoPreview] = useState<string>("");
   const [backPhotoFile, setBackPhotoFile] = useState<File | null>(null);
   const [backPhotoPreview, setBackPhotoPreview] = useState<string>("");
-  const [isScanning, setIsScanning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [scanStage, setScanStage] = useState<'ocr' | 'ai' | 'upload' | null>(null);
-  const [progress, setProgress] = useState(0);
   const [extractedData, setExtractedData] = useState<ExtractedData>({});
   const [geminiPreview, setGeminiPreview] = useState<ExtractedData | null>(null);
   const [geminiError, setGeminiError] = useState("");
@@ -101,7 +97,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const formDataRef = useRef(formData);
   const autoFilledRef = useRef<Partial<typeof formData>>({});
   const scanVersionRef = useRef(0);
-  const performOCRRef = useRef<() => Promise<void>>(async () => {});
+  const scanInFlightRef = useRef(false);
 
   useLayoutEffect(() => {
     formDataRef.current = formData;
@@ -115,18 +111,9 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     setExtractedData({});
     setGeminiPreview(null);
     setGeminiError("");
+    scanInFlightRef.current = false;
+    setIsGeminiScanning(false);
   };
-
-  const applyExtractedData = (data: ExtractedData) => {
-    const result = applyScanValues(formDataRef.current, data);
-    formDataRef.current = result.form;
-    autoFilledRef.current = result.autoFilled;
-    setFormData(result.form);
-    setExtractedData(result.autoFilled);
-  };
-
-  const isOCRRunningRef = useRef(false);
-  const pendingOCRRef = useRef(false);
 
   // Refs for file inputs
   const frontFileInputRef = useRef<HTMLInputElement>(null);
@@ -141,14 +128,15 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     },
   });
 
-  const { data: scanOptions } = useQuery<{ geminiAvailable: boolean }>({
+  const { data: scanOptions, isLoading: scanOptionsLoading } = useQuery<{ geminiAvailable: boolean }>({
     queryKey: ["/api/scan-options"],
     queryFn: async () => (await apiRequest("GET", "/api/scan-options")).json(),
   });
 
-  const tryGemini = async () => {
-    if (!frontPhotoFile || isGeminiScanning) return;
+  const scanWithGemini = async () => {
+    if (!frontPhotoFile || scanInFlightRef.current || isSaving) return;
     const scanVersion = scanVersionRef.current;
+    scanInFlightRef.current = true;
     setIsGeminiScanning(true);
     setGeminiError("");
     setGeminiPreview(null);
@@ -169,10 +157,13 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       setGeminiPreview(preview);
     } catch (error) {
       if (scanVersion === scanVersionRef.current) {
-        setGeminiError(error instanceof Error ? error.message : 'Gemini scan failed');
+        setGeminiError(error instanceof Error ? error.message : t('forms:addCoffee.gemini.failed'));
       }
     } finally {
-      setIsGeminiScanning(false);
+      if (scanVersion === scanVersionRef.current) {
+        scanInFlightRef.current = false;
+        setIsGeminiScanning(false);
+      }
     }
   };
 
@@ -187,6 +178,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   };
 
   const onDropFront = useCallback((acceptedFiles: File[]) => {
+    if (isSaving) return;
     const file = acceptedFiles[0];
     if (file) {
       scanVersionRef.current += 1;
@@ -195,9 +187,10 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       const preview = URL.createObjectURL(file);
       setFrontPhotoPreview(preview);
     }
-  }, []);
+  }, [isSaving]);
 
   const onDropBack = useCallback((acceptedFiles: File[]) => {
+    if (isSaving) return;
     const file = acceptedFiles[0];
     if (file) {
       scanVersionRef.current += 1;
@@ -206,22 +199,25 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       const preview = URL.createObjectURL(file);
       setBackPhotoPreview(preview);
     }
-  }, []);
+  }, [isSaving]);
 
   const frontDropzone = useDropzone({
     onDrop: onDropFront,
+    disabled: isSaving,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'] },
     multiple: false,
   });
 
   const backDropzone = useDropzone({
     onDrop: onDropBack,
+    disabled: isSaving,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'] },
     multiple: false,
   });
 
   // Handlers for manual file input (camera vs file browser)
   const handleFrontFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isSaving) return;
     const file = e.target.files?.[0];
     if (file) {
       scanVersionRef.current += 1;
@@ -233,6 +229,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   };
 
   const handleBackFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isSaving) return;
     const file = e.target.files?.[0];
     if (file) {
       scanVersionRef.current += 1;
@@ -242,356 +239,6 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       setBackPhotoPreview(preview);
     }
   };
-
-  // Trigger OCR when photo files change
-  useEffect(() => {
-    // Skip if no files are uploaded
-    if (!frontPhotoFile && !backPhotoFile) {
-      pendingOCRRef.current = false;
-      setIsScanning(false);
-      setScanStage(null);
-      setProgress(0);
-      return;
-    }
-
-    // If OCR is already running, mark as pending
-    if (isOCRRunningRef.current) {
-      pendingOCRRef.current = true;
-      return;
-    }
-
-    performOCR();
-  }, [frontPhotoFile, backPhotoFile]);
-
-  const performOCR = async () => {
-    // Prevent concurrent OCR runs
-    if (isOCRRunningRef.current) {
-      return;
-    }
-
-    const scanVersion = ++scanVersionRef.current;
-    clearAutoFilledData();
-    isOCRRunningRef.current = true;
-    setIsScanning(true);
-    setScanStage('ocr');
-    setProgress(0);
-    try {
-      let combinedText = "";
-
-      // Run OCR on front photo
-      if (frontPhotoFile) {
-        if (scanVersion === scanVersionRef.current) setProgress(10);
-        const frontResult = await Tesseract.recognize(frontPhotoFile, 'eng', {
-          logger: (m) => console.log('Front:', m),
-        });
-        combinedText += frontResult.data.text + "\n\n";
-        if (scanVersion === scanVersionRef.current) setProgress(30);
-      }
-
-      // Run OCR on back photo
-      if (backPhotoFile) {
-        if (scanVersion === scanVersionRef.current) setProgress(40);
-        const backResult = await Tesseract.recognize(backPhotoFile, 'eng', {
-          logger: (m) => console.log('Back:', m),
-        });
-        combinedText += backResult.data.text;
-        if (scanVersion === scanVersionRef.current) setProgress(60);
-      }
-
-      if (!combinedText.trim()) {
-        if (scanVersion === scanVersionRef.current) {
-          setIsScanning(false);
-          setScanStage(null);
-          setProgress(0);
-        }
-        return;
-      }
-
-      if (scanVersion !== scanVersionRef.current) return;
-
-      // Clean OCR text to remove artifacts and special characters
-      const cleanText = (rawText: string): string => {
-        return rawText
-          .split('\n')
-          .map(line => {
-            return line
-              // Remove common OCR artifacts (but keep legitimate apostrophes)
-              .replace(/[«»`´""]/g, '')
-              // Remove non-printable characters and control characters
-              .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-              // Remove OCR artifacts at end of lines: mixed-case gibberish like "| il aE", "| Il a3"
-              // Only remove if it's mixed case or has unusual pattern (not valid words)
-              .replace(/\s*\|\s*[a-z]{1,2}\s+[a-zA-Z]{1,3}\s*$/g, '')
-              // Clean up multiple spaces within the line
-              .replace(/\s+/g, ' ')
-              .trim();
-          })
-          .join('\n')
-          .trim();
-      };
-
-      const text = cleanText(combinedText);
-      const lowerText = text.toLowerCase();
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      const extracted: ExtractedData = {};
-
-      // Extract structured label fields (FARM:, ORIGIN:, etc.)
-      const farmMatch = text.match(/(?:FARM|Farm)[\s:]+([^\n]+)/i);
-      if (farmMatch) {
-        extracted.farm = farmMatch[1].trim();
-      }
-
-      const originMatch = text.match(/(?:ORIGIN|Origin)[\s:]+([^\n]+)/i);
-      if (originMatch) {
-        extracted.origin = originMatch[1].trim();
-      } else {
-        // Fallback: Extract origin countries
-        const origins = [
-          'Ethiopia', 'Colombia', 'Kenya', 'Brazil', 'Guatemala', 'Costa Rica',
-          'Peru', 'Honduras', 'Rwanda', 'Burundi', 'Tanzania', 'Uganda',
-          'El Salvador', 'Nicaragua', 'Panama', 'Mexico', 'Yemen', 'Indonesia',
-          'Papua New Guinea', 'India', 'Vietnam', 'Thailand'
-        ];
-        for (const origin of origins) {
-          if (lowerText.includes(origin.toLowerCase())) {
-            extracted.origin = origin;
-            break;
-          }
-        }
-      }
-
-      const varietyMatch = text.match(/(?:VARIETY|Variety)[\s:]+([^\n]+)/i);
-      if (varietyMatch) {
-        extracted.variety = varietyMatch[1].trim();
-      } else {
-        // Fallback: Extract variety keywords
-        const varieties = [
-          'Heirloom', 'Bourbon', 'Typica', 'Caturra', 'Catuai', 'Gesha', 'Geisha',
-          'SL28', 'SL34', 'Ruiru', 'Pacamara', 'Villa Sarchi', 'Red Bourbon', 
-          'Yellow Bourbon', 'Pink Bourbon', 'Mundo Novo', 'Maragogype'
-        ];
-        const foundVarieties: string[] = [];
-        for (const variety of varieties) {
-          if (lowerText.includes(variety.toLowerCase())) {
-            foundVarieties.push(variety);
-          }
-        }
-        if (foundVarieties.length > 0) {
-          extracted.variety = foundVarieties.join(', ');
-        }
-      }
-
-      const processMatch = text.match(/(?:PROCESS|Process)[\s:]+([^\n]+)/i);
-      if (processMatch) {
-        extracted.processMethod = processMatch[1].trim();
-      } else {
-        // Fallback: Extract process method keywords
-        if (lowerText.includes('fully washed') || lowerText.includes('washed') || lowerText.includes('wet process')) {
-          extracted.processMethod = 'Washed';
-        } else if (lowerText.includes('natural') || lowerText.includes('dry process')) {
-          extracted.processMethod = 'Natural';
-        } else if (lowerText.includes('honey') || lowerText.includes('pulped natural')) {
-          extracted.processMethod = 'Honey';
-        } else if (lowerText.includes('anaerobic')) {
-          extracted.processMethod = 'Anaerobic';
-        }
-      }
-
-      const flavorMatch = text.match(/(?:FLAVOU?RS?|Flavou?rs?)[\s:]+([^\n]+)/i);
-      if (flavorMatch) {
-        extracted.flavorNotes = flavorMatch[1].trim();
-      } else {
-        // Fallback: Extract flavor keywords
-        const flavorKeywords = [
-          'chocolate', 'caramel', 'citrus', 'berry', 'fruity', 'floral', 'nutty',
-          'sweet', 'honey', 'vanilla', 'blueberry', 'strawberry', 'cherry',
-          'orange', 'lemon', 'apple', 'peach', 'jasmine', 'rose', 'lavender',
-          'almond', 'hazelnut', 'walnut', 'brown sugar', 'maple', 'toffee',
-          'wine', 'grape', 'tropical', 'mango', 'pineapple', 'coconut',
-          'stone fruit', 'red fruit', 'black tea', 'earl grey', 'spice', 'cinnamon',
-          'raspberry'
-        ];
-        const foundFlavors: string[] = [];
-        for (const flavor of flavorKeywords) {
-          if (lowerText.includes(flavor)) {
-            foundFlavors.push(flavor.charAt(0).toUpperCase() + flavor.slice(1));
-          }
-        }
-        if (foundFlavors.length > 0) {
-          extracted.flavorNotes = foundFlavors.slice(0, 5).join(', ');
-        }
-      }
-
-      const roastedMatch = text.match(/(?:ROAST(?:ED)?|Roast(?:ed)?)[\s:]+([^\n]+)/i);
-      if (roastedMatch) {
-        extracted.roastDate = roastedMatch[1].trim();
-      } else {
-        // Fallback: Extract various date formats
-        const datePatterns = [
-          /(\w+ \d{1,2},? \d{4})/,  // October 6, 2025
-          /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/,
-          /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/
-        ];
-        for (const pattern of datePatterns) {
-          const match = text.match(pattern);
-          if (match) {
-            extracted.roastDate = match[1];
-            break;
-          }
-        }
-      }
-
-      // Extract roaster name - look for prominent text with "Coffee" or "Roasters"
-      const excludeWords = /^(roasted|locally|sourced|fresh|organic|single|origin|direct|trade|imported|premium|specialty|craft|artisan|small|batch|hand|selected|estate|grown|fair|sustainable|this|a|an|the)\s+/i;
-      
-      const roasterPatterns = [
-        /^([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/im,
-        /\n([A-Z][A-Za-z\s&'-]{2,50}(?:Coffee|Roasters?))/i,
-      ];
-      
-      for (const pattern of roasterPatterns) {
-        const regex = new RegExp(pattern.source, 'gim');
-        const matches = Array.from(text.matchAll(regex));
-        for (const match of matches) {
-          let name = match[1].trim().replace(/\s+/g, ' ');
-          
-          if (excludeWords.test(name)) {
-            continue;
-          }
-          
-          if (/(farm|origin|variety|process|flavou?rs?|roast(?:ed)?\s*(?:date|on)?)\s*:/i.test(name)) {
-            continue;
-          }
-          
-          const fullMatch = match[0];
-          const beforeMatch = text.substring(Math.max(0, match.index! - 20), match.index!);
-          if (/[a-z]\s*$/.test(beforeMatch)) {
-            continue;
-          }
-          
-          const capitalWords = name.match(/[A-Z][a-z]+/g);
-          if (capitalWords && capitalWords.length >= 2 && name.length > 5 && name.length < 60) {
-            extracted.roasterName = name;
-            break;
-          }
-        }
-        if (extracted.roasterName) break;
-      }
-
-      if (!extracted.roasterName) {
-        const earlyLines = lines.slice(0, 10);
-        const potentialRoaster = earlyLines.find(line => {
-          const trimmed = line.trim();
-          
-          if (trimmed.length < 5 || trimmed.length > 50) return false;
-          if (!/^[A-Z]/.test(trimmed)) return false;
-          if (excludeWords.test(trimmed)) return false;
-          if (/(washed|natural|honey|farm|origin|variety|process|roasted|flavou?rs?|direct|trade|sourced|wpg|300g|gram)/i.test(trimmed)) return false;
-          
-          const capitalWords = trimmed.match(/[A-Z][a-z]+/g);
-          return capitalWords && capitalWords.length >= 2;
-        });
-        
-        if (potentialRoaster) {
-          extracted.roasterName = potentialRoaster.trim();
-        }
-      }
-
-      // Extract website URL
-      const urlMatch = text.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-z]{2,}(?:\/[^\s]*)?)/i);
-      if (urlMatch) {
-        extracted.roasterWebsite = urlMatch[0].startsWith('http') ? urlMatch[0] : `https://${urlMatch[0]}`;
-      }
-
-      console.log('Combined OCR text from both photos:', text);
-      console.log('Basic extracted data:', extracted);
-
-      // Use AI to optimize extraction (better than regex patterns)
-      if (scanVersion === scanVersionRef.current) {
-        setScanStage('ai');
-        setProgress(70);
-      }
-      try {
-        const aiResponse = await apiRequest('POST', '/api/extract-coffee-info', { text });
-        if (scanVersion === scanVersionRef.current) setProgress(90);
-
-        if (aiResponse.ok) {
-          const aiExtracted = await aiResponse.json();
-          console.log('AI-enhanced extracted data:', aiExtracted);
-          
-          // Clean AI-extracted values to remove any remaining artifacts
-          const cleanValue = (value: string | undefined): string | undefined => {
-            if (!value) return value;
-            return value
-              .replace(/[«»`´""]/g, '')
-              .replace(/\s*\|\s*[a-zA-Z0-9]{1,3}(\s+[a-zA-Z0-9]{1,3})*\s*$/g, '')
-              .replace(/\s+/g, ' ')
-              .trim();
-          };
-          
-          // Merge AI results with basic extraction, preferring AI results when available
-          const mergedData: ExtractedData = {
-            roasterName: cleanValue(aiExtracted.roasterName) || extracted.roasterName,
-            roasterWebsite: cleanValue(aiExtracted.roasterWebsite) || extracted.roasterWebsite,
-            farm: cleanValue(aiExtracted.farm) || extracted.farm,
-            origin: cleanValue(aiExtracted.origin) || extracted.origin,
-            variety: cleanValue(aiExtracted.variety) || extracted.variety,
-            processMethod: cleanValue(aiExtracted.processMethod) || extracted.processMethod,
-            roastLevel: cleanValue(aiExtracted.roastLevel) || extracted.roastLevel,
-            roastDate: cleanValue(aiExtracted.roastDate) || extracted.roastDate,
-            flavorNotes: aiExtracted.flavorNotes ? aiExtracted.flavorNotes.map(cleanValue).filter(Boolean).join(', ') : extracted.flavorNotes,
-          };
-          
-          // Fallback: If no roaster name found but we have a website, extract from website
-          if (!mergedData.roasterName && mergedData.roasterWebsite) {
-            let websiteName = mergedData.roasterWebsite
-              .replace(/^https?:\/\/(www\.)?/, '')
-              .split(/[/.]/)[0]
-              .split(/[-_]/)
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ');
-            
-            // Remove redundant "Coffee" or "Roasters" suffix if domain already contains it
-            const lowerName = websiteName.toLowerCase();
-            if (lowerName.includes('coffee') || lowerName.includes('roaster')) {
-              mergedData.roasterName = websiteName;
-            } else {
-              mergedData.roasterName = websiteName + ' Coffee';
-            }
-          }
-          
-          if (scanVersion === scanVersionRef.current) applyExtractedData(mergedData);
-          if (scanVersion === scanVersionRef.current) setProgress(100);
-        } else {
-          if (scanVersion === scanVersionRef.current) applyExtractedData(extracted);
-          if (scanVersion === scanVersionRef.current) setProgress(100);
-        }
-      } catch (aiError) {
-        console.error('AI extraction error, using basic extraction:', aiError);
-        if (scanVersion === scanVersionRef.current) applyExtractedData(extracted);
-        if (scanVersion === scanVersionRef.current) setProgress(100);
-      }
-    } catch (error) {
-      console.error('OCR Error:', error);
-    } finally {
-      setTimeout(() => {
-        if (scanVersion === scanVersionRef.current) {
-          setIsScanning(false);
-          setScanStage(null);
-          setProgress(0);
-        }
-      }, 500);
-      isOCRRunningRef.current = false;
-
-      // If files changed during OCR, rerun
-      if (pendingOCRRef.current) {
-        pendingOCRRef.current = false;
-        performOCRRef.current();
-      }
-    }
-  };
-  performOCRRef.current = performOCR;
 
   // Check for duplicate entries
   const checkForDuplicates = () => {
@@ -610,7 +257,6 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const proceedWithSave = async (frontPhotoUrl: string, backPhotoUrl: string | null) => {
     try {
       setIsSaving(true);
-      setScanStage('upload');
 
       // Call parent handler with both photo URLs and form data
       await onSubmit(frontPhotoUrl, backPhotoUrl, formData);
@@ -625,7 +271,6 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
       alert('Failed to save entry. Please try again.');
     } finally {
       setIsSaving(false);
-      setScanStage(null);
       setPendingSave(null);
     }
   };
@@ -635,9 +280,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
     if (!frontPhotoFile || !formData.roasterName.trim()) return;
 
-    setIsScanning(true);
     setIsSaving(true);
-    setScanStage('upload');
 
     try {
       // Upload front photo
@@ -664,20 +307,15 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         setPendingSave({ frontPhotoUrl, backPhotoUrl });
         setDuplicateEntry(duplicate);
         setShowDuplicateModal(true);
-        setIsScanning(false);
         setIsSaving(false);
-        setScanStage(null);
       } else {
         // No duplicate, proceed with save
         await proceedWithSave(frontPhotoUrl, backPhotoUrl);
-        setIsScanning(false);
       }
     } catch (error) {
       console.error('Error uploading photo:', error);
       alert('Failed to upload photo. Please try again.');
-      setIsScanning(false);
       setIsSaving(false);
-      setScanStage(null);
     }
   };
 
@@ -728,6 +366,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                 <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
+                    disabled={isSaving}
                     onClick={(e) => {
                       e.stopPropagation();
                       frontFileInputRef.current?.click();
@@ -775,6 +414,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={isSaving}
                   onClick={() => {
                     scanVersionRef.current += 1;
                     clearAutoFilledData();
@@ -829,6 +469,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                 <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
+                    disabled={isSaving}
                     onClick={(e) => {
                       e.stopPropagation();
                       backFileInputRef.current?.click();
@@ -876,6 +517,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={isSaving}
                   onClick={() => {
                     scanVersionRef.current += 1;
                     clearAutoFilledData();
@@ -894,32 +536,8 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
         </div>
       </div>
 
-      {/* Scanning status */}
-      {isScanning && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {scanStage === 'ocr' && t('forms:addCoffee.scanning.readingText')}
-                {scanStage === 'ai' && t('forms:addCoffee.scanning.aiAnalyzing')}
-                {scanStage === 'upload' && t('forms:addCoffee.scanning.uploadingPhotos')}
-              </p>
-              <p className="text-xs text-blue-700 dark:text-blue-200 mt-0.5">{t('forms:addCoffee.scanning.thisMayTake')}</p>
-            </div>
-          </div>
-          {/* Progress bar */}
-          <div className="h-1 bg-blue-100 dark:bg-blue-900/30 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Auto-fill badge */}
-      {!isScanning && autoFilledFields.length > 0 && (
+      {/* Gemini fills fields only after the user reviews and applies its suggestions. */}
+      {autoFilledFields.length > 0 && (
         <div className="flex flex-wrap gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
           <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -931,22 +549,10 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
               {autoFilledFields.length > 3 && ` +${autoFilledFields.length - 3} more`}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={performOCR}
-            disabled={isScanning || (!frontPhotoFile && !backPhotoFile)}
-            className="ml-auto"
-            data-testid="button-rescan"
-          >
-            <ScanText className="w-4 h-4 mr-2" />
-            {t('forms:addCoffee.autoFill.rescan')}
-          </Button>
         </div>
       )}
 
-      {scanOptions?.geminiAvailable && frontPhotoFile && (
+      {frontPhotoFile && (
         <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/20">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -957,14 +563,17 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
               type="button"
               variant="outline"
               size="sm"
-              onClick={tryGemini}
-              disabled={isGeminiScanning || isScanning || isSaving}
-              data-testid="button-try-gemini"
+              onClick={scanWithGemini}
+              disabled={!scanOptions?.geminiAvailable || isGeminiScanning || isSaving}
+              data-testid="button-scan-gemini"
             >
               {isGeminiScanning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isGeminiScanning ? t('forms:addCoffee.gemini.scanning') : t('forms:addCoffee.gemini.try')}
+              {isGeminiScanning ? t('forms:addCoffee.gemini.scanning') : t('forms:addCoffee.gemini.scan')}
             </Button>
           </div>
+          {!scanOptionsLoading && !scanOptions?.geminiAvailable && (
+            <p role="status" className="text-sm text-muted-foreground">{t('forms:addCoffee.gemini.unavailable')}</p>
+          )}
           {geminiError && <p role="alert" className="text-sm text-destructive">{geminiError}</p>}
           {geminiPreview && (
             <div className="space-y-2" data-testid="gemini-preview">
@@ -983,7 +592,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
                 ))}
               </div>
               {GEMINI_FIELDS.some((field) => geminiPreview[field]) ? (
-                <Button type="button" size="sm" onClick={applyGeminiPreview} data-testid="button-apply-gemini">
+                <Button type="button" size="sm" onClick={applyGeminiPreview} disabled={isSaving || isGeminiScanning} data-testid="button-apply-gemini">
                   {t('forms:addCoffee.gemini.apply')}
                 </Button>
               ) : <p className="text-sm text-muted-foreground">{t('forms:addCoffee.gemini.noFields')}</p>}
@@ -1191,7 +800,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
         <Button
           type="submit"
-          disabled={!frontPhotoFile || !formData.roasterName || isSaving || isScanning || isGeminiScanning}
+          disabled={!frontPhotoFile || !formData.roasterName || isSaving || isGeminiScanning}
           className={`flex-1 relative overflow-hidden transition-all duration-300 ${
             saveSuccess
               ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-600 hover:to-green-700'

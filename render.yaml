@@ -21,7 +21,8 @@ services:
         value: 10000
 
       # Set these in Render before the build. VITE_ values are embedded in the client bundle.
-      - key: GROQ_API_KEY
+      # Required for Gemini photo scanning; manual entry works without it.
+      - key: GEMINI_API_KEY
         sync: false
 
       - key: SUPABASE_URL

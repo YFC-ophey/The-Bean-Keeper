@@ -36,7 +36,7 @@ Copy [`.env.example`](.env.example) to `.env` locally. Configure:
 | `SUPABASE_SERVICE_ROLE_KEY` | Backend database and token verification |
 | `VITE_SUPABASE_URL` | Frontend Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Frontend public anon key |
-| `GROQ_API_KEY` | AI extraction |
+| `GEMINI_API_KEY` | Server-only Gemini photo scanning; manual entry works without it |
 | `OWNER_SUPABASE_USER_ID` | Verified Supabase Auth user UUID allowed to edit the existing owner collection |
 
 `NOTION_API_KEY` and `NOTION_DATABASE_ID` remain on the server for the existing owner collection and public guest reads. The owner mapping requires both variables plus `OWNER_SUPABASE_USER_ID`. The backend compares that UUID only with a verified Supabase access token; an email address, request body, or OAuth provider token cannot grant owner access. The owner Notion key is never saved as a user connection in Supabase. `NOTION_TEMPLATE_DATABASE_ID` is optional for the Notion database creation flow. The Notion OAuth client ID and secret belong in Supabase provider settings; they are not app environment variables.
