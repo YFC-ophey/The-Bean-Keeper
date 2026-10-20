@@ -35,7 +35,7 @@ test("Gemini receives both photos and returns only supported coffee fields", asy
   assert.equal(Buffer.from(body.contents[0].parts[1].inlineData!.data, "base64").toString(), "front photo");
 });
 
-test("Gemini trial rejects photos above its inline request budget", async () => {
+test("Gemini rejects photos above its inline request budget", async () => {
   const huge = { buffer: Buffer.alloc(MAX_GEMINI_IMAGE_BYTES + 1), mimetype: "image/jpeg" };
   await assert.rejects(
     extractCoffeeInfoFromPhotos(huge, undefined, "test-key", async () => { throw new Error("Must not call API"); }),

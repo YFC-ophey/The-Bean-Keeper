@@ -1,8 +1,18 @@
-import type { ExtractedCoffeeInfo } from "./groq";
-
 export const GEMINI_SCAN_MODEL = "gemini-3.5-flash-lite";
 export const MAX_GEMINI_IMAGE_BYTES = 12 * 1024 * 1024;
 export const GEMINI_SCAN_TIMEOUT_MS = 120_000;
+
+export interface ExtractedCoffeeInfo {
+  roasterName?: string;
+  roasterWebsite?: string;
+  farm?: string;
+  origin?: string;
+  variety?: string;
+  processMethod?: string;
+  roastLevel?: string;
+  roastDate?: string;
+  flavorNotes?: string[];
+}
 
 export interface ScanImage {
   buffer: Buffer;
@@ -39,7 +49,7 @@ export async function extractCoffeeInfoFromPhotos(
 ): Promise<ExtractedCoffeeInfo> {
   const images = [front, back].filter((image): image is ScanImage => Boolean(image));
   if (images.reduce((total, image) => total + image.buffer.length, 0) > MAX_GEMINI_IMAGE_BYTES) {
-    throw new GeminiScanError("Photos are too large for the Gemini trial (12 MB combined).", 413);
+    throw new GeminiScanError("Photos are too large for Gemini scanning (12 MB combined).", 413);
   }
 
   const parts = [

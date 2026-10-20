@@ -1,5 +1,7 @@
 # Groq API Cost Analysis for The Bean Keeper
 
+> Archived historical analysis (2025). The active coffee photo scan uses Gemini 3.5 Flash-Lite; this document's Groq prices, implementation references, and “current setup” labels do not describe the deployed app. See [GEMINI_NOTION_SETUP.md](GEMINI_NOTION_SETUP.md).
+
 ## Overview
 
 This document provides a detailed cost analysis for using Groq AI's Llama 3.1 8B Instant model to extract structured coffee information from OCR text in The Bean Keeper app.

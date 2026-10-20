@@ -5,7 +5,7 @@
 [![Express](https://img.shields.io/badge/Express-4-333.svg)](https://expressjs.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-A mobile-first coffee tracking application that integrates multiple AI providers (Groq/Llama, Google Gemini, Tesseract OCR) to automatically extract, structure, and enrich coffee data from bag label photos.
+A mobile-first coffee tracking application with an optional Gemini 3.5 Flash-Lite scan for coffee bag photos. Users choose when to send a photo for scanning, review the suggested details, and save their coffee entry in Notion.
 
 ![The Bean Keeper](client/public/logo.jpeg)
 
@@ -21,23 +21,21 @@ Watch or download the full **[The Bean Keeper demo video](docs/bean-keeper-demo.
 
 ## Why This Project
 
-This started as a personal tool and became a proving ground for multi-provider AI integration. Each AI provider was selected for what it does best:
+This started as a personal tool for recording coffees. Its photo scan uses one model:
 
-- **Groq (Llama 3.1 8B)** for structured data extraction: fast inference, JSON mode, low cost per call. Chosen over GPT/Claude for this task because extraction needs speed, not reasoning depth.
-- **Google Gemini Pro** for video generation pipeline: multimodal capabilities for converting screen recordings into polished product demos.
-- **Tesseract.js** for client-side OCR: runs in the browser, zero API cost, handles multilingual text (English + Chinese).
-- **ElevenLabs** for voice synthesis in the video pipeline.
+- **Gemini 3.5 Flash-Lite** reads selected bag photos and suggests structured coffee details after the user clicks **Scan with Gemini**.
+- **Manual entry** remains available if the scan is unavailable or a suggestion is inaccurate.
 
-If AI extraction fails, regex-based extraction catches common patterns. The app can use local photo storage during development; production uploads need persistent storage.
+The app can use local photo storage during development; production uploads need persistent storage. The scan sends photos to Google only after an explicit click. Google's free-tier API data may be used to improve its products.
 
 ## Features
 
-- **AI-Powered Extraction**: Upload coffee bag photos. AI extracts roaster, origin, variety, process method, roast level, and more.
+- **Optional AI Photo Scan**: Select coffee bag photos, click **Scan with Gemini**, and review suggested roaster, origin, variety, process method, roast level, and other details.
 - **Bilingual Interface**: Full English and Traditional Chinese support with auto-detection
 - **Supabase Auth with Notion**: Users sign in through Notion and get their own coffee database
 - **Guest Mode**: Browse the owner's collection without logging in (read-only)
 - **Advanced Filtering**: Filter by roast level, rating, origin with dynamic sort
-- **AI Video Pipeline**: Converts screen recordings into product demos (Remotion + Gemini + ElevenLabs) at $0 cost
+- **Product Demo**: A recorded walkthrough is linked above.
 - **Mobile-First**: Dual photo upload (camera + file picker), responsive 2-5 column grid
 
 ## Tech Stack
@@ -45,11 +43,8 @@ If AI extraction fails, regex-based extraction catches common patterns. The app 
 ### AI / ML Pipeline
 | Layer | Provider | Why This Provider |
 |-------|----------|-------------------|
-| OCR | Tesseract.js (client-side) | Zero API cost, browser-native, multilingual |
-| Data extraction | Groq AI (Llama 3.1 8B) | Fast inference, JSON mode, structured output |
-| Video generation | Gemini Pro (Google) | Multimodal, long context for video scripts |
-| Voice synthesis | ElevenLabs | Natural speech for product demos |
-| Fallback | Regex patterns | Graceful degradation when AI fails |
+| Photo scan | Gemini 3.5 Flash-Lite | Reads the selected photos and suggests structured coffee fields |
+| Alternative | Manual form entry | Coffee entries can be saved without an AI scan |
 
 ### Application
 - **Frontend**: React 18, TypeScript, Vite, TanStack Query, shadcn/ui, Tailwind CSS
@@ -61,7 +56,7 @@ If AI extraction fails, regex-based extraction catches common patterns. The app 
 
 ### Prerequisites
 - Node.js 18+
-- Groq API key ([groq.com](https://groq.com))
+- Gemini API key from [Google AI Studio](https://aistudio.google.com/) for photo scanning; manual entry works without a key
 - Supabase project ([supabase.com](https://supabase.com))
 - Notion OAuth provider enabled in Supabase
 - Google Maps API key (optional)
@@ -94,7 +89,7 @@ Create a `.env` file with:
 
 ```env
 # Required
-GROQ_API_KEY=your_groq_api_key
+GEMINI_API_KEY=your_google_ai_studio_api_key
 SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
@@ -105,12 +100,11 @@ NOTION_API_KEY=your_notion_internal_integration_token
 NOTION_DATABASE_ID=your_notion_database_id
 
 # Optional
-GEMINI_API_KEY=your_google_ai_studio_api_key
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
 PORT=5001
 ```
 
-`GEMINI_API_KEY` enables the optional Gemini 3.5 Flash-Lite photo scan trial in Add Coffee. Keep it on the server; never use a `VITE_` prefix for this key. The existing Tesseract and Groq scan remains available. See [GROQ_NOTION_SETUP.md](GROQ_NOTION_SETUP.md) for the trial behavior.
+`GEMINI_API_KEY` enables **Scan with Gemini** in Add Coffee. Keep it on the server; never use a `VITE_` prefix for this key. Scanning starts only when a signed-in user clicks the button after selecting a front photo. Review the suggestions before applying or saving them. Manual entry works without the key. See [GEMINI_NOTION_SETUP.md](GEMINI_NOTION_SETUP.md) for scan behavior and limits.
 
 See [`.env.example`](.env.example) for details.
 
@@ -160,9 +154,6 @@ npm run build
 # Production server
 npm start
 
-# Test Groq AI extraction
-npx tsx test-groq.ts
-
 # Test Notion connection
 npx tsx test-notion-setup.ts
 ```
@@ -173,7 +164,7 @@ npx tsx test-notion-setup.ts
 Mobile-first grid layout with Instagram-style coffee cards
 
 ### AI Extraction
-Upload photo → AI extracts roaster, origin, variety, process, roast level
+Select a front photo → click **Scan with Gemini** → review and apply suggestions → save
 
 ### Bilingual Support
 Toggle between English and Traditional Chinese
@@ -195,7 +186,7 @@ The-Bean-Keeper/
 ├── server/                # Express backend
 │   ├── index.ts           # Server entry
 │   ├── routes.ts          # API endpoints
-│   ├── groq.ts            # Groq AI client
+│   ├── gemini.ts          # Gemini photo scan client
 │   ├── notion.ts          # Notion operations
 │   └── notion-storage.ts  # Storage layer
 ├── shared/                # Shared types
@@ -208,10 +199,9 @@ The-Bean-Keeper/
 ## 🎨 Key Features Detail
 
 ### AI-Powered Extraction
-- **OCR**: Tesseract.js extracts raw text from photos
-- **AI Processing**: Groq Llama 3.1 8B structures the data
-- **Smart Detection**: Automatically identifies roast level, origin, variety
-- **Graceful Fallback**: Regex extraction if AI fails
+- **Image understanding**: Gemini 3.5 Flash-Lite reads the selected front and optional back photo when the user clicks **Scan with Gemini**.
+- **Review first**: The form shows suggested fields before the user applies them.
+- **Manual entry**: Users can enter or correct coffee details even when a scan fails.
 
 ### Internationalization
 - Full bilingual support (EN + ZH 繁體中文)
@@ -249,9 +239,8 @@ MIT License - See [LICENSE](LICENSE) file for details
 ## 🙏 Acknowledgments
 
 - [Claude Code](https://claude.ai/code) - My Fav Vibe Coding Tool
-- [Groq](https://groq.com) - Lightning-fast AI inference
+- [Google Gemini](https://ai.google.dev/gemini-api/docs) - Coffee photo scanning
 - [Notion](https://notion.so) - Database and API
-- [Tesseract.js](https://tesseract.projectnaptha.com/) - OCR engine
 - [shadcn/ui](https://ui.shadcn.com/) - UI components
 - [Clash Display](https://www.fontshare.com/fonts/clash-display) - Typography
 - [Render](https://render.com/) - Cloud Application Platform
@@ -259,4 +248,4 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ---
 
-**Built with ☕ and AI** | Powered by Groq + Notion
+**Built with ☕ and AI** | Powered by Gemini + Notion

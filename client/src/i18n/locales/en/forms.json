@@ -20,25 +20,18 @@
     "frontAlt": "Front of coffee bag",
     "backAlt": "Back of coffee bag",
     "detailsTitle": "Coffee Details",
-    "extracting": "Extracting coffee info from photos...",
-    "aiProcessing": "AI is reading your coffee bag...",
-    "scanning": {
-      "readingText": "Reading text from photos...",
-      "aiAnalyzing": "AI analyzing coffee details...",
-      "uploadingPhotos": "Uploading photos...",
-      "thisMayTake": "This may take a few seconds"
-    },
     "autoFill": {
       "fieldsAutoFilled": "fields auto-filled",
       "field": "field",
-      "fields": "fields",
-      "rescan": "Rescan"
+      "fields": "fields"
     },
     "gemini": {
-      "title": "Gemini 3.5 Flash-Lite trial",
-      "privacy": "Photos go to Google's Gemini API only when you tap Try. Google may use free-tier data to improve its products.",
-      "try": "Try Gemini scan",
+      "title": "Scan coffee bag with Gemini",
+      "privacy": "Photos go to Google's Gemini API only when you select Scan with Gemini. Google may use free-tier data to improve its products.",
+      "scan": "Scan with Gemini",
       "scanning": "Scanning with Gemini...",
+      "failed": "Gemini scan failed. Please try again or enter the details manually.",
+      "unavailable": "Gemini scanning is currently unavailable. You can enter the details manually.",
       "review": "Review Gemini suggestions before applying",
       "current": "Current",
       "apply": "Apply Gemini suggestions",

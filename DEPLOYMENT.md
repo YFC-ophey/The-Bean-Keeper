@@ -15,7 +15,7 @@ The repository includes [render.yaml](render.yaml) with the Node service, `npm i
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `GROQ_API_KEY` | For AI extraction | Server secret |
+| `GEMINI_API_KEY` | For Gemini photo scanning | Server secret; manual entry works without it |
 | `SUPABASE_URL` | Yes | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server secret; never prefix with `VITE_` |
 | `VITE_SUPABASE_URL` | Yes | Public project URL, embedded in browser bundle |
@@ -36,6 +36,6 @@ The `VITE_` variables are read during `npm run build`; changing them requires a 
 2. Sign in through Notion and verify the user is linked at `/api/auth/me`.
 3. Create, update, and delete a test coffee entry. Check the Notion page and the Supabase `coffee_entries_mirror` row.
 4. Inspect `sync_events` for failures. Use `POST /api/sync/notion-to-supabase` for an existing collection that needs a mirror backfill.
-5. Test a photo upload if Cloudinary is configured.
+5. With `GEMINI_API_KEY` set, select a front photo, click the Gemini scan button, review and apply the suggestions, then test a photo upload if Cloudinary is configured. A scan sends the selected front and optional back photo to Google only after the user clicks.
 
 If sign-in fails, check the Notion callback URL, Supabase redirect allow list, and the four Supabase variables. If Notion writes work but the mirror is missing, check the migration, service role key, and server logs. A failed mirror write does not remove a valid Notion entry.

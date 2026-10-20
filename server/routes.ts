@@ -6,7 +6,6 @@ import { localStorageService } from "./local-storage";
 import { cloudinaryStorageService } from "./cloudinary-storage";
 import { insertCoffeeEntrySchema, updateCoffeeEntrySchema, type InsertCoffeeEntry, type UpdateCoffeeEntry } from "@shared/schema";
 import { z } from "zod";
-import { extractCoffeeInfoWithAI } from "./groq";
 import { extractCoffeeInfoFromPhotos, GeminiScanError } from "./gemini";
 import multer from "multer";
 import { optionalAuth, requireAuth } from "./middleware/auth";
@@ -539,23 +538,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI-powered OCR extraction endpoint
-  app.post("/api/extract-coffee-info", requireAuth, async (req, res) => {
-    try {
-      const { text } = req.body;
-
-      if (!text || typeof text !== 'string') {
-        return res.status(400).json({ error: "Text is required" });
-      }
-
-      const extracted = await extractCoffeeInfoWithAI(text);
-      res.json(extracted);
-    } catch (error) {
-      console.error("Error extracting coffee info with AI:", error);
-      res.status(500).json({ error: "Failed to extract coffee information" });
-    }
-  });
-
   app.get("/api/scan-options", requireAuth, (_req, res) => {
     res.json({ geminiAvailable: Boolean(process.env.GEMINI_API_KEY) });
   });
@@ -705,7 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cloudinaryConfigured = cloudinaryStorageService.isConfigured();
       res.json({
         nodeEnv: process.env.NODE_ENV,
-        hasGroqKey: !!process.env.GROQ_API_KEY,
+        hasGeminiKey: !!process.env.GEMINI_API_KEY,
         hasNotionKey: !!process.env.NOTION_API_KEY,
         hasNotionDb: !!process.env.NOTION_DATABASE_ID,
         hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -716,24 +698,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     });
 
-    // Test Groq API connectivity
-    app.get("/api/debug/groq", async (_req, res) => {
-      try {
-        const testResult = await extractCoffeeInfoWithAI("Happy Goat Coffee, Ottawa, Canada. Ethiopia Washed. Blueberry notes.");
-        res.json({
-          success: Object.keys(testResult).length > 0,
-          extracted: testResult,
-          message: Object.keys(testResult).length > 0
-            ? "Groq API is working"
-            : "Groq API returned empty result - check server logs for errors"
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    });
   }
 
   const httpServer = createServer(app);

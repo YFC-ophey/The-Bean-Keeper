@@ -20,25 +20,18 @@
     "frontAlt": "咖啡袋正面照片",
     "backAlt": "咖啡袋背面照片",
     "detailsTitle": "咖啡詳情",
-    "extracting": "正在從照片中提取咖啡資訊...",
-    "aiProcessing": "AI 正在讀取您的咖啡袋...",
-    "scanning": {
-      "readingText": "正在讀取照片中的文字...",
-      "aiAnalyzing": "AI 正在分析咖啡詳情...",
-      "uploadingPhotos": "正在上傳照片...",
-      "thisMayTake": "這可能需要幾秒鐘"
-    },
     "autoFill": {
       "fieldsAutoFilled": "欄位已自動填入",
       "field": "欄位",
-      "fields": "欄位",
-      "rescan": "重新掃描"
+      "fields": "欄位"
     },
     "gemini": {
-      "title": "Gemini 3.5 Flash-Lite 試用",
-      "privacy": "點選試用後，照片才會傳送至 Google Gemini API。Google 可能使用免費方案資料改進產品。",
-      "try": "試用 Gemini 掃描",
+      "title": "使用 Gemini 掃描咖啡袋",
+      "privacy": "只有點選「使用 Gemini 掃描」時，照片才會傳送至 Google Gemini API。Google 可能使用免費方案資料改進產品。",
+      "scan": "使用 Gemini 掃描",
       "scanning": "Gemini 掃描中...",
+      "failed": "Gemini 掃描失敗。請重試或手動輸入資料。",
+      "unavailable": "Gemini 掃描目前無法使用，您仍可手動輸入資料。",
       "review": "套用前請檢查 Gemini 的建議",
       "current": "目前內容",
       "apply": "套用 Gemini 建議",

@@ -1,435 +1,53 @@
-# The Bean Keeper - User Flow
+# The Bean Keeper user flow
 
-## 🎯 Simplified User Experience
+## First sign-in
 
-### One-Time Setup (30 seconds)
-1. User opens The Bean Keeper app
-2. Clicks **"Connect with Notion"**
-3. Logs in with Notion credentials
-4. Authorizes the app
-5. **Done!** Database automatically created in their Notion workspace
+1. Open The Bean Keeper and choose **Connect with Notion**.
+2. Sign in through Supabase's Notion provider and grant access to the intended Notion page.
+3. The backend links the verified Supabase user to their Notion connection and finds or creates their coffee database.
+4. A guest may browse the configured owner collection without signing in; writing an entry requires a linked account.
 
-### Daily Use (15 seconds per coffee)
-1. User clicks **"Add Coffee"**
-2. Takes photo of coffee bag (front & back)
-3. **Groq AI extracts data automatically** ⚡
-4. Reviews/edits extracted information
-5. Clicks **"Save Entry"**
-6. **Entry automatically syncs to Notion** ✨
+## Add a coffee
 
-**No manual export. No sync buttons. It just works!**
+1. Open **Add Coffee** and select a front bag photo. A back photo is optional. Selecting photos does not start an AI scan.
+2. If photo scanning is configured, click **Scan with Gemini**. The selected photos are sent to the authenticated backend and then to Google's `gemini-3.5-flash-lite` model. The scan can take time or fail; users can continue with manual entry.
+3. Review Gemini's suggested coffee details, apply useful values, and correct any errors. Existing manual edits are preserved.
+4. Review or edit the coffee details, then save the entry.
+5. The backend saves the entry in Notion first and mirrors it to Supabase. The Notion page is the canonical entry. Mirror errors are logged for repair.
 
----
-
-## 📱 Detailed User Flow
-
-### Flow 1: First-Time Setup
-
-```
-┌─────────────────┐
-│  Open App       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  See Landing    │
-│  Page           │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Click          │
-│  "Connect with  │
-│   Notion"       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Redirected to  │
-│  Notion OAuth   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  User logs in   │
-│  to Notion      │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  User grants    │
-│  permissions    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Callback       │
-│  ↓              │
-│  Access token   │
-│  received       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Database       │
-│  automatically  │
-│  created in     │
-│  user's Notion  │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Success!       │
-│  Ready to use   │
-└─────────────────┘
+```text
+Select front photo (+ optional back)
+               │
+               ▼
+      Click Scan with Gemini ───────────────┐
+               │                            │
+               ▼                            │
+  Gemini suggests coffee fields             │
+               │                            │
+               ▼                            │
+   Review and apply suggestions             │
+               │                            │
+               └──────────────┬─────────────┘
+                              ▼
+                   Edit form manually
+                              │
+                              ▼
+                        Save entry
+                              │
+                              ▼
+                      Notion page first
+                              │
+                              ▼
+                     Supabase mirror
 ```
 
-**Time: ~30 seconds**
+Manual entry follows the right-hand path without sending photos to Gemini. The **Scan with Gemini** control is unavailable if the server has no `GEMINI_API_KEY`. The key stays on the server and is never placed in browser variables.
 
----
+## Privacy and limits
 
-### Flow 2: Adding Coffee (Scan & Sync)
+- Clicking **Scan with Gemini** sends the selected front and optional back photo to Google for analysis. Google says free-tier Gemini API data may be used to improve its products. The form explains this before scanning.
+- The scan requires a signed-in user. It accepts JPEG, PNG, WebP, HEIC, and HEIF; each photo is limited to 10 MB and the pair to 12 MB for the inline image request.
+- Coffee entries are saved to the user's linked Notion database, then mirrored in Supabase for recovery and analytics. Persistent production photo uploads require configured photo storage.
+- Suggested details can be wrong. Review them against the bag before saving, especially origin, process, roast date, and tasting notes.
 
-```
-┌─────────────────┐
-│  Click          │
-│  "+ Add Coffee" │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Camera opens   │
-│  (or file       │
-│   picker)       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Take photo of  │
-│  coffee bag     │
-│  (front)        │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Optional:      │
-│  Take photo of  │
-│  back label     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Tesseract.js   │
-│  extracts text  │
-│  from photos    │
-│  ⏱️ ~2-3 sec     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Groq AI        │
-│  parses text    │
-│  into fields    │
-│  ⚡ ~0.5 sec     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Form           │
-│  auto-fills:    │
-│  • Roaster      │
-│  • Origin       │
-│  • Variety      │
-│  • Process      │
-│  • Flavors      │
-│  • etc.         │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  User reviews   │
-│  & edits        │
-│  (if needed)    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  User adds:     │
-│  • Rating       │
-│  • Tasting notes│
-│  • Purchase     │
-│    again?       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Click          │
-│  "Save Entry"   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────┐
-│  Backend:                       │
-│  1. Save to local PostgreSQL    │
-│  2. Auto-sync to Notion ✨       │
-│     (if connected)              │
-└────────┬────────────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Success! ✅     │
-│  Entry visible  │
-│  in:            │
-│  • App          │
-│  • Notion       │
-└─────────────────┘
-```
-
-**Time: ~15 seconds (including photo)**
-
----
-
-## 🔄 Real-Time Sync Architecture
-
-### How Auto-Sync Works
-
-```
-User clicks "Save"
-        │
-        ▼
-┌───────────────────────┐
-│  Frontend sends POST  │
-│  to /api/coffee-      │
-│  entries              │
-│                       │
-│  Headers:             │
-│  • x-notion-access-   │
-│    token              │
-│  • x-notion-database- │
-│    id                 │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│  Backend:             │
-│  1. Validate data     │
-│  2. Save to local DB  │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│  Check if Notion      │
-│  credentials present  │
-└───────────┬───────────┘
-            │
-     Yes    │    No
-    ┌───────┴────────┐
-    │                │
-    ▼                ▼
-┌───────────┐  ┌──────────┐
-│ Auto-sync │  │ Skip     │
-│ to Notion │  │ sync     │
-└─────┬─────┘  └──────────┘
-      │
-      ▼
-┌─────────────────────────┐
-│  Create page in user's  │
-│  Notion database with   │
-│  all coffee data        │
-└─────────┬───────────────┘
-          │
-          ▼
-┌─────────────────────────┐
-│  Return success to      │
-│  frontend               │
-└─────────────────────────┘
-```
-
-### Error Handling
-
-- **If Notion sync fails**: Entry still saved locally
-- **Network issues**: Entry queued for later sync
-- **Invalid token**: User prompted to reconnect
-- **Rate limit**: Exponential backoff retry
-
----
-
-## 🎨 UI States & Feedback
-
-### State 1: Not Connected to Notion
-```
-┌────────────────────────────────────┐
-│  ☁️  Connect with Notion            │
-│                                    │
-│  Sync your coffee collection to   │
-│  Notion automatically              │
-│                                    │
-│  [Connect with Notion Button]     │
-└────────────────────────────────────┘
-```
-
-### State 2: Connected to Notion
-```
-┌────────────────────────────────────┐
-│  ✅ Connected to Notion              │
-│                                    │
-│  Workspace: My Coffee Notes        │
-│  Database: The Bean Keeper         │
-│                                    │
-│  [Disconnect]                      │
-└────────────────────────────────────┘
-```
-
-### State 3: Saving Entry (with sync)
-```
-┌────────────────────────────────────┐
-│  Saving entry...                   │
-│                                    │
-│  ✓ Saved locally                   │
-│  ⏳ Syncing to Notion...            │
-└────────────────────────────────────┘
-```
-
-### State 4: Save Complete
-```
-┌────────────────────────────────────┐
-│  ✅ Entry saved & synced!            │
-│                                    │
-│  • Saved to app                    │
-│  • Synced to Notion                │
-│                                    │
-│  [View in Notion] [Add Another]   │
-└────────────────────────────────────┘
-```
-
----
-
-## 📊 Data Flow Diagram
-
-```
-┌──────────────┐
-│   Camera     │
-│   Photo      │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│ Tesseract.js │ ──── OCR Text
-│   (Client)   │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│   Groq AI    │ ──── Structured Data
-│   (Server)   │      • Roaster: "Blue Bottle"
-└──────┬───────┘      • Origin: "Ethiopia"
-       │              • Variety: "Heirloom"
-       │              • Process: "Washed"
-       │              • Flavors: ["Berry", "Floral"]
-       ▼
-┌──────────────┐
-│  Form Fields │ ──── User reviews & edits
-│  Auto-filled │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│ User clicks  │
-│ "Save Entry" │
-└──────┬───────┘
-       │
-       ├─────────────────────────────────────┐
-       │                                     │
-       ▼                                     ▼
-┌──────────────┐                    ┌──────────────┐
-│ PostgreSQL   │                    │   Notion     │
-│  Database    │                    │  Database    │
-│  (Local)     │                    │  (Cloud)     │
-└──────────────┘                    └──────────────┘
-       │                                     │
-       └─────────────┬───────────────────────┘
-                     │
-                     ▼
-              ┌──────────────┐
-              │  Success!    │
-              │  Both synced │
-              └──────────────┘
-```
-
----
-
-## 🔐 Security & Privacy
-
-### User Data
-- **Photos**: Stored in Google Cloud Storage (your infrastructure)
-- **Coffee data**: Stored in user's own Notion workspace
-- **Access tokens**: Stored securely in localStorage/cookies
-- **No third-party sharing**: Data only goes to user's Notion
-
-### Permissions Requested
-- ✅ Read content (to verify database)
-- ✅ Update content (to create entries)
-- ✅ Insert content (to create database)
-- ✅ Read user info (to show workspace name)
-
-### What We DON'T Do
-- ❌ Store coffee data on our servers (only in user's Notion)
-- ❌ Access other Notion pages/databases
-- ❌ Share data with third parties
-- ❌ Read private messages or content
-
----
-
-## 💡 Key Features
-
-### 1. **Automatic Sync**
-- No manual export buttons
-- No "Sync to Notion" action needed
-- Just save and forget!
-
-### 2. **Offline Support**
-- App works offline
-- Entries saved locally first
-- Syncs to Notion when back online
-
-### 3. **Error Resilience**
-- If Notion sync fails, entry still saved locally
-- User can manually trigger sync later
-- Retry logic for network issues
-
-### 4. **Real-time Updates**
-- Edit an entry → automatically updates in Notion
-- Delete an entry → automatically removes from Notion
-- No lag or manual sync needed
-
----
-
-## 🎯 Success Metrics
-
-Users should experience:
-- ✅ **Setup in < 1 minute**
-- ✅ **Add coffee in < 15 seconds**
-- ✅ **Zero manual sync actions**
-- ✅ **Instant visibility in Notion**
-- ✅ **Works offline gracefully**
-
----
-
-## 🚀 Future Enhancements
-
-### Phase 2 (Optional)
-- Background sync queue for offline entries
-- Batch sync multiple entries
-- Sync status dashboard
-- Conflict resolution UI
-- Two-way sync (Notion → App)
-
-### Phase 3 (Advanced)
-- Real-time webhooks from Notion
-- Collaborative features
-- Sharing coffee collections
-- Public profiles
-
----
-
-**This flow ensures users never think about syncing - it just happens automatically! ✨**
+For configuration and API details, see [GEMINI_NOTION_SETUP.md](GEMINI_NOTION_SETUP.md), [SUPABASE_SETUP.md](SUPABASE_SETUP.md), and [DEPLOYMENT.md](DEPLOYMENT.md).
