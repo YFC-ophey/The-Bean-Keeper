@@ -7,12 +7,12 @@
     "1": {
       "title": "Capture Your Coffee",
       "description": "Take photos of your coffee bag - front and back. Our camera makes it easy!",
-      "details": "Tap the camera icon or choose from your device. A clear front photo helps Gemini read the bag if you choose to scan it."
+      "details": "Read the Google photo-sharing notice, then take or choose a clear front photo. The back is optional."
     },
     "2": {
-      "title": "Scan with Gemini",
-      "description": "Choose Scan with Gemini to get suggestions for roaster, origin, variety, flavor notes, and more.",
-      "details": "Review the suggestions and apply the ones you want. You can also enter details manually."
+      "title": "Gemini Scans Automatically",
+      "description": "Selecting a front photo starts a Gemini scan for roaster, origin, variety, flavor notes, and more.",
+      "details": "Review the suggestions and apply the ones you want. You can enter details manually if scanning is unavailable."
     },
     "3": {
       "title": "Review Your Coffee Details",

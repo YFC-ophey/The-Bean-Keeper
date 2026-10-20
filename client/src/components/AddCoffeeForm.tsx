@@ -1,4 +1,4 @@
-import { useState, useCallback, useLayoutEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const [geminiPreview, setGeminiPreview] = useState<ExtractedData | null>(null);
   const [geminiError, setGeminiError] = useState("");
   const [isGeminiScanning, setIsGeminiScanning] = useState(false);
+  const [scanAttempt, setScanAttempt] = useState(0);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateEntry, setDuplicateEntry] = useState<CoffeeEntry | null>(null);
   const [pendingSave, setPendingSave] = useState<{
@@ -98,6 +99,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const autoFilledRef = useRef<Partial<typeof formData>>({});
   const scanVersionRef = useRef(0);
   const scanInFlightRef = useRef(false);
+  const lastStartedScanRef = useRef<{ version: number; attempt: number } | null>(null);
 
   useLayoutEffect(() => {
     formDataRef.current = formData;
@@ -133,39 +135,43 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
     queryFn: async () => (await apiRequest("GET", "/api/scan-options")).json(),
   });
 
-  const scanWithGemini = async () => {
-    if (!frontPhotoFile || scanInFlightRef.current || isSaving) return;
+  useEffect(() => {
+    if (!frontPhotoFile || scanOptionsLoading || !scanOptions?.geminiAvailable || scanInFlightRef.current || isSaving) return;
     const scanVersion = scanVersionRef.current;
+    if (lastStartedScanRef.current?.version === scanVersion && lastStartedScanRef.current.attempt === scanAttempt) return;
+    lastStartedScanRef.current = { version: scanVersion, attempt: scanAttempt };
     scanInFlightRef.current = true;
     setIsGeminiScanning(true);
     setGeminiError("");
     setGeminiPreview(null);
-    try {
-      const response = await scanPhotosWithGemini(frontPhotoFile, backPhotoFile);
-      const found = await response.json() as Record<string, unknown>;
-      if (scanVersion !== scanVersionRef.current) return;
-      const preview: ExtractedData = {};
-      for (const field of GEMINI_FIELDS) {
-        const value = found[field];
-        if (field === 'flavorNotes' && Array.isArray(value)) {
-          preview.flavorNotes = value.filter((note): note is string => typeof note === 'string')
-            .join(', ');
-        } else if (typeof value === 'string' && value.trim()) {
-          preview[field] = value.trim();
+    void (async () => {
+      try {
+        const response = await scanPhotosWithGemini(frontPhotoFile, backPhotoFile);
+        const found = await response.json() as Record<string, unknown>;
+        if (scanVersion !== scanVersionRef.current) return;
+        const preview: ExtractedData = {};
+        for (const field of GEMINI_FIELDS) {
+          const value = found[field];
+          if (field === 'flavorNotes' && Array.isArray(value)) {
+            preview.flavorNotes = value.filter((note): note is string => typeof note === 'string')
+              .join(', ');
+          } else if (typeof value === 'string' && value.trim()) {
+            preview[field] = value.trim();
+          }
+        }
+        setGeminiPreview(preview);
+      } catch (error) {
+        if (scanVersion === scanVersionRef.current) {
+          setGeminiError(error instanceof Error ? error.message : t('forms:addCoffee.gemini.failed'));
+        }
+      } finally {
+        if (scanVersion === scanVersionRef.current) {
+          scanInFlightRef.current = false;
+          setIsGeminiScanning(false);
         }
       }
-      setGeminiPreview(preview);
-    } catch (error) {
-      if (scanVersion === scanVersionRef.current) {
-        setGeminiError(error instanceof Error ? error.message : t('forms:addCoffee.gemini.failed'));
-      }
-    } finally {
-      if (scanVersion === scanVersionRef.current) {
-        scanInFlightRef.current = false;
-        setIsGeminiScanning(false);
-      }
-    }
-  };
+    })();
+  }, [frontPhotoFile, backPhotoFile, scanOptionsLoading, scanOptions?.geminiAvailable, scanAttempt, isSaving]);
 
   const applyGeminiPreview = () => {
     if (!geminiPreview) return;
@@ -278,7 +284,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!frontPhotoFile || !formData.roasterName.trim()) return;
+    if (!frontPhotoFile || !formData.roasterName.trim() || scanOptionsLoading || isGeminiScanning) return;
 
     setIsSaving(true);
 
@@ -328,6 +334,9 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" data-testid="form-add-coffee">
+      <p className="rounded-lg border border-border p-3 text-sm text-muted-foreground" data-testid="gemini-photo-disclosure">
+        {t('forms:addCoffee.gemini.privacy')}
+      </p>
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Front Photo */}
         <div>
@@ -557,24 +566,23 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium">{t('forms:addCoffee.gemini.title')}</p>
-              <p className="text-xs text-muted-foreground">{t('forms:addCoffee.gemini.privacy')}</p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={scanWithGemini}
-              disabled={!scanOptions?.geminiAvailable || isGeminiScanning || isSaving}
-              data-testid="button-scan-gemini"
-            >
-              {isGeminiScanning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isGeminiScanning ? t('forms:addCoffee.gemini.scanning') : t('forms:addCoffee.gemini.scan')}
-            </Button>
+            {isGeminiScanning && (
+              <p role="status" className="flex items-center text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {t('forms:addCoffee.gemini.scanning')}
+              </p>
+            )}
           </div>
           {!scanOptionsLoading && !scanOptions?.geminiAvailable && (
             <p role="status" className="text-sm text-muted-foreground">{t('forms:addCoffee.gemini.unavailable')}</p>
           )}
           {geminiError && <p role="alert" className="text-sm text-destructive">{geminiError}</p>}
+          {!isGeminiScanning && scanOptions?.geminiAvailable && (geminiError || (geminiPreview && !GEMINI_FIELDS.some((field) => geminiPreview[field]))) && (
+            <Button type="button" variant="outline" size="sm" onClick={() => setScanAttempt((attempt) => attempt + 1)} disabled={isSaving} data-testid="button-retry-gemini">
+              {t('forms:addCoffee.gemini.retry')}
+            </Button>
+          )}
           {geminiPreview && (
             <div className="space-y-2" data-testid="gemini-preview">
               <p className="text-sm font-medium">{t('forms:addCoffee.gemini.review')}</p>
@@ -800,7 +808,7 @@ export default function AddCoffeeForm({ onSubmit, onCancel }: AddCoffeeFormProps
 
         <Button
           type="submit"
-          disabled={!frontPhotoFile || !formData.roasterName || isSaving || isGeminiScanning}
+          disabled={!frontPhotoFile || !formData.roasterName || isSaving || isGeminiScanning || scanOptionsLoading}
           className={`flex-1 relative overflow-hidden transition-all duration-300 ${
             saveSuccess
               ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-600 hover:to-green-700'

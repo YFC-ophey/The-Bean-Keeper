@@ -6,9 +6,9 @@ This guide covers photo scanning and Notion storage. For Supabase Auth, the Noti
 
 Create a Gemini API key in Google AI Studio and set `GEMINI_API_KEY` in the server's local `.env` or Render environment. Keep the key out of Git and out of `VITE_` variables. It is required for AI photo scanning; coffee details can still be entered manually when no key is configured.
 
-In Add Coffee, select a front photo and optionally a back photo, then click **Scan with Gemini**. Selecting a photo does not start a scan. The authenticated `POST /api/scan-coffee-photos` route sends the selected photos to Google's `gemini-3.5-flash-lite` model. Review its suggestions before applying them to the form, then check the fields before saving. Existing manual edits are preserved.
+In Add Coffee, selecting a front photo starts a scan automatically. An optional back photo is included if already selected; adding or changing a photo can start a fresh scan. The authenticated `POST /api/scan-coffee-photos` route sends the selected photos to Google's `gemini-3.5-flash-lite` model. Review its suggestions before applying them to the form, then check the fields before saving. Existing manual edits are preserved. Coffee details can be entered manually without a successful scan, but saving still requires a front photo.
 
-The endpoint requires Supabase authentication, accepts JPEG, PNG, WebP, HEIC, and HEIF, and limits each photo to 10 MB and both photos together to 12 MB for Gemini's inline image request. Google says free-tier API data may be used to improve its products, so the form discloses this before the user clicks. The scan button is unavailable when `GEMINI_API_KEY` is absent. Test several real bags before relying on extracted details without review.
+The endpoint requires Supabase authentication, accepts JPEG, PNG, WebP, HEIC, and HEIF, and limits each photo to 10 MB and both photos together to 12 MB for Gemini's inline image request. Google says free-tier API data may be used to improve its products, so the form discloses photo transmission before selection. Automatic scanning is unavailable when `GEMINI_API_KEY` is absent. Test several real bags before relying on extracted details without review.
 
 ## Notion storage
 

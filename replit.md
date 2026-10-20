@@ -1,6 +1,6 @@
 # The Bean Keeper workspace notes
 
-This repository is a React, Vite, and Express coffee journal. Coffee entries are stored as Notion pages. Supabase Auth handles Notion sign-in and Supabase tables hold the user's Notion connection, a coffee-entry mirror, and sync events. Signed-in users can select bag photos and click **Scan with Gemini** to receive coffee-field suggestions from Gemini 3.5 Flash-Lite; manual entry remains available.
+This repository is a React, Vite, and Express coffee journal. Coffee entries are stored as Notion pages. Supabase Auth handles Notion sign-in and Supabase tables hold the user's Notion connection, a coffee-entry mirror, and sync events. Selecting a front bag photo automatically starts a Gemini 3.5 Flash-Lite scan for signed-in users; they review suggestions before applying them. Coffee details can be entered manually if scanning fails or is unavailable, but saving requires a front photo.
 
 ## Development
 
@@ -16,4 +16,4 @@ Run `npm install`, copy `.env.example` to `.env`, configure Supabase and Notion 
 - `shared/schema.ts` — coffee entry types and validation.
 - `migrations/` — Supabase schema and profile trigger.
 
-Render deployment settings are in `render.yaml`; see [DEPLOYMENT.md](DEPLOYMENT.md). Configure `VITE_` variables before the build and keep the Supabase service role key and `GEMINI_API_KEY` on the server. Gemini scanning sends selected photos to Google only when the user clicks the scan button. Google says free-tier API data may be used to improve its products.
+Render deployment settings are in `render.yaml`; see [DEPLOYMENT.md](DEPLOYMENT.md). Configure `VITE_` variables before the build and keep the Supabase service role key and `GEMINI_API_KEY` on the server. Selecting a front photo sends it and any selected back photo to Google for scanning; the form explains this before photo selection. Google says free-tier API data may be used to improve its products.

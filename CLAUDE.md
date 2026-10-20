@@ -2,7 +2,7 @@
 
 ## What the app does
 
-The Bean Keeper is a React and Express coffee journal. Users can enter coffee details manually or choose to scan bag photos with Gemini 3.5 Flash-Lite, review the suggestions, and save a coffee entry in Notion. Scanning starts only when the user clicks the scan button. The interface supports English and Traditional Chinese.
+The Bean Keeper is a React and Express coffee journal. Users can enter coffee details manually or select a front bag photo to start a Gemini 3.5 Flash-Lite scan automatically, review the suggestions, and save a coffee entry in Notion. The interface supports English and Traditional Chinese.
 
 ## Commands
 
@@ -21,7 +21,7 @@ npm start         # Run the production bundle
 - **Coffee data:** Notion pages are the canonical entries. `server/notion.ts` handles page operations, and `shared/schema.ts` defines the `CoffeeEntry` shape. A guest can read the configured owner collection when `NOTION_API_KEY` and `NOTION_DATABASE_ID` are set; writes require an authenticated and linked user.
 - **Mirror:** `server/supabase-mirror.ts` maps coffee fields to `public.coffee_entries_mirror` after Notion writes and records results in `public.sync_events`. Mirror failures are logged and can be repaired with protected sync endpoints. `public.profiles` tracks registered Supabase Auth users. The schema and row-level security policies live in `migrations/`.
 - **Photos:** Cloudinary is the persistent production option. Local photo storage is available for development. A Google Cloud Storage integration remains for older object paths.
-- **Photo scan:** The Add Coffee form sends the selected front and optional back photo to authenticated `POST /api/scan-coffee-photos` on an explicit click. The server calls Gemini 3.5 Flash-Lite using server-only `GEMINI_API_KEY` and returns suggestions for review; manual entry remains available. Google says free-tier API data may be used to improve its products.
+- **Photo scan:** Selecting a front photo in Add Coffee automatically sends it and any selected back photo to authenticated `POST /api/scan-coffee-photos`. Changing a selected photo can start a fresh scan. The server calls Gemini 3.5 Flash-Lite using server-only `GEMINI_API_KEY` and returns suggestions for review before application. Coffee details can be entered manually without a successful scan, but a front photo is still required to save. The form discloses Google transmission before photo selection. Google says free-tier API data may be used to improve its products.
 - **UI:** React 18, Vite, TanStack Query, Wouter, Tailwind, shadcn/ui, and i18next. The server uses Express, the Notion SDK, and Supabase JS.
 
 ## Important files
